@@ -4,7 +4,7 @@ import { buildProviderRequest, generateWithProvider, type AiConnection } from ".
 const connection: AiConnection = { provider: "compatible", baseUrl: "https://ai.example/v1", model: "writer-model", apiKey: "test-only-key" };
 afterEach(() => vi.unstubAllGlobals());
 describe("independent AI providers", () => {
-  it("uses the writer's chosen endpoint, model and key, not Lovable", () => {
+  it("uses the writer's chosen endpoint, model and key", () => {
     const request = buildProviderRequest(connection, { mode: "write", topic: "Markdown", notes: "" });
     expect(request.url).toBe("https://ai.example/v1/chat/completions");
     expect(request.headers.Authorization).toBe("Bearer test-only-key");
