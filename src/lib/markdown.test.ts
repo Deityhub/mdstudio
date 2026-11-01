@@ -17,11 +17,15 @@ describe("portable rendering", () => {
   });
 
   it("does not apply smart quotes", () => {
-    expect(renderMarkdown(`"quoted" -- dash`)).toContain("&#x22;quoted&#x22; -- dash".replace(/&#x22;/g, '"'));
+    expect(renderMarkdown(`"quoted" -- dash`)).toContain(
+      "&#x22;quoted&#x22; -- dash".replace(/&#x22;/g, '"'),
+    );
   });
 
   it("strips scripts and event handlers", () => {
-    const html = renderMarkdown('<img src="x" onerror="alert(1)">\n\n<script>alert(1)</script>\n\n[x](javascript:alert(1))');
+    const html = renderMarkdown(
+      '<img src="x" onerror="alert(1)">\n\n<script>alert(1)</script>\n\n[x](javascript:alert(1))',
+    );
     expect(html).not.toMatch(/onerror|<script|javascript:/i);
   });
 
@@ -47,7 +51,9 @@ describe("export bytes", () => {
   });
 
   it("embeds local images as base64 for self-contained export", () => {
-    const out = embedImages("![cat](./images/cat.png) ![web](https://x.com/a.png)", { "cat.png": "data:image/png;base64,AAA" });
+    const out = embedImages("![cat](./images/cat.png) ![web](https://x.com/a.png)", {
+      "cat.png": "data:image/png;base64,AAA",
+    });
     expect(out).toBe("![cat](data:image/png;base64,AAA) ![web](https://x.com/a.png)");
   });
 });
@@ -67,19 +73,22 @@ describe("portability checker", () => {
 
   it("flags raw HTML", () => expect(rules("<div>hi</div>")).toContain("raw-html"));
   it("flags ==highlight==", () => expect(rules("a ==b== c")).toContain("highlight"));
-  it("allows ==highlight== for Obsidian", () => expect(rules("a ==b== c", "obsidian")).not.toContain("highlight"));
+  it("allows ==highlight== for Obsidian", () =>
+    expect(rules("a ==b== c", "obsidian")).not.toContain("highlight"));
   it("flags wiki links", () => expect(rules("see [[Page]]")).toContain("wiki-link"));
   it("flags local images", () => expect(rules("![a](./a.png)")).toContain("local-image"));
   it("flags trailing-space breaks", () => expect(rules("one  \ntwo")).toContain("trailing-break"));
   it("flags mixed bullets", () => expect(rules("- a\n* b")).toContain("mixed-bullets"));
-  it("flags GFM tables in strict mode", () => expect(rules("| a | b |\n| --- | --- |", "commonmark")).toContain("gfm-table"));
-  it("ignores syntax inside code blocks", () => expect(rules("```md\na ==b==\n```")).not.toContain("highlight"));
+  it("flags GFM tables in strict mode", () =>
+    expect(rules("| a | b |\n| --- | --- |", "commonmark")).toContain("gfm-table"));
+  it("ignores syntax inside code blocks", () =>
+    expect(rules("```md\na ==b==\n```")).not.toContain("highlight"));
 });
 
 describe("paste conversion", () => {
   it("converts HTML to Markdown", () => {
-    expect(htmlToMarkdown("<h2>Hi</h2><p><strong>bold</strong> <a href='https://a.b'>x</a></p>")).toBe(
-      "## Hi\n\n*bold* [x](https://a.b)".replace("*bold*", "**bold**"),
-    );
+    expect(
+      htmlToMarkdown("<h2>Hi</h2><p><strong>bold</strong> <a href='https://a.b'>x</a></p>"),
+    ).toBe("## Hi\n\n*bold* [x](https://a.b)".replace("*bold*", "**bold**"));
   });
 });

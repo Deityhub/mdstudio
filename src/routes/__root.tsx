@@ -78,7 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Markdown Studio" },
       { name: "description", content: "Write portable Markdown with a faithful live preview." },
       { property: "og:title", content: "Markdown Studio" },
-      { property: "og:description", content: "Write portable Markdown with a faithful live preview." },
+      {
+        property: "og:description",
+        content: "Write portable Markdown with a faithful live preview.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

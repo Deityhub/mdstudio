@@ -31,12 +31,20 @@ export type FrontMatter = Record<string, unknown>;
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
-export function splitFrontMatter(md: string): { data: FrontMatter | null; body: string; raw: string } {
+export function splitFrontMatter(md: string): {
+  data: FrontMatter | null;
+  body: string;
+  raw: string;
+} {
   const m = md.match(FM_RE);
   if (!m) return { data: null, body: md, raw: "" };
   try {
     const data = YAML.parse(m[1] ?? "");
-    return { data: data && typeof data === "object" ? data : {}, body: md.slice(m[0].length), raw: m[0] };
+    return {
+      data: data && typeof data === "object" ? data : {},
+      body: md.slice(m[0].length),
+      raw: m[0],
+    };
   } catch {
     return { data: null, body: md, raw: "" };
   }
@@ -44,7 +52,9 @@ export function splitFrontMatter(md: string): { data: FrontMatter | null; body: 
 
 export function joinFrontMatter(data: FrontMatter | null, body: string): string {
   const clean = Object.fromEntries(
-    Object.entries(data ?? {}).filter(([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0)),
+    Object.entries(data ?? {}).filter(
+      ([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0),
+    ),
   );
   if (Object.keys(clean).length === 0) return body;
   return `---\n${YAML.stringify(clean).trimEnd()}\n---\n\n${body.replace(/^\n+/, "")}`;
@@ -54,7 +64,10 @@ export function joinFrontMatter(data: FrontMatter | null, body: string): string 
 
 const schema = {
   ...defaultSchema,
-  protocols: { ...defaultSchema.protocols, src: [...(defaultSchema.protocols?.["src"] ?? []), "data"] },
+  protocols: {
+    ...defaultSchema.protocols,
+    src: [...(defaultSchema.protocols?.["src"] ?? []), "data"],
+  },
 };
 
 export function basename(path: string) {
@@ -73,7 +86,11 @@ function rehypeResolveImages(images: Record<string, string>) {
   };
 }
 
-export function renderMarkdown(md: string, profile: Profile = "github", images: Record<string, string> = {}): string {
+export function renderMarkdown(
+  md: string,
+  profile: Profile = "github",
+  images: Record<string, string> = {},
+): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
   const file = p
@@ -104,7 +121,8 @@ function fencedLines(lines: string[]): Set<number> {
     const m = l.match(/^\s{0,3}(`{3,}|~{3,})/);
     if (fence) {
       set.add(i);
-      if (m?.[1] && m[1][0] === fence[0] && m[1].length >= fence.length && l.trim() === m[1]) fence = null;
+      if (m?.[1] && m[1][0] === fence[0] && m[1].length >= fence.length && l.trim() === m[1])
+        fence = null;
     } else if (m) {
       fence = m[1] ?? null;
       set.add(i);
@@ -127,18 +145,37 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
     if (node.type === "html") {
       const v = (node as { value: string }).value.trim();
       if (!/^<!--[\s\S]*-->$/.test(v))
-        add(line, "raw-html", "Raw HTML is stripped or rendered differently on many platforms.", profile === "devto" ? "error" : "warning");
+        add(
+          line,
+          "raw-html",
+          "Raw HTML is stripped or rendered differently on many platforms.",
+          profile === "devto" ? "error" : "warning",
+        );
     }
     if (node.type === "image") {
       const url = (node as { url: string }).url;
       if (url.startsWith("data:"))
-        add(line, "data-image", "Embedded (base64) image: some platforms like GitHub won't display it.", "info");
+        add(
+          line,
+          "data-image",
+          "Embedded (base64) image: some platforms like GitHub won't display it.",
+          "info",
+        );
       else if (!/^https?:\/\//i.test(url))
-        add(line, "local-image", "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.");
+        add(
+          line,
+          "local-image",
+          "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.",
+        );
     }
     if (node.type === "code") {
       const lang = (node as { lang?: string | null }).lang;
-      if ((node as { position?: unknown }).position && lang === "mermaid" && profile !== "github" && profile !== "obsidian")
+      if (
+        (node as { position?: unknown }).position &&
+        lang === "mermaid" &&
+        profile !== "github" &&
+        profile !== "obsidian"
+      )
         add(line, "mermaid", "Mermaid diagrams only render on GitHub, GitLab and Obsidian.");
     }
   });
@@ -149,23 +186,39 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
     if (inCode.has(i)) {
       const m = l.match(/^\s{0,3}(`{3,}|~{3,})\s*$/);
       // opening fence without language
-      if (m && !inCode.has(i - 1)) add(n, "fence-lang", "Code block has no language, so it won't be highlighted.", "info");
+      if (m && !inCode.has(i - 1))
+        add(n, "fence-lang", "Code block has no language, so it won't be highlighted.", "info");
       return;
     }
-    if (profile !== "obsidian" && /==[^=\s][^=]*==/.test(l)) add(n, "highlight", "==highlight== isn't standard Markdown.");
-    if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l)) add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
-    if (profile !== "obsidian" && /^\s*\$\$/.test(l)) add(n, "math", "Math blocks ($$) aren't supported on every platform.");
+    if (profile !== "obsidian" && /==[^=\s][^=]*==/.test(l))
+      add(n, "highlight", "==highlight== isn't standard Markdown.");
+    if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l))
+      add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
+    if (profile !== "obsidian" && /^\s*\$\$/.test(l))
+      add(n, "math", "Math blocks ($$) aren't supported on every platform.");
     if (/^\s*:::/.test(l)) add(n, "container", "Custom ::: containers are not standard Markdown.");
-    if (/\S {2,}$/.test(l) && lines[i + 1]?.trim()) add(n, "trailing-break", "Trailing spaces for line breaks are invisible and often trimmed. Use a backslash (\\) instead.");
+    if (/\S {2,}$/.test(l) && lines[i + 1]?.trim())
+      add(
+        n,
+        "trailing-break",
+        "Trailing spaces for line breaks are invisible and often trimmed. Use a backslash (\\) instead.",
+      );
     const lm = l.match(/^\s*([-*+])\s+\S/);
     if (lm?.[1] && !/^\s*[-*_](\s*[-*_]){2,}\s*$/.test(l)) markers.add(lm[1]);
     if (profile === "commonmark") {
-      if (/^\s*\|?.*\|.*\|?\s*$/.test(l) && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1] ?? "")) add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
+      if (/^\s*\|?.*\|.*\|?\s*$/.test(l) && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1] ?? ""))
+        add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
       if (/^\s*[-*+]\s+\[[ xX]\]/.test(l)) add(n, "gfm-task", "Task lists are a GFM extension.");
       if (/~~[^~]+~~/.test(l)) add(n, "gfm-strike", "Strikethrough is a GFM extension.");
     }
   });
-  if (markers.size > 1) add(1, "mixed-bullets", `Mixed bullet markers (${[...markers].join(" ")}) can split lists. Normalizing on export fixes this.`, "info");
+  if (markers.size > 1)
+    add(
+      1,
+      "mixed-bullets",
+      `Mixed bullet markers (${[...markers].join(" ")}) can split lists. Normalizing on export fixes this.`,
+      "info",
+    );
 
   return issues.sort((a, b) => a.line - b.line);
 }
@@ -181,7 +234,11 @@ export function getOutline(md: string): Heading[] {
     visit(node, (c) => {
       if ("value" in c && typeof c.value === "string" && c.type !== "html") text += c.value;
     });
-    out.push({ depth: node.depth, text: text.trim() || "(untitled)", line: node.position?.start.line ?? 1 });
+    out.push({
+      depth: node.depth,
+      text: text.trim() || "(untitled)",
+      line: node.position?.start.line ?? 1,
+    });
   });
   return out;
 }
@@ -216,26 +273,41 @@ export function slugify(s: string) {
 
 /** Byte-level cleanup that never changes meaning: LF endings, no BOM, single final newline. */
 export function finalizeText(md: string) {
-  return md.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").replace(/\s*$/, "") + "\n";
+  return (
+    md
+      .replace(/^\uFEFF/, "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\s*$/, "") + "\n"
+  );
 }
 
 export function normalizeMarkdown(md: string, profile: Profile = "github"): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
   const out = p
-    .use(remarkStringify, { bullet: "-", fences: true, rule: "-", emphasis: "_", strong: "*", listItemIndent: "one" })
+    .use(remarkStringify, {
+      bullet: "-",
+      fences: true,
+      rule: "-",
+      emphasis: "_",
+      strong: "*",
+      listItemIndent: "one",
+    })
     .processSync(md);
   return finalizeText(String(out));
 }
 
 /** Replace local image references with embedded data URIs from the document's image store. */
 export function embedImages(md: string, images: Record<string, string>): string {
-  return md.replace(/(!\[[^\]]*\]\()(<[^>]+>|[^)\s]+)((?:\s+"[^"]*")?\))/g, (all, pre, url, post) => {
-    const clean = url.replace(/^<|>$/g, "");
-    if (/^(https?:|data:)/i.test(clean)) return all;
-    const hit = images[basename(clean)];
-    return hit ? `${pre}${hit}${post}` : all;
-  });
+  return md.replace(
+    /(!\[[^\]]*\]\()(<[^>]+>|[^)\s]+)((?:\s+"[^"]*")?\))/g,
+    (all, pre, url, post) => {
+      const clean = url.replace(/^<|>$/g, "");
+      if (/^(https?:|data:)/i.test(clean)) return all;
+      const hit = images[basename(clean)];
+      return hit ? `${pre}${hit}${post}` : all;
+    },
+  );
 }
 
 export function htmlToMarkdown(html: string): string {
@@ -243,13 +315,22 @@ export function htmlToMarkdown(html: string): string {
     .use(rehypeParse, { fragment: true })
     .use(rehypeRemark)
     .use(remarkGfm)
-    .use(remarkStringify, { bullet: "-", fences: true, emphasis: "_", strong: "*", listItemIndent: "one" })
+    .use(remarkStringify, {
+      bullet: "-",
+      fences: true,
+      emphasis: "_",
+      strong: "*",
+      listItemIndent: "one",
+    })
     .processSync(html);
   return String(out).trim();
 }
 
 export function standaloneHtml(title: string, bodyHtml: string) {
-  const esc = title.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const esc = title.replace(
+    /[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
+  );
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc}</title>

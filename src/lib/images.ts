@@ -24,7 +24,11 @@ export async function compressImage(file: File, maxSize = 1600, quality = 0.85):
 }
 
 export function safeImageName(name: string, existing: Record<string, string>) {
-  const base = name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-|-$/g, "") || "image.png";
+  const base =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9.]+/g, "-")
+      .replace(/^-|-$/g, "") || "image.png";
   let n = base;
   let i = 1;
   while (existing[n]) n = base.replace(/(\.[a-z0-9]+)?$/, `-${i++}$1`);
