@@ -8,16 +8,34 @@ import {
   highlightActiveLineGutter,
   drawSelection,
 } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+  redo,
+  undo,
+} from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { syntaxHighlighting } from "@codemirror/language";
 import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { classHighlighter } from "@lezer/highlight";
+import {
+  getContext,
+  isListLine,
+  runCommand,
+  type Command,
+  type Context,
+  type Snapshot,
+} from "@/lib/editing";
 
 export type EditorHandle = {
+  /** Runs a pure editing command (see `lib/editing.ts`) on the current selection. */
+  run: (command: Command) => void;
+  undo: () => void;
+  redo: () => void;
   wrap: (before: string, after?: string, placeholder?: string) => void;
-  linePrefix: (prefix: string) => void;
   insert: (text: string) => void;
   goToLine: (line: number) => void;
   scrollToRatio: (r: number) => void;
@@ -30,7 +48,15 @@ type Props = {
   onScrollRatio?: (r: number) => void;
   onPaste?: (e: ClipboardEvent) => string | null;
   onFiles?: (files: File[]) => void;
+  /** Called when the formatting state at the cursor changes (drives toolbar toggle state). */
+  onContext?: (context: Context) => void;
 };
+
+const snapshot = (state: EditorState): Snapshot => ({
+  text: state.doc.toString(),
+  from: state.selection.main.from,
+  to: state.selection.main.to,
+});
 
 const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(props, ref) {
   const host = useRef<HTMLDivElement>(null);
@@ -38,14 +64,17 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   const cb = useRef(props);
   cb.current = props;
   const silent = useRef(false);
+  const lastContext = useRef("");
 
   useEffect(() => {
-    const wrapCmd =
-      (before: string, after = before) =>
-      (v: EditorView) => {
-        api.wrap(before, after);
-        return !!v;
-      };
+    const cmd = (command: Command) => () => (api.run(command), true);
+    const emitContext = (state: EditorState) => {
+      const context = getContext(snapshot(state));
+      const key = JSON.stringify(context);
+      if (key === lastContext.current) return;
+      lastContext.current = key;
+      cb.current.onContext?.(context);
+    };
     const state = EditorState.create({
       doc: props.value,
       extensions: [
@@ -60,9 +89,29 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         syntaxHighlighting(classHighlighter),
         keymap.of([
-          { key: "Mod-b", run: wrapCmd("**") },
-          { key: "Mod-i", run: wrapCmd("_") },
+          { key: "Mod-b", run: cmd("bold") },
+          { key: "Mod-i", run: cmd("italic") },
+          { key: "Mod-e", run: cmd("code") },
+          { key: "Mod-Shift-x", run: cmd("strike") },
+          { key: "Mod-Shift-h", run: cmd("highlight") },
+          { key: "Mod-Shift-7", run: cmd("ordered") },
+          { key: "Mod-Shift-8", run: cmd("bullet") },
+          { key: "Mod-Shift-l", run: cmd("task") },
+          { key: "Mod-Shift-.", run: cmd("quote") },
+          ...([0, 1, 2, 3, 4, 5, 6] as const).map((n) => ({
+            key: `Mod-Alt-${n}`,
+            run: cmd(`h${n}`),
+          })),
           { key: "Mod-k", run: (v) => (api.wrap("[", "](https://)", "link text"), !!v) },
+          // Tab nests list items; anywhere else it falls through to a plain indent.
+          {
+            key: "Tab",
+            run: (v) => isListLine(snapshot(v.state)) && (api.run("indent"), true),
+          },
+          {
+            key: "Shift-Tab",
+            run: (v) => isListLine(snapshot(v.state)) && (api.run("outdent"), true),
+          },
           ...searchKeymap,
           ...historyKeymap,
           indentWithTab,
@@ -70,6 +119,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !silent.current) cb.current.onChange(u.state.doc.toString());
+          if (u.docChanged || u.selectionSet) emitContext(u.state);
         }),
         EditorView.domEventHandlers({
           scroll: (_e, v) => {
@@ -105,6 +155,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
       ],
     });
     view.current = new EditorView({ state, parent: host.current! });
+    emitContext(state);
     return () => view.current?.destroy();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -122,6 +173,23 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   }, [props.value]);
 
   const api: EditorHandle = {
+    run(command) {
+      const v = view.current!;
+      const edit = runCommand(snapshot(v.state), command);
+      if (edit)
+        v.dispatch({ changes: edit.changes, selection: { anchor: edit.from, head: edit.to } });
+      v.focus();
+    },
+    undo() {
+      const v = view.current!;
+      undo(v);
+      v.focus();
+    },
+    redo() {
+      const v = view.current!;
+      redo(v);
+      v.focus();
+    },
     wrap(before, after = before, placeholder = "text") {
       const v = view.current!;
       const { from, to } = v.state.selection.main;
@@ -130,24 +198,6 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         changes: { from, to, insert: before + sel + after },
         selection: { anchor: from + before.length, head: from + before.length + sel.length },
       });
-      v.focus();
-    },
-    linePrefix(prefix) {
-      const v = view.current!;
-      const { from, to } = v.state.selection.main;
-      const start = v.state.doc.lineAt(from).number;
-      const end = v.state.doc.lineAt(to).number;
-      const changes = [];
-      for (let n = start; n <= end; n++) {
-        const line = v.state.doc.line(n);
-        const stripped = line.text.replace(/^(#{1,6}\s|>\s|-\s|\d+\.\s)/, "");
-        changes.push({
-          from: line.from,
-          to: line.to,
-          insert: (line.text.startsWith(prefix) ? "" : prefix) + stripped,
-        });
-      }
-      v.dispatch({ changes });
       v.focus();
     },
     insert(text) {
