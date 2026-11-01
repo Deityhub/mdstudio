@@ -1,4 +1,5 @@
 import {
+  Fragment,
   lazy,
   Suspense,
   useCallback,
@@ -13,7 +14,14 @@ import { toast } from "sonner";
 import {
   Bold,
   Italic,
-  Heading2,
+  Heading,
+  Check,
+  IndentDecrease,
+  IndentIncrease,
+  ListChecks,
+  Redo2,
+  SquareCode,
+  Undo2,
   List,
   ListOrdered,
   Quote,
@@ -82,6 +90,7 @@ import {
   splitFrontMatter,
   joinFrontMatter,
 } from "@/lib/markdown";
+import type { Command, Context } from "@/lib/editing";
 import type { EditorHandle } from "./MarkdownEditor";
 import { AiWriter } from "./AiWriter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -95,6 +104,16 @@ import {
 } from "@/components/ui/dialog";
 
 const NO_IMAGES: Record<string, string> = {};
+const NO_CONTEXT: Context = {
+  bold: false,
+  italic: false,
+  strike: false,
+  code: false,
+  highlight: false,
+  heading: 0,
+  quote: false,
+  list: null,
+};
 type SaveState = "saved" | "saving" | "error";
 
 const MarkdownEditor = lazy(() => import("./MarkdownEditor"));
@@ -123,6 +142,7 @@ export function Studio({ docId }: { docId: string }) {
   const [panel, setPanel] = useState<Panel>("checks");
   const [library, setLibrary] = useState(true);
   const [focus, setFocus] = useState(false);
+  const [ctx, setCtx] = useState<Context>(NO_CONTEXT);
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
   const [mobileLibrary, setMobileLibrary] = useState(false);
@@ -351,32 +371,109 @@ export function Studio({ docId }: { docId: string }) {
       </div>
     );
 
-  const tools: { icon: typeof Bold; label: string; run: () => void }[] = [
-    { icon: Heading2, label: "Heading", run: () => editor.current?.linePrefix("## ") },
-    { icon: Bold, label: "Bold (Ctrl/⌘+B)", run: () => editor.current?.wrap("**") },
-    { icon: Italic, label: "Italic (Ctrl/⌘+I)", run: () => editor.current?.wrap("_") },
-    { icon: Strikethrough, label: "Strikethrough", run: () => editor.current?.wrap("~~") },
-    {
-      icon: Link2,
-      label: "Link (Ctrl/⌘+K)",
-      run: () => editor.current?.wrap("[", "](https://)", "link text"),
-    },
-    {
-      icon: Code,
-      label: "Code block",
-      run: () => editor.current?.wrap("\n```ts\n", "\n```\n", "code"),
-    },
-    { icon: Quote, label: "Quote", run: () => editor.current?.linePrefix("> ") },
-    { icon: List, label: "Bulleted list", run: () => editor.current?.linePrefix("- ") },
-    { icon: ListOrdered, label: "Numbered list", run: () => editor.current?.linePrefix("1. ") },
-    {
-      icon: Table,
-      label: "Table",
-      run: () =>
-        editor.current?.insert("\n| Column | Column |\n| ------ | ------ |\n| Cell   | Cell   |\n"),
-    },
-    { icon: ImageIcon, label: "Image", run: () => imageInput.current?.click() },
+  const run = (command: Command) => () => editor.current?.run(command);
+  type Tool = { icon: typeof Bold; label: string; run: () => void; active?: boolean };
+  // Grouped as in the design: history | text | links & media | blocks | insert.
+  const toolGroups: Tool[][] = [
+    [
+      { icon: Undo2, label: "Undo (Ctrl/⌘+Z)", run: () => editor.current?.undo() },
+      { icon: Redo2, label: "Redo (Ctrl/⌘+Shift+Z)", run: () => editor.current?.redo() },
+    ],
+    [
+      { icon: Bold, label: "Bold (Ctrl/⌘+B)", run: run("bold"), active: ctx.bold },
+      { icon: Italic, label: "Italic (Ctrl/⌘+I)", run: run("italic"), active: ctx.italic },
+      {
+        icon: Strikethrough,
+        label: "Strikethrough (Ctrl/⌘+Shift+X)",
+        run: run("strike"),
+        active: ctx.strike,
+      },
+      { icon: Code, label: "Inline code (Ctrl/⌘+E)", run: run("code"), active: ctx.code },
+    ],
+    [
+      {
+        icon: Link2,
+        label: "Link (Ctrl/⌘+K)",
+        run: () => editor.current?.wrap("[", "](https://)", "link text"),
+      },
+      { icon: ImageIcon, label: "Image", run: () => imageInput.current?.click() },
+    ],
+    [
+      { icon: Quote, label: "Quote (Ctrl/⌘+Shift+.)", run: run("quote"), active: ctx.quote },
+      {
+        icon: List,
+        label: "Bulleted list (Ctrl/⌘+Shift+8)",
+        run: run("bullet"),
+        active: ctx.list === "bullet",
+      },
+      {
+        icon: ListOrdered,
+        label: "Numbered list (Ctrl/⌘+Shift+7)",
+        run: run("ordered"),
+        active: ctx.list === "ordered",
+      },
+      {
+        icon: ListChecks,
+        label: "Task list (Ctrl/⌘+Shift+L)",
+        run: run("task"),
+        active: ctx.list === "task",
+      },
+      { icon: IndentDecrease, label: "Outdent list item (Shift+Tab)", run: run("outdent") },
+      { icon: IndentIncrease, label: "Indent list item (Tab)", run: run("indent") },
+    ],
+    [
+      {
+        icon: SquareCode,
+        label: "Code block",
+        run: () => editor.current?.wrap("\n```ts\n", "\n```\n", "code"),
+      },
+      {
+        icon: Table,
+        label: "Table",
+        run: () =>
+          editor.current?.insert(
+            "\n| Column | Column |\n| ------ | ------ |\n| Cell   | Cell   |\n",
+          ),
+      },
+    ],
   ];
+  const headingMenu = (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={ctx.heading ? "secondary" : "ghost"}
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label="Heading style"
+            >
+              <Heading className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Heading style (Ctrl/⌘+Alt+1–6)</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(e) => {
+          // keep typing where you were instead of jumping back to the menu button
+          e.preventDefault();
+          editor.current?.focus();
+        }}
+      >
+        {([0, 1, 2, 3, 4, 5, 6] as const).map((n) => (
+          <DropdownMenuItem key={n} onClick={run(`h${n}`)}>
+            <span className="flex w-4 justify-center">
+              {ctx.heading === n && <Check className="h-4 w-4" />}
+            </span>
+            {n === 0 ? "Paragraph" : `Heading ${n}`}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   const errCount = issues.filter((i) => i.severity !== "info").length;
   const showLibrary = library && !focus && !compact;
@@ -703,23 +800,34 @@ export function Studio({ docId }: { docId: string }) {
           {/* Editor + preview */}
           <main className="flex min-w-0 flex-1 flex-col">
             {effectiveView !== "preview" && (
-              <div className="flex h-12 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-2">
-                {tools.map((t) => (
-                  <Tooltip key={t.label}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 shrink-0"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={t.run}
-                        aria-label={t.label}
-                      >
-                        <t.icon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t.label}</TooltipContent>
-                  </Tooltip>
+              <div
+                role="toolbar"
+                aria-label="Formatting"
+                className="flex h-12 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-2"
+              >
+                {toolGroups.map((group, gi) => (
+                  <Fragment key={gi}>
+                    {gi > 0 && <span aria-hidden className="mx-1 h-6 w-px shrink-0 bg-border" />}
+                    {gi === 1 && headingMenu}
+                    {group.map((t) => (
+                      <Tooltip key={t.label}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={t.active ? "secondary" : "ghost"}
+                            size="icon"
+                            className="h-10 w-10 shrink-0"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={t.run}
+                            aria-label={t.label}
+                            aria-pressed={t.active}
+                          >
+                            <t.icon className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t.label}</TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </Fragment>
                 ))}
                 <span className="ml-auto hidden whitespace-nowrap pr-2 text-xs text-muted-foreground md:block">
                   Paste formatted text or drop .md / images
@@ -744,6 +852,7 @@ export function Studio({ docId }: { docId: string }) {
                           onScrollRatio={onEditorScroll}
                           onPaste={onPaste}
                           onFiles={onFiles}
+                          onContext={setCtx}
                         />
                       </Suspense>
                     </ClientOnly>

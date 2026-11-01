@@ -8,7 +8,7 @@
 - [x] Self-hosted fonts and nonce-based CSP
 - [x] Autosave hardening, checker locations, `local-link` and `unclosed-html` rules
 - [ ] Math (KaTeX) and Mermaid, profile-gated
-- [ ] Complete formatting toolbar
+- [ ] Complete formatting toolbar (core done: toggles, headings, lists, nesting; insertions, tables and profile warnings next)
 - [ ] Open-source license, contributor docs and license check
 - [ ] CI (lint, test, build, license, e2e)
 - [ ] Infra blueprints (Cloudflare Workers + D1 + R2, Docker + SQLite)
