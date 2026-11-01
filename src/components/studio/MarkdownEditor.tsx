@@ -30,6 +30,7 @@ import {
   type Edit,
   type Snapshot,
 } from "@/lib/editing";
+import { isInTable, tableMove } from "@/lib/tables";
 
 export type EditorHandle = {
   /** Runs a pure editing command (see `lib/editing.ts`) on the current selection. */
@@ -72,6 +73,16 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   const lastContext = useRef("");
 
   useEffect(() => {
+    const tabInStructure = (v: EditorView, dir: 1 | -1) => {
+      const snap = snapshot(v.state);
+      if (isInTable(snap)) {
+        const edit = tableMove(snap, dir);
+        if (edit) api.apply(edit);
+        return true; // consumed even at the first cell, so Shift-Tab never inserts spaces in a table
+      }
+      if (isListLine(snap)) return (api.run(dir === 1 ? "indent" : "outdent"), true);
+      return false;
+    };
     const cmd = (command: Command) => () => (api.run(command), true);
     const emitContext = (state: EditorState) => {
       const context = getContext(snapshot(state));
@@ -108,15 +119,9 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
             run: cmd(`h${n}`),
           })),
           { key: "Mod-k", run: () => (cb.current.onLinkShortcut?.(), true) },
-          // Tab nests list items; anywhere else it falls through to a plain indent.
-          {
-            key: "Tab",
-            run: (v) => isListLine(snapshot(v.state)) && (api.run("indent"), true),
-          },
-          {
-            key: "Shift-Tab",
-            run: (v) => isListLine(snapshot(v.state)) && (api.run("outdent"), true),
-          },
+          // Tab moves between table cells and nests list items; anywhere else it indents.
+          { key: "Tab", run: (v) => tabInStructure(v, 1) },
+          { key: "Shift-Tab", run: (v) => tabInStructure(v, -1) },
           ...searchKeymap,
           ...historyKeymap,
           indentWithTab,

@@ -23,6 +23,8 @@ import {
   ListChecks,
   Redo2,
   SquareCode,
+  TableProperties,
+  TriangleAlert,
   Undo2,
   List,
   ListOrdered,
@@ -94,16 +96,25 @@ import {
 } from "@/lib/markdown";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editing";
 import {
+  ALERT_KINDS,
   CODE_LANGUAGES,
   codeBlock,
   findLinkAt,
   insertFootnote,
+  insertAlert,
   insertImage,
   insertLink,
   insertRule,
   type FoundLink,
 } from "@/lib/editing-insert";
-import { ImageDialog, LinkDialog, type ImageSubmit, type LinkDialogState } from "./InsertDialogs";
+import { insertTable, tableCommand, type TableCommand } from "@/lib/tables";
+import {
+  ImageDialog,
+  LinkDialog,
+  TableDialog,
+  type ImageSubmit,
+  type LinkDialogState,
+} from "./InsertDialogs";
 import type { EditorHandle } from "./MarkdownEditor";
 import { AiWriter } from "./AiWriter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -127,6 +138,8 @@ const NO_CONTEXT: Context = {
   quote: false,
   list: null,
   codeLang: null,
+  table: false,
+  alert: null,
 };
 type SaveState = "saved" | "saving" | "error";
 
@@ -163,6 +176,7 @@ export function Studio({ docId }: { docId: string }) {
     found: FoundLink | null;
   }>({ open: false, initial: { text: "", url: "", title: "", editing: false }, found: null });
   const [imageDialog, setImageDialog] = useState({ open: false, initialAlt: "" });
+  const [tableDialog, setTableDialog] = useState(false);
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
   const [mobileLibrary, setMobileLibrary] = useState(false);
@@ -480,16 +494,7 @@ export function Studio({ docId }: { docId: string }) {
       { icon: IndentDecrease, label: "Outdent list item (Shift+Tab)", run: run("outdent") },
       { icon: IndentIncrease, label: "Indent list item (Tab)", run: run("indent") },
     ],
-    [
-      {
-        icon: Table,
-        label: "Table",
-        run: () =>
-          editor.current?.insert(
-            "\n| Column | Column |\n| ------ | ------ |\n| Cell   | Cell   |\n",
-          ),
-      },
-    ],
+    [{ icon: Table, label: "Insert table", run: () => setTableDialog(true) }],
   ];
   const headingMenu = (
     <DropdownMenu>
@@ -569,6 +574,99 @@ export function Studio({ docId }: { docId: string }) {
               {ctx.codeLang === l.id && <Check className="h-4 w-4" />}
             </span>
             {l.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  const tableOps: ([TableCommand, string] | "-")[] = [
+    ["row-above", "Add row above"],
+    ["row-below", "Add row below"],
+    ["delete-row", "Delete row"],
+    "-",
+    ["col-left", "Add column left"],
+    ["col-right", "Add column right"],
+    ["delete-col", "Delete column"],
+    "-",
+    ["align-left", "Align column left"],
+    ["align-center", "Align column center"],
+    ["align-right", "Align column right"],
+    ["align-none", "Clear column alignment"],
+    "-",
+    ["format", "Format table"],
+  ];
+  const tableMenu = (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild disabled={!ctx.table}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label="Table options"
+              disabled={!ctx.table}
+            >
+              <TableProperties className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          {ctx.table ? "Table options" : "Table options (place the cursor in a table)"}
+        </TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          editor.current?.focus();
+        }}
+      >
+        {tableOps.map((op, i) =>
+          op === "-" ? (
+            <DropdownMenuSeparator key={i} />
+          ) : (
+            <DropdownMenuItem key={op[0]} onClick={insert((snap) => tableCommand(snap, op[0]))}>
+              {op[1]}
+            </DropdownMenuItem>
+          ),
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  const alertMenu = (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={ctx.alert ? "secondary" : "ghost"}
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label="Alert"
+              aria-pressed={!!ctx.alert}
+            >
+              <TriangleAlert className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Alert (GitHub, Obsidian)</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          editor.current?.focus();
+        }}
+      >
+        {ALERT_KINDS.map((kind) => (
+          <DropdownMenuItem key={kind} onClick={insert((snap) => insertAlert(snap, kind))}>
+            <span className="flex w-4 justify-center">
+              {ctx.alert === kind && <Check className="h-4 w-4" />}
+            </span>
+            {kind[0] + kind.slice(1).toLowerCase()}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -917,6 +1015,12 @@ export function Studio({ docId }: { docId: string }) {
                         <TooltipContent>{t.label}</TooltipContent>
                       </Tooltip>
                     ))}
+                    {gi === 4 && (
+                      <>
+                        {tableMenu}
+                        {alertMenu}
+                      </>
+                    )}
                   </Fragment>
                 ))}
                 <span className="ml-auto hidden whitespace-nowrap pr-2 text-xs text-muted-foreground md:block">
@@ -1039,6 +1143,15 @@ export function Studio({ docId }: { docId: string }) {
           initialAlt={imageDialog.initialAlt}
           onOpenChange={(open) => setImageDialog((d) => ({ ...d, open }))}
           onSubmit={submitImage}
+          returnFocus={() => editor.current?.focus()}
+        />
+        <TableDialog
+          open={tableDialog}
+          onOpenChange={setTableDialog}
+          onSubmit={({ rows, cols }) => {
+            setTableDialog(false);
+            insert((snap) => insertTable(snap, rows, cols))();
+          }}
           returnFocus={() => editor.current?.focus()}
         />
         <Sheet open={compact && mobileLibrary} onOpenChange={setMobileLibrary}>

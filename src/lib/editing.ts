@@ -6,7 +6,7 @@
  * CodeMirror, so it is fast to test and reusable by any editing surface.
  */
 
-import { fenceAt } from "./blocks";
+import { fenceAt, isInTable as inTable, quoteBlockAt } from "./blocks";
 
 export type Snapshot = { text: string; from: number; to: number };
 export type Change = { from: number; to: number; insert: string };
@@ -30,6 +30,10 @@ export type Context = {
   list: "bullet" | "ordered" | "task" | null;
   /** Language of the fenced code block around the selection ("" when it has none), else null. */
   codeLang: string | null;
+  /** The caret is inside a GFM table. */
+  table: boolean;
+  /** Alert kind (NOTE, TIP, ...) of the blockquote around the caret, else null. */
+  alert: string | null;
 };
 
 export function applyEdit(text: string, edit: Edit): string {
@@ -452,5 +456,7 @@ export function getContext(snap: Snapshot): Context {
     quote: parsed.quote !== "",
     list: isList(kind) ? (kind.type as "bullet" | "ordered" | "task") : null,
     codeLang: fenceAt(text, from, to)?.lang ?? null,
+    table: inTable(text, from),
+    alert: quoteBlockAt(text, from)?.kind ?? null,
   };
 }

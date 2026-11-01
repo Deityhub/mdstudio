@@ -2,7 +2,9 @@
  * Pure commands that insert Markdown constructs (links, images, footnotes, rules, code blocks).
  * Same contract as `editing.ts`: text and selection in, changes and the selection to restore out.
  */
-import { fenceAt } from "./blocks";
+import { ALERT_KINDS, fenceAt, quoteBlockAt, wholeLines, type AlertKind } from "./blocks";
+
+export { ALERT_KINDS, type AlertKind };
 import { mapPos, type Change, type Edit, type Snapshot } from "./editing";
 
 export const CODE_LANGUAGES: { id: string; label: string }[] = [
@@ -181,11 +183,8 @@ export function codeBlock(snap: Snapshot, lang: string): Edit | null {
         : [{ from: fence.infoFrom, to: fence.openTo, insert: lang }];
     return { changes, from: mapPos(changes, from, 1), to: mapPos(changes, to, -1) };
   }
-  const end = to > from && text[to - 1] === "\n" ? to - 1 : to;
-  const blockFrom = text.lastIndexOf("\n", from - 1) + 1;
-  const nl = text.indexOf("\n", end);
-  const blockTo = nl === -1 ? text.length : nl;
-  const content = text.slice(blockFrom, blockTo);
+  const { blockFrom, blockTo, lines } = wholeLines(text, from, to);
+  const content = lines.join("\n");
   if (content.trim() === "") {
     const f = "```";
     return insertBlock(snap, `${f}${lang}\n\n${f}`, {
@@ -201,5 +200,53 @@ export function codeBlock(snap: Snapshot, lang: string): Edit | null {
     changes: [{ from: blockFrom, to: blockTo, insert: `${open}${content}\n${f}` }],
     from: from + shift,
     to: to + shift,
+  };
+}
+
+/* ------------------------------ GitHub alerts ------------------------------ */
+
+/**
+ * `> [!KIND]` blockquote. Inside an alert: another kind switches it, the same kind removes the
+ * marker (leaving a plain quote). In a plain quote it adds the marker. Elsewhere it quotes the
+ * selected lines (or the caret's line), or inserts an empty alert on a blank line.
+ */
+export function insertAlert(snap: Snapshot, kind: AlertKind): Edit {
+  const { text, from, to } = snap;
+  const quote = quoteBlockAt(text, from);
+  if (quote) {
+    const first = quote.from;
+    const header = `> [!${kind}]`;
+    const changes: Change[] =
+      quote.kind === kind
+        ? quote.lineCount === 1
+          ? [{ from: first, to: quote.headerTo, insert: "> " }]
+          : [{ from: first, to: quote.headerTo + 1, insert: "" }]
+        : quote.kind
+          ? [{ from: first, to: quote.headerTo, insert: header }]
+          : [{ from: first, to: first, insert: header + "\n" }];
+    return { changes, from: mapPos(changes, from, 1), to: mapPos(changes, to, -1) };
+  }
+  const { blockFrom, blockTo, lines } = wholeLines(text, from, to);
+  if (lines.join("").trim() === "") {
+    const body = `> [!${kind}]\n> `;
+    return insertBlock(snap, body, { from: body.length, to: body.length });
+  }
+  const header = `> [!${kind}]\n`;
+  const quoted = lines.map((l) => (l.trim() ? `> ${l}` : ">"));
+  // every line gains a prefix, so a position moves by the prefixes up to and including its line
+  const map = (pos: number) => {
+    let at = blockFrom;
+    let shift = header.length;
+    for (let i = 0; i < lines.length; i++) {
+      shift += quoted[i]!.length - lines[i]!.length;
+      if (pos <= at + lines[i]!.length) return pos + shift;
+      at += lines[i]!.length + 1;
+    }
+    return pos + shift;
+  };
+  return {
+    changes: [{ from: blockFrom, to: blockTo, insert: header + quoted.join("\n") }],
+    from: map(from),
+    to: map(to),
   };
 }

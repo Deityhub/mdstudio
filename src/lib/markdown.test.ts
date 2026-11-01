@@ -136,6 +136,48 @@ describe("portability checker locations", () => {
   });
 });
 
+describe("alerts", () => {
+  const md = "> [!NOTE]\n> Useful info";
+  it("renders GitHub alerts as styled alerts for GitHub and Obsidian", () => {
+    for (const profile of ["github", "obsidian"] as const) {
+      const html = renderMarkdown(md, profile);
+      expect(html).toContain('class="md-alert md-alert-note"');
+      expect(html).toContain('<p class="md-alert-title">Note</p>');
+      expect(html).toContain("Useful info");
+      expect(html).not.toContain("[!NOTE]");
+    }
+  });
+  it("leaves them as plain quotes where the platform does not render them", () => {
+    for (const profile of ["commonmark", "devto"] as const) {
+      const html = renderMarkdown(md, profile);
+      expect(html).not.toContain("md-alert");
+      expect(html).toContain("[!NOTE]");
+    }
+  });
+  it("needs the marker alone on the first line for GitHub, but Obsidian allows a title", () => {
+    expect(renderMarkdown("> [!NOTE] inline text", "github")).not.toContain("md-alert");
+    const html = renderMarkdown("> [!tip] Custom title\n> body", "obsidian");
+    expect(html).toContain("md-alert-tip");
+    expect(html).toContain('<p class="md-alert-title">Custom title</p>');
+  });
+  it("keeps content after the marker and leaves ordinary quotes alone", () => {
+    expect(renderMarkdown("> [!WARNING]\n> one\n>\n> two", "github")).toContain("two");
+    expect(renderMarkdown("> just a quote", "github")).not.toContain("md-alert");
+  });
+  it("cannot be spoofed with raw HTML classes", () =>
+    expect(
+      renderMarkdown('<blockquote class="md-alert md-alert-note">x</blockquote>', "github"),
+    ).not.toContain("md-alert"));
+  it("is flagged by the checker outside GitHub and Obsidian", () => {
+    const rule = (p: Parameters<typeof checkPortability>[1]) =>
+      checkPortability(md, p).map((i) => i.rule);
+    expect(rule("commonmark")).toContain("alert");
+    expect(rule("devto")).toContain("alert");
+    expect(rule("github")).not.toContain("alert");
+    expect(rule("obsidian")).not.toContain("alert");
+  });
+});
+
 describe("paste conversion", () => {
   it("converts HTML to Markdown", () => {
     expect(
