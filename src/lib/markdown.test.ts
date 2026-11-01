@@ -110,6 +110,12 @@ describe("portability checker locations", () => {
     expect(lines).toEqual([1, 3, 5, 7, 17]);
   });
 
+  it("flags images without alt text on the line they appear", () => {
+    const md =
+      "![](https://x.com/a.png)\n\n![A cat](https://x.com/b.png)\n\n![ ](https://x.com/c.png)";
+    expect(find(md, "missing-alt").map((i) => i.line)).toEqual([1, 5]);
+  });
+
   it("does not report links inside code", () =>
     expect(find("`[a](./a.md)`\n\n```\n[a](./a.md)\n```", "local-link")).toEqual([]));
 

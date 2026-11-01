@@ -211,7 +211,13 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
         );
     }
     if (node.type === "image") {
-      const url = (node as { url: string }).url;
+      const { url, alt } = node as { url: string; alt?: string | null };
+      if (!alt?.trim())
+        add(
+          line,
+          "missing-alt",
+          "Image has no alt text. Screen readers and search engines skip it.",
+        );
       if (url.startsWith("data:"))
         add(
           line,

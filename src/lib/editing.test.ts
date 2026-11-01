@@ -1,31 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { applyEdit, getContext, runCommand, type Command, type Snapshot } from "./editing";
+import { applied, parse } from "@/test/marked";
+import { getContext, runCommand, type Command } from "./editing";
 
-/** `⟦a⟧` is a selection, `¦` is a caret. */
-function parse(marked: string): Snapshot {
-  const open = marked.indexOf("⟦");
-  if (open >= 0) {
-    const close = marked.indexOf("⟧");
-    const text = marked.replace("⟦", "").replace("⟧", "");
-    return { text, from: open, to: close - 1 };
-  }
-  const caret = marked.indexOf("¦");
-  return { text: marked.replace("¦", ""), from: caret, to: caret };
-}
-
-function show(text: string, from: number, to: number) {
-  return from === to
-    ? text.slice(0, from) + "¦" + text.slice(from)
-    : text.slice(0, from) + "⟦" + text.slice(from, to) + "⟧" + text.slice(to);
-}
-
-/** Runs a command on a marked-up state and returns the marked-up result (null when it is a no-op). */
-function run(marked: string, cmd: Command): string | null {
-  const snap = parse(marked);
-  const edit = runCommand(snap, cmd);
-  if (!edit) return null;
-  return show(applyEdit(snap.text, edit), edit.from, edit.to);
-}
+const run = (marked: string, cmd: Command) => applied(marked, (snap) => runCommand(snap, cmd));
 
 describe("inline marks", () => {
   it("wraps the selection", () => expect(run("a ⟦b c⟧ d", "bold")).toBe("a **⟦b c⟧** d"));

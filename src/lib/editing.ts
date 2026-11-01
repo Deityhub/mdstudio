@@ -6,6 +6,8 @@
  * CodeMirror, so it is fast to test and reusable by any editing surface.
  */
 
+import { fenceAt } from "./blocks";
+
 export type Snapshot = { text: string; from: number; to: number };
 export type Change = { from: number; to: number; insert: string };
 /** `changes` are ascending, non-overlapping and expressed in original-document positions. */
@@ -26,6 +28,8 @@ export type Context = {
   heading: number;
   quote: boolean;
   list: "bullet" | "ordered" | "task" | null;
+  /** Language of the fenced code block around the selection ("" when it has none), else null. */
+  codeLang: string | null;
 };
 
 export function applyEdit(text: string, edit: Edit): string {
@@ -36,7 +40,7 @@ export function applyEdit(text: string, edit: Edit): string {
 }
 
 /** Maps an original position through the changes. `assoc > 0` places it after text inserted at that exact position. */
-function mapPos(changes: Change[], pos: number, assoc: 1 | -1): number {
+export function mapPos(changes: Change[], pos: number, assoc: 1 | -1): number {
   let shift = 0;
   for (const c of changes) {
     if (c.to < pos || (c.to === pos && c.from < c.to)) shift += c.insert.length - (c.to - c.from);
@@ -447,5 +451,6 @@ export function getContext(snap: Snapshot): Context {
     heading: kind.type === "heading" ? kind.level : 0,
     quote: parsed.quote !== "",
     list: isList(kind) ? (kind.type as "bullet" | "ordered" | "task") : null,
+    codeLang: fenceAt(text, from, to)?.lang ?? null,
   };
 }
