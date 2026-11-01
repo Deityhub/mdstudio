@@ -20,12 +20,13 @@ bun run dev        # http://localhost:8080
 
 ## Before you push
 
-Write the test first (`src/lib/*.test.ts`, with e2e coverage where behavior needs a browser), then:
+Write the test first (`src/lib/*.test.ts`, plus a Playwright spec in `e2e/` where behavior needs a real browser; run `bunx playwright install chromium` once), then:
 
 ```bash
 bun run lint
+bun run typecheck
 bun run test
-bun run build
+bun run e2e         # builds the self-hosted output and runs Playwright
 bun run licenses   # only needed after changing dependencies
 ```
 
