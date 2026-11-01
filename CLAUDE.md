@@ -36,12 +36,11 @@ Before proposing or making changes, read the documentation in this order:
 2. **True Portability:** Cloudflare D1 runs SQLite at the edge. A self-hosted Docker container also runs zero-dependency SQLite (`better-sqlite3`). By standardizing on SQLite via Drizzle ORM, 100% of the database schema and query logic is shared between the cloud deployment and self-hosters.
 3. **No Vendor Lock-in:** Writers own their data without dependency on external hosted Postgres providers.
 
-### Supabase Cleanup Checklist (To Be Performed in Next Build / Cleanup Turn):
-- [ ] Delete `src/integrations/supabase/` entirely.
-- [ ] Delete root `supabase/` directory and `supabase/config.toml`.
-- [ ] Remove `@supabase/supabase-js` from `package.json`.
-- [ ] Clean up `src/start.ts`: remove `import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher"` and remove `attachSupabaseAuth` from `functionMiddleware`.
-- [ ] Clean up any stale Supabase error logging in `src/lib/lovable-error-reporting.ts`.
+- [x] Delete `src/integrations/supabase/` entirely.
+- [x] Delete root `supabase/` directory and `supabase/config.toml`.
+- [x] Remove `@supabase/supabase-js` from `package.json`.
+- [x] Clean up `src/start.ts`: remove `import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher"` and remove `attachSupabaseAuth` from `functionMiddleware`.
+- [x] Clean up any stale Supabase error logging in `src/lib/lovable-error-reporting.ts`.
 
 ---
 
