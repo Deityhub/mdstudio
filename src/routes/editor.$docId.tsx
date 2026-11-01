@@ -5,9 +5,15 @@ export const Route = createFileRoute("/editor/$docId")({
   head: () => ({
     meta: [
       { title: "Draft | Markdown Studio" },
-      { name: "description", content: "Edit a Markdown draft with a faithful live preview and portability checks." },
+      {
+        name: "description",
+        content: "Edit a Markdown draft with a faithful live preview and portability checks.",
+      },
       { property: "og:title", content: "Draft | Markdown Studio" },
-      { property: "og:description", content: "Edit a Markdown draft with a faithful live preview and portability checks." },
+      {
+        property: "og:description",
+        content: "Edit a Markdown draft with a faithful live preview and portability checks.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },

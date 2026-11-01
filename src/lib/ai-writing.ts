@@ -2,9 +2,17 @@ import { z } from "zod";
 
 export const writingRequestSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("metadata"), draft: z.string().trim().min(1).max(100000) }),
-  z.object({ mode: z.literal("write"), topic: z.string().trim().min(1).max(5000), notes: z.string().max(10000).default("") }),
+  z.object({
+    mode: z.literal("write"),
+    topic: z.string().trim().min(1).max(5000),
+    notes: z.string().max(10000).default(""),
+  }),
 ]);
-export const metadataSchema = z.object({ title: z.string(), description: z.string(), tags: z.array(z.string()) });
+export const metadataSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  tags: z.array(z.string()),
+});
 export type SuggestedMetadata = z.infer<typeof metadataSchema>;
 export type WritingRequest = z.infer<typeof writingRequestSchema>;
 export type WritingEvent =
@@ -13,9 +21,14 @@ export type WritingEvent =
   | { type: "done" }
   | { type: "error"; message: string };
 
-export async function readWritingStream(response: Response, onEvent: (event: WritingEvent) => void) {
+export async function readWritingStream(
+  response: Response,
+  onEvent: (event: WritingEvent) => void,
+) {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: `AI request failed (${response.status}).` }));
+    const error = await response
+      .json()
+      .catch(() => ({ message: `AI request failed (${response.status}).` }));
     throw new Error(error.message ?? `AI request failed (${response.status}).`);
   }
   if (!response.body) throw new Error("The AI response was empty.");
@@ -40,7 +53,8 @@ export async function readWritingStream(response: Response, onEvent: (event: Wri
       if (chunk.done) break;
     }
     consume(pending);
-    if (!completed) throw new Error("Generation was interrupted. Your partial draft has been kept.");
+    if (!completed)
+      throw new Error("Generation was interrupted. Your partial draft has been kept.");
   } finally {
     await reader.cancel().catch(() => {});
     reader.releaseLock();

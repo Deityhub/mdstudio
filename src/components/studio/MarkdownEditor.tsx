@@ -1,6 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { EditorState } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection } from "@codemirror/view";
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  drawSelection,
+} from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
@@ -33,10 +40,12 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   const silent = useRef(false);
 
   useEffect(() => {
-    const wrapCmd = (before: string, after = before) => (v: EditorView) => {
-      api.wrap(before, after);
-      return !!v;
-    };
+    const wrapCmd =
+      (before: string, after = before) =>
+      (v: EditorView) => {
+        api.wrap(before, after);
+        return !!v;
+      };
     const state = EditorState.create({
       doc: props.value,
       extensions: [
@@ -69,7 +78,9 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
             cb.current.onScrollRatio?.(max > 0 ? s.scrollTop / max : 0);
           },
           paste: (e, v) => {
-            const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+            const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
+              f.type.startsWith("image/"),
+            );
             if (files.length) {
               e.preventDefault();
               cb.current.onFiles?.(files);
@@ -130,7 +141,11 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
       for (let n = start; n <= end; n++) {
         const line = v.state.doc.line(n);
         const stripped = line.text.replace(/^(#{1,6}\s|>\s|-\s|\d+\.\s)/, "");
-        changes.push({ from: line.from, to: line.to, insert: (line.text.startsWith(prefix) ? "" : prefix) + stripped });
+        changes.push({
+          from: line.from,
+          to: line.to,
+          insert: (line.text.startsWith(prefix) ? "" : prefix) + stripped,
+        });
       }
       v.dispatch({ changes });
       v.focus();
@@ -143,7 +158,10 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
     goToLine(line) {
       const v = view.current!;
       const l = v.state.doc.line(Math.min(Math.max(1, line), v.state.doc.lines));
-      v.dispatch({ selection: { anchor: l.from }, effects: EditorView.scrollIntoView(l.from, { y: "start", yMargin: 40 }) });
+      v.dispatch({
+        selection: { anchor: l.from },
+        effects: EditorView.scrollIntoView(l.from, { y: "start", yMargin: 40 }),
+      });
       v.focus();
     },
     scrollToRatio(r) {

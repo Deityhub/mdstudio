@@ -6,9 +6,15 @@ export const Route = createFileRoute("/editor/")({
   head: () => ({
     meta: [
       { title: "Editor | Markdown Studio" },
-      { name: "description", content: "Write and preview portable Markdown with live preview, import and export." },
+      {
+        name: "description",
+        content: "Write and preview portable Markdown with live preview, import and export.",
+      },
       { property: "og:title", content: "Editor | Markdown Studio" },
-      { property: "og:description", content: "Write and preview portable Markdown with live preview, import and export." },
+      {
+        property: "og:description",
+        content: "Write and preview portable Markdown with live preview, import and export.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -25,5 +31,9 @@ function EditorIndex() {
       navigate({ to: "/editor/$docId", params: { docId: d.id }, replace: true });
     })();
   }, [navigate]);
-  return <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">Opening your drafts…</div>;
+  return (
+    <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
+      Opening your drafts…
+    </div>
+  );
 }
