@@ -32,10 +32,9 @@ Fields: title, slug, date, cover image URL, description, tags (comma separated).
 - Errors are shown inline (auth, quota, network/CORS).
 
 ## 7. Small screens — `06_mobile_editor_view.png`, `07_mobile_preview_view.png`
-- **Below 640px** the studio is a single pane: the view toggle offers Editor and Preview only, and the panel buttons move to a bottom navigation bar.
+- **Below 768px** the studio is a single pane: the view toggle offers Editor and Preview only, and the panel buttons move to a bottom navigation bar.
 - **Below 1280px** the drafts list opens as a left sheet and Checks, Outline and Front matter open as a right sheet, sharing the same panel components as the desktop sidebars.
 - **At 1280px and above** the drafts sidebar and the panel column are docked.
-- Spec target is single pane below 768px; the 640-767px range currently shows the split view (tracked in `SYSTEM_SPEC.md` §12).
 
 ## Interactions
 - Autosave 400ms after typing. Unsaved edits are flushed immediately when switching drafts, leaving the studio, hiding the tab or closing the page. A failed save shows "Not saved" and one toast.

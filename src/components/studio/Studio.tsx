@@ -129,7 +129,7 @@ export function Studio({ docId }: { docId: string }) {
   const [mobilePanel, setMobilePanel] = useState<Panel>(null);
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1280px)");
-    const small = window.matchMedia("(max-width: 639px)");
+    const small = window.matchMedia("(max-width: 767px)");
     const sync = () => {
       setCompact(!desktop.matches);
       setPhone(small.matches);
@@ -681,7 +681,7 @@ export function Studio({ docId }: { docId: string }) {
                     key={v}
                     variant={effectiveView === v ? "secondary" : "ghost"}
                     size="icon"
-                    className={cn("h-10 w-10 shrink-0", v === "split" && "hidden sm:inline-flex")}
+                    className={cn("h-10 w-10 shrink-0", v === "split" && "hidden md:inline-flex")}
                     onClick={() => setView(v)}
                     aria-label={`${v} view`}
                     aria-pressed={effectiveView === v}
@@ -691,7 +691,7 @@ export function Studio({ docId }: { docId: string }) {
                   </Button>
                 ))}
               </div>
-              {!focus && <div className="hidden sm:flex xl:hidden">{panelButtons}</div>}
+              {!focus && <div className="hidden md:flex xl:hidden">{panelButtons}</div>}
             </div>
           </div>
         </header>
@@ -804,7 +804,7 @@ export function Studio({ docId }: { docId: string }) {
         {!focus && (
           <nav
             aria-label="Document panels"
-            className="flex shrink-0 items-center justify-around border-t border-border pb-[env(safe-area-inset-bottom)] sm:hidden"
+            className="flex shrink-0 items-center justify-around border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
           >
             {panelButtons}
           </nav>

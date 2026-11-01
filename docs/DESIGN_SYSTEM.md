@@ -42,8 +42,8 @@ Radius: `--radius: 0.5rem` (sm/md/lg/xl derived). Shadows: minimal, soft; prefer
 GitHub-like prose on `bg-paper`: max-width ~72ch, headings in Fraunces, links primary with underline, blockquote left border `border`, tables bordered with zebra `muted`, code `code-bg` + mono, task-list checkboxes, images max-width 100%.
 
 ## Layout & breakpoints
-- `< 640px` phone: single pane (Editor / Preview toggle), horizontally scrollable toolbar, panel buttons in a bottom nav, library and panels in sheets, condensed status bar. The spec target is `< 768px`; the 640-767px gap is tracked in `SYSTEM_SPEC.md` §12.
-- `640-1279px`: split view with scroll sync; the library opens as a left sheet and the panels as a right sheet.
+- `< 768px` phone: single pane (Editor / Preview toggle), horizontally scrollable toolbar, panel buttons in a bottom nav, library and panels in sheets, condensed status bar.
+- `768-1279px`: split view with scroll sync; the library opens as a left sheet and the panels as a right sheet.
 - `>= 1280px` desktop: docked library sidebar (about 240px, collapsible) | editor | preview (scroll-synced) | docked side panel (about 288px, Checks/Outline/Front matter).
 - Focus mode: hides chrome, centers the editor.
 - Touch targets >= 40px; dialogs scroll within the viewport.
