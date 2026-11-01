@@ -4,6 +4,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -68,12 +69,16 @@ import {
   normalizeMarkdown,
   embedImages,
   htmlToMarkdown,
-  standaloneHtml,
+  supports,
   splitFrontMatter,
   joinFrontMatter,
 } from "@/lib/markdown";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editing";
 import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editing-insert";
+import { hydrateDiagrams, withCachedDiagrams } from "@/lib/diagrams";
+import { renderExportBody, standaloneDocument } from "@/lib/export";
+import { ensureMath, hasMathSyntax, isMathLoaded } from "@/lib/math";
+import { patchHtml } from "@/lib/preview-dom";
 import { insertTable } from "@/lib/tables";
 import { EditorToolbar, type ToolbarHandle } from "./EditorToolbar";
 import { ShortcutsDialog } from "./ShortcutsDialog";
@@ -130,6 +135,11 @@ function readFile(file: File) {
 
 export function Studio({ docId }: { docId: string }) {
   const navigate = useNavigate();
+  // The studio is a fixed app shell: only the panes inside it scroll, never the page.
+  useEffect(() => {
+    document.documentElement.classList.add("studio-open");
+    return () => document.documentElement.classList.remove("studio-open");
+  }, []);
   const [doc, setDoc] = useState<MdDocument | null>(null);
   const [docs, setDocs] = useState<MdDocument[]>([]);
   const [missing, setMissing] = useState(false);
@@ -256,10 +266,39 @@ export function Studio({ docId }: { docId: string }) {
   const content = doc?.content ?? "";
   const deferred = useDeferredValue(content);
   const images = doc?.images ?? NO_IMAGES;
-  const html = useMemo(
-    () => renderMarkdown(deferred, profile, images),
-    [deferred, profile, images],
+  // KaTeX loads only when a document has math; bumping this re-renders once it is ready.
+  const [mathVersion, setMathVersion] = useState(0);
+  useEffect(() => {
+    if (!supports("math", profile) || !hasMathSyntax(deferred) || isMathLoaded()) return;
+    ensureMath()
+      .then(() => setMathVersion((v) => v + 1))
+      .catch((error) => {
+        console.error(error);
+        toast.error("Couldn't load math rendering. Check your connection and try again.", {
+          id: "math-load",
+        });
+      });
+  }, [deferred, profile]);
+  const html = useMemo(() => {
+    const rendered = renderMarkdown(deferred, profile, images);
+    // known diagrams go straight into the HTML so they never show up as code while typing
+    return supports("mermaid", profile) ? withCachedDiagrams(rendered) : rendered;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deferred, profile, images, mathVersion]);
+  // Only the blocks that changed are replaced (see patchHtml), then pending diagrams render.
+  // This runs before paint, so the preview never shows an intermediate state.
+  const previewBody = useRef<HTMLElement | null>(null);
+  const htmlRef = useRef(html);
+  htmlRef.current = html;
+  const syncPreview = useCallback(
+    (el: HTMLElement | null) => {
+      if (!el) return;
+      patchHtml(el, htmlRef.current);
+      if (supports("mermaid", profile)) hydrateDiagrams(el).catch((e) => console.error(e));
+    },
+    [profile],
   );
+  useLayoutEffect(() => syncPreview(previewBody.current), [html, syncPreview]);
   const issues = useMemo(() => checkPortability(deferred, profile), [deferred, profile]);
   const outline = useMemo(() => getOutline(deferred), [deferred]);
   const stats = useMemo(() => getStats(deferred), [deferred]);
@@ -347,6 +386,12 @@ export function Studio({ docId }: { docId: string }) {
     return typeof s === "string" && s ? slugify(s) : slugify(doc?.title ?? "untitled");
   };
   const hasLocalImages = issues.some((i) => i.rule === "local-image");
+  /** HTML export renders math and diagrams, which load on demand and can fail offline. */
+  const exportAsync = (fn: () => Promise<unknown>) =>
+    fn().catch((error) => {
+      console.error(error);
+      toast.error("Couldn't prepare the HTML export. Check your connection and try again.");
+    });
   const copy = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
     toast.success(`${label} copied`);
@@ -640,15 +685,24 @@ export function Studio({ docId }: { docId: string }) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>HTML</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => copy(renderMarkdown(out(true), profile), "HTML")}>
+                <DropdownMenuItem
+                  onClick={() =>
+                    exportAsync(async () => {
+                      const { html } = await renderExportBody(out(true), profile, {});
+                      await copy(html, "HTML");
+                    })
+                  }
+                >
                   <Copy className="h-4 w-4" /> Copy rendered HTML
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() =>
-                    download(
-                      `${fileBase()}.html`,
-                      standaloneHtml(doc?.title ?? "", renderMarkdown(out(true), profile)),
-                      "text/html;charset=utf-8",
+                    exportAsync(async () =>
+                      download(
+                        `${fileBase()}.html`,
+                        await standaloneDocument(doc?.title ?? "", out(true), profile, {}),
+                        "text/html;charset=utf-8",
+                      ),
                     )
                   }
                 >
@@ -785,13 +839,16 @@ export function Studio({ docId }: { docId: string }) {
                   ref={preview}
                   onScroll={onPreviewScroll}
                   className={cn(
-                    "min-w-0 overflow-y-auto",
+                    "relative min-w-0 overflow-y-auto",
                     effectiveView === "split" ? "w-1/2" : "flex-1",
                   )}
                 >
                   <article
+                    ref={(el) => {
+                      previewBody.current = el;
+                      syncPreview(el); // the pane is created fresh when switching views
+                    }}
                     className="md-preview mx-auto max-w-180 px-4 py-5 sm:px-8 sm:py-8"
-                    dangerouslySetInnerHTML={{ __html: html }}
                   />
                 </section>
               )}

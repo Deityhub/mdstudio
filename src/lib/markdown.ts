@@ -1,6 +1,7 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkRehype from "remark-rehype";
 import remarkStringify from "remark-stringify";
@@ -10,9 +11,10 @@ import rehypeStringify from "rehype-stringify";
 import rehypeParse from "rehype-parse";
 import rehypeRemark from "rehype-remark";
 import { visit } from "unist-util-visit";
+import { getKatexPlugin, KATEX_OPTIONS, remarkMathGuard } from "./math";
 import YAML from "yaml";
 import type { Root as MdRoot, Parent as MdParent } from "mdast";
-import type { Root as HastRoot, Element } from "hast";
+import type { Root as HastRoot, Element, ElementContent } from "hast";
 
 export type Profile = "commonmark" | "github" | "devto" | "obsidian";
 
@@ -36,8 +38,8 @@ const NOWHERE = { commonmark: false, github: false, devto: false, obsidian: fals
 
 /**
  * Where each feature renders. The checker's rules and the toolbar's warnings both read this, so
- * they cannot disagree (a test enforces it). `math` and `mermaid` follow what the preview can
- * show today; they widen to GitHub when the KaTeX/Mermaid renderers land.
+ * they cannot disagree (a test enforces it). A feature listed here is one the preview renders
+ * for that profile too, so "supported" means the preview matches the platform.
  */
 export const FEATURE_SUPPORT: Record<Feature, Record<Profile, boolean>> = {
   table: GFM_ONLY,
@@ -45,7 +47,7 @@ export const FEATURE_SUPPORT: Record<Feature, Record<Profile, boolean>> = {
   strike: GFM_ONLY,
   footnote: GFM_ONLY,
   alert: GITHUB_AND_OBSIDIAN,
-  math: { ...NOWHERE, obsidian: true },
+  math: GITHUB_AND_OBSIDIAN,
   mermaid: GITHUB_AND_OBSIDIAN,
   highlight: { ...NOWHERE, obsidian: true },
   html: NOWHERE,
@@ -66,7 +68,7 @@ export function supportHint(feature: Feature, profile: Profile): string | null {
   const where = PROFILES.map((p) => p.id)
     .filter((id) => supports(feature, id))
     .map((id) => PROFILE_NAMES[id]);
-  if (where.length === 0) return "Raw HTML is flagged as non-portable";
+  if (where.length === 0) return "Raw HTML may be removed or shown differently on other platforms";
   const list =
     where.length === 1
       ? where[0]
@@ -175,6 +177,40 @@ function rehypeAlerts(profile: Profile) {
   };
 }
 
+const HIGHLIGHT = /==([^=\s](?:[^=\n]*[^=\s])?)==/g;
+
+/**
+ * `==text==` as <mark>, for the profile whose platform renders it (Obsidian). Runs after
+ * sanitizing and only splits text nodes, so no HTML from the document can reach the output.
+ * Code is skipped. A highlight must sit inside one run of text: `==**bold**==` is not matched.
+ */
+function rehypeHighlights(profile: Profile) {
+  return () => (tree: HastRoot) => {
+    if (!supports("highlight", profile)) return;
+    visit(tree, "text", (node, index, parent) => {
+      if (!parent || index === undefined || !node.value.includes("==")) return;
+      if (parent.type === "element" && (parent.tagName === "code" || parent.tagName === "pre"))
+        return;
+      const parts: ElementContent[] = [];
+      let last = 0;
+      for (const m of node.value.matchAll(HIGHLIGHT)) {
+        if (m.index > last) parts.push({ type: "text", value: node.value.slice(last, m.index) });
+        parts.push({
+          type: "element",
+          tagName: "mark",
+          properties: {},
+          children: [{ type: "text", value: m[1] ?? "" }],
+        });
+        last = m.index + m[0].length;
+      }
+      if (!parts.length) return;
+      if (last < node.value.length) parts.push({ type: "text", value: node.value.slice(last) });
+      parent.children.splice(index, 1, ...parts);
+      return index + parts.length;
+    });
+  };
+}
+
 export function renderMarkdown(
   md: string,
   profile: Profile = "github",
@@ -182,10 +218,18 @@ export function renderMarkdown(
 ): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
-  const file = p
+  const mathProfile = supports("math", profile);
+  if (mathProfile) p.use(remarkMath).use(remarkMathGuard);
+  // KaTeX runs after sanitizing (so raw HTML can't smuggle anything past it) with trust off, and
+  // only once ensureMath() has loaded it; until then math shows as a code block.
+  const katex = mathProfile ? getKatexPlugin() : null;
+  const q = p
     .use(remarkRehype)
     .use(rehypeSanitize, schema)
     .use(rehypeAlerts(profile))
+    .use(rehypeHighlights(profile));
+  if (katex) q.use(katex, KATEX_OPTIONS);
+  const file = q
     .use(rehypeResolveImages(images))
     .use(rehypeHighlight, { detect: false, ignoreMissing: true } as never)
     .use(rehypeStringify)
@@ -196,7 +240,9 @@ export function renderMarkdown(
 function parse(md: string, profile: Profile): MdRoot {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
-  return p.parse(md) as MdRoot;
+  // math is always parsed so the checker can find it (and ignore code and currency) in any profile
+  p.use(remarkMath).use(remarkMathGuard);
+  return p.runSync(p.parse(md), md) as MdRoot;
 }
 
 /* ---------------- portability checker ---------------- */
@@ -325,6 +371,11 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
           "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.",
         );
     }
+    if (
+      ((node.type as string) === "math" || (node.type as string) === "inlineMath") &&
+      !supports("math", profile)
+    )
+      add(line, "math", "Math ($…$ and $$…$$) isn't supported on every platform.");
     if (node.type === "blockquote" && !supports("alert", profile)) {
       const para = (
         node as { children: { type: string; children?: { type: string; value?: string }[] }[] }
@@ -378,8 +429,6 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
       add(n, "highlight", "==highlight== isn't standard Markdown.");
     if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l))
       add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
-    if (!supports("math", profile) && /^\s*\$\$/.test(l))
-      add(n, "math", "Math blocks ($$) aren't supported on every platform.");
     if (/^\s*:::/.test(l)) add(n, "container", "Custom ::: containers are not standard Markdown.");
     if (/\S {2,}$/.test(l) && lines[i + 1]?.trim())
       add(
@@ -516,7 +565,7 @@ export function htmlToMarkdown(html: string): string {
   return String(out).trim();
 }
 
-export function standaloneHtml(title: string, bodyHtml: string) {
+export function standaloneHtml(title: string, bodyHtml: string, extraCss = "") {
   const esc = title.replace(
     /[&<>"]/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
@@ -530,7 +579,10 @@ pre{background:#f6f8fa;padding:14px;border-radius:6px;overflow:auto}code{font-fa
 table{border-collapse:collapse}th,td{border:1px solid #d0d7de;padding:6px 12px}
 blockquote{margin:0;padding:0 1em;color:#59636e;border-left:.25em solid #d0d7de}
 .md-alert{--c:#0969da;color:inherit;border-left-color:var(--c);padding:.25em 1em}.md-alert-title{margin:0 0 .25em;font-weight:600;color:var(--c)}
-.md-alert-tip{--c:#1a7f37}.md-alert-important{--c:#8250df}.md-alert-warning{--c:#9a6700}.md-alert-caution{--c:#cf222e}</style>
+.md-alert-tip{--c:#1a7f37}.md-alert-important{--c:#8250df}.md-alert-warning{--c:#9a6700}.md-alert-caution{--c:#cf222e}
+mark{background:#fff8c5;color:inherit}
+.md-mermaid{overflow-x:auto;text-align:center;margin:0 0 1em}.md-mermaid svg{max-width:100%;height:auto}.katex-display{overflow-x:auto;overflow-y:hidden}
+${extraCss}</style>
 </head><body>
 ${bodyHtml}
 </body></html>

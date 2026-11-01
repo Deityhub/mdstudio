@@ -61,7 +61,7 @@
 | **Publishing Integrations** | Direct push to GitHub repositories via personal access token, dev.to API, Hashnode API | Milestone 4 |
 | **Collaboration** | Optional real-time collaborative editing via Yjs / CRDTs | Post-v1 |
 | **WYSIWYG Editing** | Optional WYSIWYG (live-preview) mode built on CodeMirror decorations that hide syntax markers on inactive lines. The Markdown text stays the document and the output is always standard Markdown; never the default or the only mode | Milestone 2 |
-| **Math & Mermaid** | KaTeX math and Mermaid diagrams, rendered only in profiles whose target platform supports them (GitHub, Obsidian; dev.to/Hashnode partially) and flagged elsewhere. Mermaid is lazy-loaded and runs with `securityLevel: "strict"` | Planned (next) |
+| **Math & Mermaid** | KaTeX math (`$x$`, `$$…$$`, ```` ```math ````) and Mermaid diagrams, rendered only in profiles whose target platform renders them (GitHub, Obsidian) and left as source or code elsewhere. KaTeX runs after sanitizing with `trust: false` and loads on demand; Mermaid runs with `securityLevel: "strict"`, loads on demand, and shows invalid diagrams as an error under their code. Exports embed rendered math (with the KaTeX stylesheet and fonts) and inline SVG diagrams | Done |
 | **Complete Toolbar** | Formatting toolbar covering every Markdown/GFM construct and each profile's extensions (headings 1-6, emphasis, code, links, images, quotes, lists, task lists, tables, rules, footnotes, math, diagrams, alerts, HTML extras), grouped, keyboard-accessible (roving focus, Alt+F10) and profile-aware (warnings driven by `FEATURE_SUPPORT`). Edit logic is pure functions in `src/lib/editing*.ts` and `tables.ts` | Done. Rendering math and Mermaid in the preview is the next feature |
 
 ---
@@ -96,7 +96,7 @@
 | **Framework**         | TanStack Start v1, React 19, Vite 8                                                                                                                                 | Modern full-stack SSR and server functions; compiles to Edge Workers or Node runtime.             |
 | **Styling**           | Tailwind CSS v4, shadcn/ui                                                                                                                                          | Native CSS token theming (`src/styles.css`), dark mode support, accessible Radix UI primitives.   |
 | **Editor**            | CodeMirror 6 (client-only dynamic import)                                                                                                                           | Fast, modular, accessible on mobile keyboards, extensible language facets.                        |
-| **Markdown Pipeline** | Unified ecosystem (`remark-parse`, `remark-gfm`, `remark-frontmatter`, `remark-rehype`, `rehype-sanitize`, `rehype-highlight`, `rehype-stringify`; `rehype-parse` + `rehype-remark` + `remark-stringify` for HTML→MD). The preview is a sanitized HTML string. Planned: `remark-math` + `rehype-katex`, `mermaid` | Strict AST-compliant parsing, linting, conversion, and sanitization sharing a single syntax tree. |
+| **Markdown Pipeline** | Unified ecosystem (`remark-parse`, `remark-gfm`, `remark-frontmatter`, `remark-rehype`, `rehype-sanitize`, `rehype-highlight`, `rehype-stringify`; `rehype-parse` + `rehype-remark` + `remark-stringify` for HTML→MD). The preview is a sanitized HTML string. `remark-math` + `rehype-katex` (math), `mermaid` (diagrams, in the browser only) | Strict AST-compliant parsing, linting, conversion, and sanitization sharing a single syntax tree. |
 | **Client Storage**    | IndexedDB (raw, no wrapper library)                                                                                                                                          | Reliable client-side persistence for large drafts and base64 image blobs.                         |
 | **Database ORM**      | Drizzle ORM (SQLite dialect)                                                                                                                                        | Identical type-safe SQL queries run on Cloudflare D1 and `better-sqlite3`.                        |
 | **Object Storage**    | Cloudflare R2 / Local Filesystem                                                                                                                                    | S3-compatible, zero egress costs on Cloudflare; flat directory structure on Docker.               |
@@ -115,11 +115,16 @@
 │   │   ├── markdown.ts        # Unified parsing, rendering, checks, stats, exports
 │   │   ├── documentStore.ts   # IndexedDB document repository
 │   │   ├── csp.ts             # Nonce + Content-Security-Policy builder
+│   │   ├── math.ts            # Lazy KaTeX loader, currency guard, export CSS helpers
+│   │   ├── diagrams.ts        # Lazy Mermaid renderer, preview hydration, export inlining
+│   │   ├── export.ts          # Async HTML export (math + diagrams + standalone document)
 │   │   ├── images.ts          # Canvas resizing and base64 compression
 │   │   ├── ai-provider.ts     # BYOK direct browser HTTP/SSE client
 │   │   └── ai-writing.ts      # AI prompts and metadata response schemas
 │   └── styles.css             # Tailwind v4 theme tokens, prose typography, CodeMirror overrides
 ├── public/fonts/              # Self-hosted woff2 fonts + OFL licenses
+├── public/katex/              # Vendored KaTeX stylesheet, fonts and licenses (bun run vendor:katex)
+├── scripts/vendor-katex.mjs   # Copies KaTeX assets out of node_modules
 ├── infra/                     # Shared backend blueprints (scaffolded in the infra PR, activated in M3)
 │   ├── db/
 │   │   ├── schema.ts          # Drizzle SQLite schema (users, sessions, documents, revisions, assets)
@@ -148,6 +153,10 @@
 | `src/lib/blocks.ts`                        | Structural scanning shared by commands and cursor context: fenced code, GFM tables, alert quotes, whole lines. | `fenceAt`, `tableAt`, `quoteBlockAt`, `wholeLines`, `splitCells`                                                                                                                                                                         |
 | `src/lib/tables.ts`                        | Pure GFM table commands: insert, add/delete rows and columns, alignment, format, Tab navigation. | `insertTable`, `tableCommand`, `tableMove`, `isInTable`                                                                                                                                                                                  |
 | `src/components/studio/EditorToolbar.tsx`  | The formatting toolbar (menus, profile warnings, roving focus) built on the pure commands and `FEATURE_SUPPORT`. | `EditorToolbar`, `useRovingToolbar`                                                                                                                                                                                                      |
+| `src/lib/math.ts`                          | On-demand KaTeX loading, the `$5 and $10` guard, and embedding KaTeX CSS and fonts for exports. | `ensureMath`, `hasMathSyntax`, `remarkMathGuard`, `katexCssForExport`                                                                                                                                                                    |
+| `src/lib/diagrams.ts`                      | On-demand Mermaid rendering with a result cache; swaps diagram blocks in the preview and in exported HTML. | `renderDiagram`, `hydrateDiagrams`, `inlineDiagrams`                                                                                                                                                                                    |
+| `src/lib/preview-dom.ts`                   | Updates the preview block by block so unchanged content (images, math, diagrams) is never rebuilt. | `patchHtml`                                                                                                                                                                                                                              |
+| `src/lib/export.ts`                        | Async rendering for "Copy rendered HTML" and "Download standalone .html". | `renderExportBody`, `standaloneDocument`                                                                                                                                                                                                 |
 | `src/lib/csp.ts`                           | Per-request nonce and the Content-Security-Policy / security headers (§8).             | `createNonce()`, `buildCsp(nonce)`, `securityHeaders(nonce)`                                                                                                                                                                             |
 | `src/components/studio/Studio.tsx`         | Main workspace coordinator: layout, debounce autosave, drawers, panels, import/export. | State coordinator; handles keyboard shortcuts and two-way scroll mapping.                                                                                                                                                                |
 | `src/components/studio/MarkdownEditor.tsx` | CodeMirror 6 React wrapper with line numbers, keymaps, and paste handlers.             | Exposes imperative `EditorHandle` (`run`, `undo`, `redo`, `getSnapshot`, `apply`, `insert`, `goToLine`, `scrollToRatio`, `focus`).                                                                                                                                |
@@ -167,7 +176,7 @@ Each issue carries a 1-based `line` that points at the offending text (clicking 
 | `alert` | `> [!NOTE]`-style alerts outside the GitHub and Obsidian profiles (they show as a plain quote) | warning |
 | `missing-alt` | Images with empty alt text | warning |
 | `mermaid` | Mermaid blocks outside GitHub/Obsidian profiles | warning |
-| `math` | `$$` blocks outside the Obsidian profile | warning |
+| `math` | Inline or block math (found in the AST, so code and currency such as `$5 and $10` are ignored) in profiles that don't render it | warning |
 | `highlight` / `wiki-link` | `==x==` and `[[x]]` outside the Obsidian profile | warning |
 | `container` | `:::` custom containers | warning |
 | `trailing-break` | Two trailing spaces used as a line break | warning |
@@ -175,7 +184,7 @@ Each issue carries a 1-based `line` that points at the offending text (clicking 
 | `mixed-bullets` | Mixed `-`/`*`/`+` markers; points at the first line that differs | info |
 | `gfm-table` / `gfm-task` / `gfm-strike` / `gfm-footnote` | GFM extensions under the Strict CommonMark profile | warning |
 
-`math` and `mermaid` become profile-aware (rendered where supported, flagged elsewhere) with the Math & Mermaid feature.
+`math`, `mermaid` and `alert` follow `FEATURE_SUPPORT`: rendered by the preview where supported, flagged elsewhere.
 
 ***
 
@@ -425,7 +434,8 @@ CREATE TABLE share_links (
 
 | Gap | Spec expectation | Current behavior | Plan |
 | --- | --- | --- | --- |
-| Obsidian profile preview | Render what Obsidian renders | `==highlight==` and `[[wiki-links]]` are silenced in Checks but shown as plain text in the preview | Roadmap, Phase 1 |
+| Obsidian wiki-links | Render what Obsidian renders | `[[wiki-links]]` are silenced in Checks but shown as plain text in the preview (`==highlight==` now renders as a marker) | Roadmap, Phase 1 |
 | Rename draft, canonical URL, draft toggle | Listed in earlier specs | Not implemented (titles come from content) | Studio polish PR |
+| Math and diagram details | Preview = platform | Mermaid always uses its neutral light theme (no dark-mode theme yet); a document with math exports as a ~380 KB file because all KaTeX fonts are embedded; the `$…$` currency guard follows GitHub's rule (no space inside the dollars, no digit right after) | Dark mode and font pruning later |
 | Playwright e2e | Listed in the stack | Not installed | With the CI workflow |
 | Drafts from before the DB rename | n/a | Drafts in the old `keyval-store` database are not read (rename was intentional; app unreleased) | None |

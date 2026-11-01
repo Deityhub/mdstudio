@@ -14,9 +14,9 @@ Editor, strict preview, scroll sync, profiles + portability checker, import/drag
 6. **More checks**: heading level skips, duplicate headings/anchors, broken internal anchors, missing alt text, overly long lines in tables, empty links.
 7. **Paste-image from clipboard** and image manager panel (rename, delete unused, size).
 8. **Spellcheck / grammar** toggle (browser native first).
-9. **Math (KaTeX) and Mermaid**, profile-gated: rendered only where the target platform renders them, flagged elsewhere. AC: sanitize before KaTeX (`trust: false`), Mermaid `securityLevel: "strict"` and lazy-loaded, KaTeX CSS/fonts self-hosted, standalone HTML export embeds both.
+9. ✅ **Math (KaTeX) and Mermaid**, profile-gated: rendered only where the target platform renders them, flagged elsewhere. AC: sanitize before KaTeX (`trust: false`), Mermaid `securityLevel: "strict"` and lazy-loaded, KaTeX CSS/fonts self-hosted, standalone HTML export embeds both.
 10. **Complete formatting toolbar**: every Markdown/GFM construct and profile extension (headings 1-6, emphasis, code, links, images, quotes, lists, task lists, tables, rules, footnotes, math, diagrams, alerts). AC: grouped, overflow menu on phones, shortcuts in tooltips, tools flagged when the profile can't render them, edit actions are pure tested functions.
-11. **Obsidian profile rendering**: render `==highlight==` and `[[wiki-links]]` in the Obsidian profile so the preview matches the platform.
+11. **Obsidian profile rendering**: `==highlight==` renders as a marker (done); render `[[wiki-links]]` in the Obsidian profile so the preview matches the platform.
 12. **Studio polish**: rename draft, canonical URL and draft toggle in front matter.
 13. **WYSIWYG live-preview mode** (optional): CodeMirror decorations hide syntax markers on inactive lines, Markdown remains the document. AC: round-trip is lossless by construction, never the default, works on phone.
 
