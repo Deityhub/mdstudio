@@ -13,7 +13,8 @@ This document defines the strict engineering guidelines, architecture invariants
 5. **Client-only CodeMirror:** CodeMirror 6 components interact directly with browser DOM APIs and must only be rendered behind client-only boundaries (`ClientOnly` / dynamic import).
 6. **BYOK AI Isolation:** AI writing assistants must connect directly from the user's browser to configured provider endpoints (OpenAI, Anthropic, Google Gemini, OpenAI-compatible). API keys must reside in session memory only, must never be persisted to `localStorage`, and must never be routed through an intermediary app server.
 7. **Single Source of Truth:** `docs/SYSTEM_SPEC.md` is the authoritative specification for architecture, data models, and API surfaces. If a code change modifies an architecture pattern or schema, update `docs/SYSTEM_SPEC.md` in the exact same change.
-8. **Universal SQLite Backend:** Backend storage blueprints in `infra/` share a single Drizzle SQLite schema between Cloudflare D1 and self-hosted `better-sqlite3`. Never write database-engine-specific SQL queries.
+8. **Markdown stays canonical in every editing mode:** Source, split and WYSIWYG modes edit the same text; a mode must never rewrite the document except through explicit user edits, and must never emit proprietary syntax. Math and Mermaid render only in profiles whose target platform supports them.
+9. **Universal SQLite Backend:** Backend storage blueprints in `infra/` share a single Drizzle SQLite schema between Cloudflare D1 and self-hosted `better-sqlite3`. Never write database-engine-specific SQL queries.
 
 ---
 
@@ -32,7 +33,7 @@ This document defines the strict engineering guidelines, architecture invariants
 
 ## 3. Coding Conventions & Best Practices
 
-- **Framework:** TanStack Start v1 with React 19 and Vite 7.
+- **Framework:** TanStack Start v1 with React 19 and Vite 8.
 - **Routing:** TanStack Router (`src/routes/*`). Never install or use `react-router-dom`. Route file additions must update `src/routeTree.gen.ts` automatically.
 - **UI Components:** Built on Radix UI primitives via shadcn/ui.
 - **Notifications:** Toast notifications must use `sonner`.
