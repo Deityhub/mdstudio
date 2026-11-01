@@ -34,7 +34,14 @@ export default defineConfig(({ command }) => ({
           nitro({
             preset,
             ...(preset === "cloudflare-module" && {
-              cloudflare: { nodeCompat: true, deployConfig: true },
+              cloudflare: {
+                nodeCompat: true,
+                deployConfig: true,
+                wrangler: {
+                  name: "mdstudio",
+                  routes: [{ pattern: "mdstudio.deityhub.com", custom_domain: true }],
+                },
+              },
             }),
           }),
         ]

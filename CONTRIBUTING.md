@@ -35,4 +35,6 @@ bun run licenses   # only needed after changing dependencies
 Prefer a few lines in this project over a new package. A new dependency must pass `bun run licenses`;
 anything outside the permissive set needs a reviewed exception (see `THIRD_PARTY_NOTICES.md`).
 
+Maintainers: see `docs/RELEASING.md` for how releases are cut.
+
 By contributing you agree your work is released under the MIT license.
