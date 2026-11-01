@@ -11,7 +11,7 @@ import rehypeParse from "rehype-parse";
 import rehypeRemark from "rehype-remark";
 import { visit } from "unist-util-visit";
 import YAML from "yaml";
-import type { Root as MdRoot } from "mdast";
+import type { Root as MdRoot, Parent as MdParent } from "mdast";
 import type { Root as HastRoot, Element } from "hast";
 
 export type Profile = "commonmark" | "github" | "devto" | "obsidian";
@@ -131,6 +131,64 @@ function fencedLines(lines: string[]): Set<number> {
   return set;
 }
 
+const VOID_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "source",
+  "track",
+  "wbr",
+]);
+const TAG_RE = /<(\/?)([a-zA-Z][\w-]*)\b[^>]*?(\/?)>/g;
+
+/** Anything that is not an anchor, protocol-relative or web/mail/phone URL points at a local file. */
+const isLocalUrl = (url: string) =>
+  url !== "" &&
+  !url.startsWith("#") &&
+  !url.startsWith("//") &&
+  !/^(https?|mailto|tel|sms|ftp):/i.test(url);
+
+/**
+ * Pairs raw HTML open/close tags per parent node (block HTML may open at the root and close
+ * several paragraphs later; inline HTML pairs inside its paragraph).
+ */
+function unclosedHtml(tree: MdRoot, report: (line: number, message: string) => void) {
+  const walk = (parent: MdParent) => {
+    const open: { name: string; line: number }[] = [];
+    for (const child of parent.children) {
+      if (child.type === "html") {
+        const baseLine = child.position?.start.line ?? 1;
+        for (const m of child.value.matchAll(TAG_RE)) {
+          const [, closing, rawName = "", selfClosing] = m;
+          const name = rawName.toLowerCase();
+          if (VOID_TAGS.has(name) || selfClosing) continue;
+          const line = baseLine + (child.value.slice(0, m.index).match(/\n/g)?.length ?? 0);
+          if (!closing) {
+            open.push({ name, line });
+            continue;
+          }
+          const at = open.map((o) => o.name).lastIndexOf(name);
+          if (at < 0) report(line, `Closing </${name}> has no matching opening tag.`);
+          else {
+            // tags opened after the match were never closed
+            for (const o of open.splice(at).slice(1))
+              report(o.line, `<${o.name}> is never closed.`);
+          }
+        }
+      } else if ("children" in child) walk(child as MdParent);
+    }
+    for (const o of open) report(o.line, `<${o.name}> is never closed.`);
+  };
+  walk(tree);
+}
+
 export function checkPortability(md: string, profile: Profile = "github"): Issue[] {
   const issues: Issue[] = [];
   const lines = md.split(/\r?\n/);
@@ -168,6 +226,15 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
           "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.",
         );
     }
+    if (node.type === "link" || node.type === "definition") {
+      const url = (node as { url: string }).url;
+      if (isLocalUrl(url))
+        add(
+          line,
+          "local-link",
+          `Link to a local file (${url}) will break outside this folder. Use a full URL.`,
+        );
+    }
     if (node.type === "code") {
       const lang = (node as { lang?: string | null }).lang;
       if (
@@ -180,7 +247,11 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
     }
   });
 
+  unclosedHtml(tree, (line, message) => add(line, "unclosed-html", message));
+
   const markers = new Set<string>();
+  let firstMarker: string | undefined;
+  let mixedAt = 0;
   lines.forEach((l, i) => {
     const n = i + 1;
     if (inCode.has(i)) {
@@ -204,7 +275,11 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
         "Trailing spaces for line breaks are invisible and often trimmed. Use a backslash (\\) instead.",
       );
     const lm = l.match(/^\s*([-*+])\s+\S/);
-    if (lm?.[1] && !/^\s*[-*_](\s*[-*_]){2,}\s*$/.test(l)) markers.add(lm[1]);
+    if (lm?.[1] && !/^\s*[-*_](\s*[-*_]){2,}\s*$/.test(l)) {
+      markers.add(lm[1]);
+      firstMarker ??= lm[1];
+      if (lm[1] !== firstMarker && !mixedAt) mixedAt = n;
+    }
     if (profile === "commonmark") {
       if (/^\s*\|?.*\|.*\|?\s*$/.test(l) && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1] ?? ""))
         add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
@@ -214,7 +289,7 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
   });
   if (markers.size > 1)
     add(
-      1,
+      mixedAt,
       "mixed-bullets",
       `Mixed bullet markers (${[...markers].join(" ")}) can split lists. Normalizing on export fixes this.`,
       "info",
