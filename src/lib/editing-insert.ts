@@ -250,3 +250,106 @@ export function insertAlert(snap: Snapshot, kind: AlertKind): Edit {
     to: map(to),
   };
 }
+
+/* ------------------------------ math, diagrams, HTML ------------------------------ */
+
+/** `$$` fences around the selected lines (or the caret's line); an empty block on a blank line. */
+export function insertMathBlock(snap: Snapshot): Edit {
+  const { text, from, to } = snap;
+  const { blockFrom, blockTo, lines } = wholeLines(text, from, to);
+  const content = lines.join("\n");
+  if (content.trim() === "") return insertBlock(snap, "$$\n\n$$", { from: 3, to: 3 });
+  const shift = "$$\n".length;
+  return {
+    changes: [{ from: blockFrom, to: blockTo, insert: `$$\n${content}\n$$` }],
+    from: from + shift,
+    to: to + shift,
+  };
+}
+
+export const MERMAID_TEMPLATES: { id: string; label: string; code: string }[] = [
+  {
+    id: "flowchart",
+    label: "Flowchart",
+    code: "graph TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Do it]\n  B -->|No| D[Skip it]",
+  },
+  {
+    id: "sequence",
+    label: "Sequence diagram",
+    code: "sequenceDiagram\n  participant A as Alice\n  participant B as Bob\n  A->>B: Hello\n  B-->>A: Hi",
+  },
+  {
+    id: "class",
+    label: "Class diagram",
+    code: "classDiagram\n  class Animal {\n    +String name\n    +speak()\n  }\n  Animal <|-- Dog",
+  },
+  {
+    id: "state",
+    label: "State diagram",
+    code: "stateDiagram-v2\n  [*] --> Draft\n  Draft --> Review\n  Review --> Published\n  Published --> [*]",
+  },
+  {
+    id: "er",
+    label: "Entity relationship",
+    code: "erDiagram\n  USER ||--o{ POST : writes\n  POST {\n    string title\n  }",
+  },
+  {
+    id: "gantt",
+    label: "Gantt chart",
+    code: "gantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Work\n  Write :a1, 2026-01-01, 7d",
+  },
+  { id: "pie", label: "Pie chart", code: 'pie title Share\n  "A" : 60\n  "B" : 40' },
+];
+
+/** A Mermaid code block with the starter code selected, ready to overwrite. */
+export function insertMermaid(snap: Snapshot, id: string): Edit | null {
+  const template = MERMAID_TEMPLATES.find((t) => t.id === id);
+  if (!template) return null;
+  const open = "```mermaid\n";
+  return insertBlock(snap, `${open}${template.code}\n\`\`\``, {
+    from: open.length,
+    to: open.length + template.code.length,
+  });
+}
+
+/** Wraps the selection in `<tag>…</tag>`, or removes the tag when it is already there. */
+export function wrapTag({ text, from, to }: Snapshot, tag: string): Edit {
+  const open = `<${tag}>`;
+  const close = `</${tag}>`;
+  if (from === to) {
+    const insert = `${open}text${close}`;
+    return {
+      changes: [{ from, to, insert }],
+      from: from + open.length,
+      to: from + open.length + 4,
+    };
+  }
+  const selected = text.slice(from, to);
+  const changes: Change[] =
+    selected.startsWith(open) &&
+    selected.endsWith(close) &&
+    selected.length > open.length + close.length
+      ? [
+          { from, to: from + open.length, insert: "" },
+          { from: to - close.length, to, insert: "" },
+        ]
+      : text.slice(from - open.length, from) === open && text.slice(to, to + close.length) === close
+        ? [
+            { from: from - open.length, to: from, insert: "" },
+            { from: to, to: to + close.length, insert: "" },
+          ]
+        : [
+            { from, to: from, insert: open },
+            { from: to, to, insert: close },
+          ];
+  return { changes, from: mapPos(changes, from, 1), to: mapPos(changes, to, -1) };
+}
+
+/** A collapsible `<details>` block with the summary selected. */
+export function insertDetails(snap: Snapshot): Edit {
+  const lead = "<details>\n<summary>";
+  return insertBlock(snap, `${lead}Summary</summary>\n\nContent\n\n</details>`, {
+    from: lead.length,
+    to: lead.length + "Summary".length,
+  });
+}

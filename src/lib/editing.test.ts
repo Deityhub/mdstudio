@@ -131,3 +131,12 @@ describe("context", () => {
     expect(ctx("x¦").list).toBeNull();
   });
 });
+
+describe("inline math", () => {
+  it("wraps and unwraps with single dollars", () => {
+    expect(run("⟦x+1⟧", "math")).toBe("$⟦x+1⟧$");
+    expect(run("$⟦x+1⟧$", "math")).toBe("⟦x+1⟧");
+    expect(run("a wo¦rd", "math")).toBe("a $wo¦rd$");
+    expect(run("$a ¦b$", "math")).toBe("a ¦b");
+  });
+});

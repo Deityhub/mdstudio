@@ -13,7 +13,7 @@ export type Change = { from: number; to: number; insert: string };
 /** `changes` are ascending, non-overlapping and expressed in original-document positions. */
 export type Edit = { changes: Change[]; from: number; to: number };
 
-export type Mark = "bold" | "italic" | "strike" | "code" | "highlight";
+export type Mark = "bold" | "italic" | "strike" | "code" | "highlight" | "math";
 export type BlockCommand = "quote" | "bullet" | "ordered" | "task" | "indent" | "outdent";
 export type HeadingCommand = `h${0 | 1 | 2 | 3 | 4 | 5 | 6}`;
 export type Command = Mark | BlockCommand | HeadingCommand;
@@ -63,6 +63,7 @@ const MARKERS: Record<Mark, string[]> = {
   strike: ["~~"],
   code: ["`"],
   highlight: ["=="],
+  math: ["$"],
 };
 
 /** Finds `mark ... mark` spans on one line. No lookbehind: older Safari would fail to parse it. */
@@ -79,6 +80,11 @@ const SPAN_RE: Record<
   strike: { re: "~~(\\S|\\S.*?\\S)~~", open: () => 0, len: () => 2 },
   highlight: { re: "==(\\S|\\S.*?\\S)==", open: () => 0, len: () => 2 },
   code: { re: "(`+)(?!`)(.+?)\\1(?!`)", open: () => 0, len: (m) => (m[1] ?? "`").length },
+  math: {
+    re: "(^|[^$\\\\])(\\$)([^$\\s]|[^$\\s].*?[^$\\s])\\$(?!\\$)",
+    open: (m) => (m[1] ?? "").length,
+    len: () => 1,
+  },
 };
 
 type Span = { start: number; end: number; n: number };
@@ -421,7 +427,8 @@ export function runCommand(snap: Snapshot, cmd: Command): Edit | null {
     cmd === "italic" ||
     cmd === "strike" ||
     cmd === "code" ||
-    cmd === "highlight"
+    cmd === "highlight" ||
+    cmd === "math"
   )
     return toggleMark(snap, cmd);
   if (cmd === "indent") return shiftIndent(snap, 1);
