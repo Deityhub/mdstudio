@@ -10,7 +10,7 @@ Source of truth: `src/styles.css`. All colors are OKLCH CSS variables mapped to 
 | Display / headings / logo | Fraunces (serif) | `font-display` |
 | UI & body | IBM Plex Sans | `font-sans` |
 | Editor, code, kbd | JetBrains Mono | `font-mono` |
-Loaded via Google Fonts `<link>` in `__root.tsx`. Scale: UI 13–14px, editor 14–15px / 1.7, preview body 16px / 1.7, H1 2em display.
+Self-hosted as latin-subset variable woff2 files in `public/fonts/` (SIL OFL 1.1, licenses alongside), declared with `@font-face` in `src/styles.css`; Fraunces and IBM Plex Sans are preloaded in `__root.tsx`. Characters outside latin fall back to the system font. Scale: UI 13–14px, editor 14–15px / 1.7, preview body 16px / 1.7, H1 2em display.
 
 ## Color tokens
 | Token | Light | Dark | Use |

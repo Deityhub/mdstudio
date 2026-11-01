@@ -90,12 +90,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap",
-      },
+      // Preload the two fonts used above the fold; the mono font loads on demand in the editor.
+      ...["fraunces", "ibm-plex-sans"].map((name) => ({
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: `/fonts/${name}.woff2`,
+        crossOrigin: "anonymous" as const,
+      })),
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
