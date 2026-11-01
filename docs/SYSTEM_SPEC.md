@@ -306,15 +306,17 @@ CREATE TABLE share_links (
 ## 8. Security & Privacy Guarantees
 
 1. **HTML Sanitization:** Raw user input is parsed and sanitized using a strict `rehype-sanitize` schema allowing only standard formatting elements, safe attributes, and `data:image/*` or `https://` sources.
-2. **Content Security Policy (CSP):**
+2. **Content Security Policy (CSP):** Sent on every HTML response in production by the security-headers middleware (`src/start.ts`, `src/lib/csp.ts`). Each request gets a random nonce that TanStack Start stamps on its inline SSR scripts, so `script-src` never needs `'unsafe-inline'`. Styles keep `'unsafe-inline'` because CodeMirror and Radix inject style elements at runtime. `connect-src` allows `https:` and `http://localhost`/`127.0.0.1` because BYOK AI calls go directly from the browser to the writer's provider (including local runners such as Ollama). Fonts are self-hosted, so no third-party origins are needed. The same middleware sets `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` and `Strict-Transport-Security`. It is disabled in `vite dev` (HMR needs inline scripts).
    ```
    default-src 'self';
+   script-src 'self' 'nonce-<per-request>';
+   style-src 'self' 'unsafe-inline';
    img-src 'self' data: https:;
-   connect-src 'self' https:;
-   script-src 'self';
-   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-   font-src 'self' https://fonts.gstatic.com;
+   font-src 'self';
+   connect-src 'self' https: http://localhost:* http://127.0.0.1:*;
    object-src 'none';
+   base-uri 'self';
+   form-action 'self';
    frame-ancestors 'none';
    ```
 3. **Session Management:** Cryptographically random 32-byte session tokens stored as SHA-256 digests in SQLite. Delivered via `HttpOnly`, `Secure`, `SameSite=Lax` cookies.
