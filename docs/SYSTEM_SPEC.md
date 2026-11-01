@@ -419,7 +419,6 @@ CREATE TABLE share_links (
 | Gap | Spec expectation | Current behavior | Plan |
 | --- | --- | --- | --- |
 | Obsidian profile preview | Render what Obsidian renders | `==highlight==` and `[[wiki-links]]` are silenced in Checks but shown as plain text in the preview | Roadmap, Phase 1 |
-| Single-pane breakpoint | Single pane below 768px (AGENTS §2) | Single pane below 640px; 640-767px shows the split view | Follow-up fix |
 | Rename draft, canonical URL, draft toggle | Listed in earlier specs | Not implemented (titles come from content) | Studio polish PR |
 | Playwright e2e | Listed in the stack | Not installed | With the CI workflow |
 | Drafts from before the DB rename | n/a | Drafts in the old `keyval-store` database are not read (rename was intentional; app unreleased) | None |
