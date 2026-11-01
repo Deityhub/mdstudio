@@ -46,7 +46,7 @@ GitHub-like prose on `bg-paper`: max-width ~72ch, headings in Fraunces, links pr
 - `768-1279px`: split view with scroll sync; the library opens as a left sheet and the panels as a right sheet.
 - `>= 1280px` desktop: docked library sidebar (about 240px, collapsible) | editor | preview (scroll-synced) | docked side panel (about 288px, Checks/Outline/Front matter).
 - Focus mode: hides chrome, centers the editor.
-- Touch targets >= 40px; dialogs scroll within the viewport.
+- Touch targets >= 40px on phones (toolbar buttons shrink to 36px from 768px up, where a pointer is the norm); dialogs scroll within the viewport.
 
 ## Voice
 Plain, helpful, writer-first. Explain portability issues in one sentence with a fix ("`==highlight==` isn't standard; use `**bold**` or `<mark>` for GitHub").

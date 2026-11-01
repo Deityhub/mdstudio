@@ -8,7 +8,12 @@ import {
   insertImage,
   insertLink,
   insertAlert,
+  insertDetails,
+  insertMathBlock,
+  insertMermaid,
   insertRule,
+  wrapTag,
+  MERMAID_TEMPLATES,
 } from "./editing-insert";
 
 describe("insertLink", () => {
@@ -131,4 +136,34 @@ describe("insertAlert", () => {
     expect(getContext(parse("> plain ¦quote")).alert).toBeNull();
     expect(getContext(parse("para¦")).alert).toBeNull();
   });
+});
+
+describe("math, diagrams and HTML extras", () => {
+  it("fences a math block around the selection or inserts an empty one", () => {
+    expect(applied("¦", insertMathBlock)).toBe("$$\n¦\n$$\n");
+    expect(applied("⟦a+b⟧", insertMathBlock)).toBe("$$\n⟦a+b⟧\n$$");
+    expect(applied("a+¦b", insertMathBlock)).toBe("$$\na+¦b\n$$");
+  });
+
+  it("inserts a Mermaid starter with the template selected", () => {
+    const flow = MERMAID_TEMPLATES.find((t) => t.id === "flowchart")!;
+    expect(applied("¦", (s) => insertMermaid(s, "flowchart"))).toBe(
+      "```mermaid\n⟦" + flow.code + "⟧\n```\n",
+    );
+  });
+  it("offers the common diagram types", () =>
+    expect(MERMAID_TEMPLATES.map((t) => t.id)).toEqual(
+      expect.arrayContaining(["flowchart", "sequence", "class", "state", "er", "gantt", "pie"]),
+    ));
+
+  it("wraps text in an HTML tag, with a placeholder and a toggle", () => {
+    expect(applied("⟦x⟧", (s) => wrapTag(s, "kbd"))).toBe("<kbd>⟦x⟧</kbd>");
+    expect(applied("¦", (s) => wrapTag(s, "sub"))).toBe("<sub>⟦text⟧</sub>");
+    expect(applied("<kbd>⟦x⟧</kbd>", (s) => wrapTag(s, "kbd"))).toBe("⟦x⟧");
+  });
+
+  it("inserts a collapsible details block with the summary selected", () =>
+    expect(applied("¦", insertDetails)).toBe(
+      "<details>\n<summary>⟦Summary⟧</summary>\n\nContent\n\n</details>\n",
+    ));
 });

@@ -1,5 +1,4 @@
 import {
-  Fragment,
   lazy,
   Suspense,
   useCallback,
@@ -12,28 +11,7 @@ import {
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
-  Bold,
-  Italic,
-  Heading,
-  Minus,
-  Superscript,
-  Check,
-  IndentDecrease,
-  IndentIncrease,
-  ListChecks,
-  Redo2,
-  SquareCode,
-  TableProperties,
-  TriangleAlert,
-  Undo2,
-  List,
-  ListOrdered,
-  Quote,
-  Code,
-  Link2,
-  Table,
   Image as ImageIcon,
-  Strikethrough,
   Upload,
   Download,
   Copy,
@@ -73,7 +51,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { documentStore, SAMPLE, type MdDocument } from "@/lib/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/images";
@@ -95,19 +73,10 @@ import {
   joinFrontMatter,
 } from "@/lib/markdown";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editing";
-import {
-  ALERT_KINDS,
-  CODE_LANGUAGES,
-  codeBlock,
-  findLinkAt,
-  insertFootnote,
-  insertAlert,
-  insertImage,
-  insertLink,
-  insertRule,
-  type FoundLink,
-} from "@/lib/editing-insert";
-import { insertTable, tableCommand, type TableCommand } from "@/lib/tables";
+import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editing-insert";
+import { insertTable } from "@/lib/tables";
+import { EditorToolbar, type ToolbarHandle } from "./EditorToolbar";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import {
   ImageDialog,
   LinkDialog,
@@ -177,6 +146,8 @@ export function Studio({ docId }: { docId: string }) {
   }>({ open: false, initial: { text: "", url: "", title: "", editing: false }, found: null });
   const [imageDialog, setImageDialog] = useState({ open: false, initialAlt: "" });
   const [tableDialog, setTableDialog] = useState(false);
+  const [shortcuts, setShortcuts] = useState(false);
+  const toolbar = useRef<ToolbarHandle>(null);
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
   const [mobileLibrary, setMobileLibrary] = useState(false);
@@ -208,8 +179,16 @@ export function Studio({ docId }: { docId: string }) {
     if (p && PROFILES.some((x) => x.id === p)) setProfile(p);
     setNormalize(localStorage.getItem("md:normalize") === "1");
   }, []);
-  useEffect(() => localStorage.setItem("md:profile", profile), [profile]);
-  useEffect(() => localStorage.setItem("md:normalize", normalize ? "1" : "0"), [normalize]);
+  // Saved where the choice is made, not in an effect: an effect on mount would overwrite the
+  // stored value with the default before (or while) it is loaded.
+  const chooseProfile = (p: Profile) => {
+    setProfile(p);
+    localStorage.setItem("md:profile", p);
+  };
+  const chooseNormalize = (on: boolean) => {
+    setNormalize(on);
+    localStorage.setItem("md:normalize", on ? "1" : "0");
+  };
 
   const refreshList = useCallback(() => documentStore.list().then(setDocs), []);
   useEffect(() => {
@@ -447,231 +426,6 @@ export function Studio({ docId }: { docId: string }) {
     if (file) return addImages([file], values.alt);
     insert((snap) => insertImage(snap, values))();
   };
-  type Tool = { icon: typeof Bold; label: string; run: () => void; active?: boolean };
-  // Grouped as in the design: history | text | links & media | blocks | insert.
-  const toolGroups: Tool[][] = [
-    [
-      { icon: Undo2, label: "Undo (Ctrl/⌘+Z)", run: () => editor.current?.undo() },
-      { icon: Redo2, label: "Redo (Ctrl/⌘+Shift+Z)", run: () => editor.current?.redo() },
-    ],
-    [
-      { icon: Bold, label: "Bold (Ctrl/⌘+B)", run: run("bold"), active: ctx.bold },
-      { icon: Italic, label: "Italic (Ctrl/⌘+I)", run: run("italic"), active: ctx.italic },
-      {
-        icon: Strikethrough,
-        label: "Strikethrough (Ctrl/⌘+Shift+X)",
-        run: run("strike"),
-        active: ctx.strike,
-      },
-      { icon: Code, label: "Inline code (Ctrl/⌘+E)", run: run("code"), active: ctx.code },
-    ],
-    [
-      { icon: Link2, label: "Link (Ctrl/⌘+K)", run: openLink },
-      { icon: ImageIcon, label: "Image", run: openImage },
-      { icon: Superscript, label: "Footnote", run: insert(insertFootnote) },
-      { icon: Minus, label: "Horizontal rule", run: insert(insertRule) },
-    ],
-    [
-      { icon: Quote, label: "Quote (Ctrl/⌘+Shift+.)", run: run("quote"), active: ctx.quote },
-      {
-        icon: List,
-        label: "Bulleted list (Ctrl/⌘+Shift+8)",
-        run: run("bullet"),
-        active: ctx.list === "bullet",
-      },
-      {
-        icon: ListOrdered,
-        label: "Numbered list (Ctrl/⌘+Shift+7)",
-        run: run("ordered"),
-        active: ctx.list === "ordered",
-      },
-      {
-        icon: ListChecks,
-        label: "Task list (Ctrl/⌘+Shift+L)",
-        run: run("task"),
-        active: ctx.list === "task",
-      },
-      { icon: IndentDecrease, label: "Outdent list item (Shift+Tab)", run: run("outdent") },
-      { icon: IndentIncrease, label: "Indent list item (Tab)", run: run("indent") },
-    ],
-    [{ icon: Table, label: "Insert table", run: () => setTableDialog(true) }],
-  ];
-  const headingMenu = (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant={ctx.heading ? "secondary" : "ghost"}
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              onMouseDown={(e) => e.preventDefault()}
-              aria-label="Heading style"
-            >
-              <Heading className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Heading style (Ctrl/⌘+Alt+1–6)</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        onCloseAutoFocus={(e) => {
-          // keep typing where you were instead of jumping back to the menu button
-          e.preventDefault();
-          editor.current?.focus();
-        }}
-      >
-        {([0, 1, 2, 3, 4, 5, 6] as const).map((n) => (
-          <DropdownMenuItem key={n} onClick={run(`h${n}`)}>
-            <span className="flex w-4 justify-center">
-              {ctx.heading === n && <Check className="h-4 w-4" />}
-            </span>
-            {n === 0 ? "Paragraph" : `Heading ${n}`}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-  const codeMenu = (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant={ctx.codeLang !== null ? "secondary" : "ghost"}
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              onMouseDown={(e) => e.preventDefault()}
-              aria-label="Code block"
-              aria-pressed={ctx.codeLang !== null}
-            >
-              <SquareCode className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Code block</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        className="max-h-72 overflow-y-auto"
-        onCloseAutoFocus={(e) => {
-          e.preventDefault();
-          editor.current?.focus();
-        }}
-      >
-        {ctx.codeLang !== null && (
-          <>
-            <DropdownMenuItem onClick={insert((snap) => codeBlock(snap, ctx.codeLang ?? ""))}>
-              Remove code block
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
-        {[{ id: "", label: "No language" }, ...CODE_LANGUAGES].map((l) => (
-          <DropdownMenuItem key={l.id} onClick={insert((snap) => codeBlock(snap, l.id))}>
-            <span className="flex w-4 justify-center">
-              {ctx.codeLang === l.id && <Check className="h-4 w-4" />}
-            </span>
-            {l.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-  const tableOps: ([TableCommand, string] | "-")[] = [
-    ["row-above", "Add row above"],
-    ["row-below", "Add row below"],
-    ["delete-row", "Delete row"],
-    "-",
-    ["col-left", "Add column left"],
-    ["col-right", "Add column right"],
-    ["delete-col", "Delete column"],
-    "-",
-    ["align-left", "Align column left"],
-    ["align-center", "Align column center"],
-    ["align-right", "Align column right"],
-    ["align-none", "Clear column alignment"],
-    "-",
-    ["format", "Format table"],
-  ];
-  const tableMenu = (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild disabled={!ctx.table}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              onMouseDown={(e) => e.preventDefault()}
-              aria-label="Table options"
-              disabled={!ctx.table}
-            >
-              <TableProperties className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          {ctx.table ? "Table options" : "Table options (place the cursor in a table)"}
-        </TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        onCloseAutoFocus={(e) => {
-          e.preventDefault();
-          editor.current?.focus();
-        }}
-      >
-        {tableOps.map((op, i) =>
-          op === "-" ? (
-            <DropdownMenuSeparator key={i} />
-          ) : (
-            <DropdownMenuItem key={op[0]} onClick={insert((snap) => tableCommand(snap, op[0]))}>
-              {op[1]}
-            </DropdownMenuItem>
-          ),
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-  const alertMenu = (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant={ctx.alert ? "secondary" : "ghost"}
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              onMouseDown={(e) => e.preventDefault()}
-              aria-label="Alert"
-              aria-pressed={!!ctx.alert}
-            >
-              <TriangleAlert className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Alert (GitHub, Obsidian)</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent
-        align="start"
-        onCloseAutoFocus={(e) => {
-          e.preventDefault();
-          editor.current?.focus();
-        }}
-      >
-        {ALERT_KINDS.map((kind) => (
-          <DropdownMenuItem key={kind} onClick={insert((snap) => insertAlert(snap, kind))}>
-            <span className="flex w-4 justify-center">
-              {ctx.alert === kind && <Check className="h-4 w-4" />}
-            </span>
-            {kind[0] + kind.slice(1).toLowerCase()}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
 
   const errCount = issues.filter((i) => i.severity !== "info").length;
   const showLibrary = library && !focus && !compact;
@@ -911,7 +665,7 @@ export function Studio({ docId }: { docId: string }) {
                       Consistent bullets, fences and emphasis
                     </span>
                   </Label>
-                  <Switch id="normalize" checked={normalize} onCheckedChange={setNormalize} />
+                  <Switch id="normalize" checked={normalize} onCheckedChange={chooseNormalize} />
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -937,7 +691,7 @@ export function Studio({ docId }: { docId: string }) {
             }}
           />
           <div className="col-span-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-            <Select value={profile} onValueChange={(v) => setProfile(v as Profile)}>
+            <Select value={profile} onValueChange={(v) => chooseProfile(v as Profile)}>
               <SelectTrigger
                 className="h-10 w-full min-w-0 sm:max-w-[200px] [&_.text-xs]:hidden"
                 aria-label="Target platform"
@@ -987,46 +741,16 @@ export function Studio({ docId }: { docId: string }) {
           {/* Editor + preview */}
           <main className="flex min-w-0 flex-1 flex-col">
             {effectiveView !== "preview" && (
-              <div
-                role="toolbar"
-                aria-label="Formatting"
-                className="flex h-12 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-2"
-              >
-                {toolGroups.map((group, gi) => (
-                  <Fragment key={gi}>
-                    {gi > 0 && <span aria-hidden className="mx-1 h-6 w-px shrink-0 bg-border" />}
-                    {gi === 1 && headingMenu}
-                    {gi === 4 && codeMenu}
-                    {group.map((t) => (
-                      <Tooltip key={t.label}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={t.active ? "secondary" : "ghost"}
-                            size="icon"
-                            className="h-10 w-10 shrink-0"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={t.run}
-                            aria-label={t.label}
-                            aria-pressed={t.active}
-                          >
-                            <t.icon className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t.label}</TooltipContent>
-                      </Tooltip>
-                    ))}
-                    {gi === 4 && (
-                      <>
-                        {tableMenu}
-                        {alertMenu}
-                      </>
-                    )}
-                  </Fragment>
-                ))}
-                <span className="ml-auto hidden whitespace-nowrap pr-2 text-xs text-muted-foreground md:block">
-                  Paste formatted text or drop .md / images
-                </span>
-              </div>
+              <EditorToolbar
+                ref={toolbar}
+                editor={editor}
+                ctx={ctx}
+                profile={profile}
+                onOpenLink={openLink}
+                onOpenImage={openImage}
+                onOpenTable={() => setTableDialog(true)}
+                onOpenShortcuts={() => setShortcuts(true)}
+              />
             )}
             <div className="flex min-h-0 flex-1">
               {effectiveView !== "preview" && (
@@ -1048,6 +772,8 @@ export function Studio({ docId }: { docId: string }) {
                           onFiles={onFiles}
                           onContext={setCtx}
                           onLinkShortcut={openLink}
+                          onFocusToolbar={() => toolbar.current?.focus()}
+                          onShowShortcuts={() => setShortcuts(true)}
                         />
                       </Suspense>
                     </ClientOnly>
@@ -1143,6 +869,11 @@ export function Studio({ docId }: { docId: string }) {
           initialAlt={imageDialog.initialAlt}
           onOpenChange={(open) => setImageDialog((d) => ({ ...d, open }))}
           onSubmit={submitImage}
+          returnFocus={() => editor.current?.focus()}
+        />
+        <ShortcutsDialog
+          open={shortcuts}
+          onOpenChange={setShortcuts}
           returnFocus={() => editor.current?.focus()}
         />
         <TableDialog

@@ -25,6 +25,55 @@ export const PROFILES: { id: Profile; label: string; hint: string }[] = [
 
 const usesGfm = (p: Profile) => p !== "commonmark";
 
+/* ---------------- feature support (shared by the checker and the toolbar) ---------------- */
+
+export type Feature =
+  "table" | "task" | "strike" | "footnote" | "alert" | "math" | "mermaid" | "highlight" | "html";
+
+const GFM_ONLY = { commonmark: false, github: true, devto: true, obsidian: true };
+const GITHUB_AND_OBSIDIAN = { commonmark: false, github: true, devto: false, obsidian: true };
+const NOWHERE = { commonmark: false, github: false, devto: false, obsidian: false };
+
+/**
+ * Where each feature renders. The checker's rules and the toolbar's warnings both read this, so
+ * they cannot disagree (a test enforces it). `math` and `mermaid` follow what the preview can
+ * show today; they widen to GitHub when the KaTeX/Mermaid renderers land.
+ */
+export const FEATURE_SUPPORT: Record<Feature, Record<Profile, boolean>> = {
+  table: GFM_ONLY,
+  task: GFM_ONLY,
+  strike: GFM_ONLY,
+  footnote: GFM_ONLY,
+  alert: GITHUB_AND_OBSIDIAN,
+  math: { ...NOWHERE, obsidian: true },
+  mermaid: GITHUB_AND_OBSIDIAN,
+  highlight: { ...NOWHERE, obsidian: true },
+  html: NOWHERE,
+};
+
+export const supports = (feature: Feature, profile: Profile) => FEATURE_SUPPORT[feature][profile];
+
+const PROFILE_NAMES: Record<Profile, string> = {
+  github: "GitHub",
+  commonmark: "Strict CommonMark",
+  devto: "dev.to",
+  obsidian: "Obsidian",
+};
+
+/** Why a tool is flagged for this profile, or null when it renders there. */
+export function supportHint(feature: Feature, profile: Profile): string | null {
+  if (supports(feature, profile)) return null;
+  const where = PROFILES.map((p) => p.id)
+    .filter((id) => supports(feature, id))
+    .map((id) => PROFILE_NAMES[id]);
+  if (where.length === 0) return "Raw HTML is flagged as non-portable";
+  const list =
+    where.length === 1
+      ? where[0]
+      : `${where.slice(0, -1).join(", ")} and ${where[where.length - 1]}`;
+  return `Renders on ${list} only`;
+}
+
 /* ---------------- front matter ---------------- */
 
 export type FrontMatter = Record<string, unknown>;
@@ -230,6 +279,9 @@ function unclosedHtml(tree: MdRoot, report: (line: number, message: string) => v
   walk(tree);
 }
 
+const isDelimiterRow = (l: string) =>
+  l.includes("|") && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(l);
+
 export function checkPortability(md: string, profile: Profile = "github"): Issue[] {
   const issues: Issue[] = [];
   const lines = md.split(/\r?\n/);
@@ -273,7 +325,7 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
           "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.",
         );
     }
-    if (node.type === "blockquote" && profile !== "github" && profile !== "obsidian") {
+    if (node.type === "blockquote" && !supports("alert", profile)) {
       const para = (
         node as { children: { type: string; children?: { type: string; value?: string }[] }[] }
       ).children[0];
@@ -302,8 +354,7 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
       if (
         (node as { position?: unknown }).position &&
         lang === "mermaid" &&
-        profile !== "github" &&
-        profile !== "obsidian"
+        !supports("mermaid", profile)
       )
         add(line, "mermaid", "Mermaid diagrams only render on GitHub, GitLab and Obsidian.");
     }
@@ -323,11 +374,11 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
         add(n, "fence-lang", "Code block has no language, so it won't be highlighted.", "info");
       return;
     }
-    if (profile !== "obsidian" && /==[^=\s][^=]*==/.test(l))
+    if (!supports("highlight", profile) && /==[^=\s][^=]*==/.test(l))
       add(n, "highlight", "==highlight== isn't standard Markdown.");
     if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l))
       add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
-    if (profile !== "obsidian" && /^\s*\$\$/.test(l))
+    if (!supports("math", profile) && /^\s*\$\$/.test(l))
       add(n, "math", "Math blocks ($$) aren't supported on every platform.");
     if (/^\s*:::/.test(l)) add(n, "container", "Custom ::: containers are not standard Markdown.");
     if (/\S {2,}$/.test(l) && lines[i + 1]?.trim())
@@ -342,12 +393,14 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
       firstMarker ??= lm[1];
       if (lm[1] !== firstMarker && !mixedAt) mixedAt = n;
     }
-    if (profile === "commonmark") {
-      if (/^\s*\|?.*\|.*\|?\s*$/.test(l) && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1] ?? ""))
-        add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
-      if (/^\s*[-*+]\s+\[[ xX]\]/.test(l)) add(n, "gfm-task", "Task lists are a GFM extension.");
-      if (/~~[^~]+~~/.test(l)) add(n, "gfm-strike", "Strikethrough is a GFM extension.");
-    }
+    if (!supports("table", profile) && /\|/.test(l) && isDelimiterRow(lines[i + 1] ?? ""))
+      add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
+    if (!supports("task", profile) && /^\s*[-*+]\s+\[[ xX]\]/.test(l))
+      add(n, "gfm-task", "Task lists are a GFM extension.");
+    if (!supports("strike", profile) && /~~[^~]+~~/.test(l))
+      add(n, "gfm-strike", "Strikethrough is a GFM extension.");
+    if (!supports("footnote", profile) && /^\[\^[^\]\s]+\]:/.test(l))
+      add(n, "gfm-footnote", "Footnotes are a GFM extension, not strict CommonMark.");
   });
   if (markers.size > 1)
     add(

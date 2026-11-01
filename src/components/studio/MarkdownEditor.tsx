@@ -56,6 +56,10 @@ type Props = {
   onContext?: (context: Context) => void;
   /** Mod-K: the studio opens its link dialog. */
   onLinkShortcut?: () => void;
+  /** Alt-F10: move keyboard focus to the toolbar (Tab is used for indenting in the editor). */
+  onFocusToolbar?: () => void;
+  /** Mod-/: show the shortcuts list. */
+  onShowShortcuts?: () => void;
 };
 
 const snapshot = (state: EditorState): Snapshot => ({
@@ -119,6 +123,8 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
             run: cmd(`h${n}`),
           })),
           { key: "Mod-k", run: () => (cb.current.onLinkShortcut?.(), true) },
+          { key: "Alt-F10", run: () => (cb.current.onFocusToolbar?.(), true) },
+          { key: "Mod-/", run: () => (cb.current.onShowShortcuts?.(), true) },
           // Tab moves between table cells and nests list items; anywhere else it indents.
           { key: "Tab", run: (v) => tabInStructure(v, 1) },
           { key: "Shift-Tab", run: (v) => tabInStructure(v, -1) },
