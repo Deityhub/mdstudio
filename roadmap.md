@@ -7,9 +7,9 @@
 - [x] Dependency diet (unused UI components and packages removed)
 - [x] Self-hosted fonts and nonce-based CSP
 - [x] Autosave hardening, checker locations, `local-link` and `unclosed-html` rules
-- [ ] Math (KaTeX) and Mermaid, profile-gated
+- [x] Math (KaTeX) and Mermaid, profile-gated
 - [x] Complete formatting toolbar (marks, headings, lists, links, images, footnotes, rules, code blocks, tables, alerts, math/Mermaid/HTML insertion, profile warnings, keyboard model)
-- [ ] Open-source license, contributor docs and license check
+- [ ] Open-source license, contributor docs and license check (known items for the audit: `elkjs` EPL-2.0 via Mermaid needs an attribution notice; `khroma` is MIT but has no `license` field; `lightningcss` MPL-2.0 is build-time only; KaTeX font lineage is MathJax-derived, see `public/katex/README.md`)
 - [ ] CI (lint, test, build, license, e2e)
 - [ ] Infra blueprints (Cloudflare Workers + D1 + R2, Docker + SQLite)
 - [ ] Release automation (prepare-release, changelog, tags, GHCR + Docker Hub, Cloudflare deploy)
@@ -39,7 +39,7 @@
 - [ ] **Library Organization:** Full-text document search, custom tags, and folder categorization.
 - [ ] **Bulk Import & Export:** Export all drafts as a structured ZIP file; bulk import Markdown folders and archives.
 - [ ] **WYSIWYG Live-Preview Mode:** Optional CodeMirror-decoration mode that hides syntax markers on inactive lines; Markdown stays canonical.
-- [ ] **Obsidian Rendering:** Render `==highlight==` and `[[wiki-links]]` in the Obsidian profile.
+- [ ] **Obsidian Rendering:** `==highlight==` renders; `[[wiki-links]]` in the Obsidian profile still to do.
 - [ ] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
 - [ ] **Custom Checker Rules:** User-configurable linting rules and warnings for publication standards.
 

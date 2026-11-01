@@ -47,5 +47,7 @@ describe("supportHint", () => {
     expect(supportHint("table", "devto")).toBeNull();
   });
   it("explains raw HTML separately", () =>
-    expect(supportHint("html", "github")).toBe("Raw HTML is flagged as non-portable"));
+    expect(supportHint("html", "github")).toBe(
+      "Raw HTML may be removed or shown differently on other platforms",
+    ));
 });

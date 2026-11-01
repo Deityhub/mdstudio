@@ -64,7 +64,7 @@ All backend code lives in or is scaffolded via `infra/`:
 - All Markdown processing lives here. Built on unified: `remark-parse` → `remark-gfm` → `remark-frontmatter` → `remark-rehype` → `rehype-sanitize` → `rehype-highlight` → `rehype-stringify` (the preview is a sanitized HTML string).
 - Output HTML must **always** pass through `rehype-sanitize` with our configured schema (allowing data URIs for self-contained exports).
 - Portability checks inspect AST and raw lines to flag non-portable syntax: unclosed raw HTML, embedded base64 data URIs, local file references, Obsidian wiki-links, math blocks, Mermaid syntax, and trailing spaces. Anything flagged should be clickable and lead directly to where it was found so it can be fixed.
-- Target profiles supported: **Strict CommonMark**, **GitHub Flavored Markdown**, **Dev.to**, and **Obsidian**. We should also support LaTex
+- Target profiles supported: **Strict CommonMark**, **GitHub Flavored Markdown**, **Dev.to**, and **Obsidian**. We should also support LaTex (done: KaTeX math and Mermaid diagrams, see `docs/SYSTEM_SPEC.md`)
 
 ### 2. Editor (`src/components/studio/MarkdownEditor.tsx`)
 - CodeMirror 6 with custom syntax highlighting tokens matching our warm design theme.

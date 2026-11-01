@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
+import { ensureMath } from "./math";
 import {
   renderMarkdown,
   checkPortability,
@@ -176,6 +177,85 @@ describe("alerts", () => {
     expect(rule("github")).not.toContain("alert");
     expect(rule("obsidian")).not.toContain("alert");
   });
+});
+
+describe("math", () => {
+  beforeAll(async () => {
+    await ensureMath();
+  });
+  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "github") =>
+    renderMarkdown(md, p);
+
+  it("renders inline and display math with KaTeX for GitHub and Obsidian", () => {
+    for (const profile of ["github", "obsidian"] as const) {
+      expect(html("Euler: $e^{i\\pi}+1=0$.", profile)).toContain('class="katex"');
+      expect(html("$$\nx^2\n$$", profile)).toContain("katex-display");
+      expect(html("```math\nx^2\n```", profile)).toContain("katex-display");
+    }
+  });
+  it("leaves the source alone where the platform does not render math", () => {
+    for (const profile of ["commonmark", "devto"] as const) {
+      const out = html("Euler: $e^{i\\pi}$.", profile);
+      expect(out).not.toContain("katex");
+      expect(out).toContain("$e^{i");
+    }
+  });
+  it("does not mistake currency for math", () => {
+    expect(html("It costs $5 and $10 today.")).not.toContain("katex");
+    expect(html("It costs $5 and $10 today.")).toContain("$5 and $10");
+    expect(html("From $5-$10.")).not.toContain("katex");
+    expect(html("a $ b $ c")).not.toContain("katex");
+    expect(html("escaped \\$5 and \\$6")).not.toContain("katex");
+  });
+  it("keeps KaTeX from producing links or scripts", () => {
+    const out = html("$\\href{javascript:alert(1)}{click}$");
+    expect(out).not.toMatch(/href=|<a /i);
+    expect(html("$a$\n\n<script>alert(1)</script>")).not.toContain("<script");
+  });
+  it("shows invalid math as an error instead of throwing", () => {
+    expect(() => html("$\\frac{1$")).not.toThrow();
+    expect(html("$\\frac{1$")).toContain("katex-error");
+  });
+  it("is flagged by the checker outside the profiles that render it, ignoring code and currency", () => {
+    const rule = (md: string, p: Parameters<typeof checkPortability>[1]) =>
+      checkPortability(md, p).some((i) => i.rule === "math");
+    for (const p of ["commonmark", "devto"] as const) {
+      expect(rule("so $x^2$ here", p)).toBe(true);
+      expect(rule("$$\nx\n$$", p)).toBe(true);
+      expect(rule("costs $5 and $10", p)).toBe(false);
+      expect(rule("code `$x$` here", p)).toBe(false);
+      expect(rule("```\n$x$\n```", p)).toBe(false);
+    }
+    expect(rule("so $x^2$ here", "github")).toBe(false);
+    expect(rule("so $x^2$ here", "obsidian")).toBe(false);
+  });
+});
+
+describe("highlights", () => {
+  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "obsidian") =>
+    renderMarkdown(md, p);
+
+  it("renders ==text== as <mark> for Obsidian", () => {
+    expect(html("a ==b== c")).toContain("a <mark>b</mark> c");
+    expect(html("==one== and ==two==")).toBe("<p><mark>one</mark> and <mark>two</mark></p>");
+    expect(html("# Title with ==mark==")).toContain("<mark>mark</mark>");
+    expect(html("- item ==x==")).toContain("<mark>x</mark>");
+  });
+  it("leaves the text alone for platforms that don't render it", () => {
+    for (const p of ["github", "commonmark", "devto"] as const) {
+      expect(html("a ==b== c", p)).toContain("==b==");
+      expect(html("a ==b== c", p)).not.toContain("<mark");
+    }
+  });
+  it("ignores code and things that are not highlights", () => {
+    expect(html("`==x==`")).not.toContain("<mark");
+    expect(html("```\n==x==\n```")).not.toContain("<mark");
+    expect(html("a == b ==")).not.toContain("<mark");
+    expect(html("==unclosed")).not.toContain("<mark");
+    expect(html("a ==\n== b")).not.toContain("<mark");
+  });
+  it("does not let raw HTML through", () =>
+    expect(html("<mark>x</mark> and ==y==")).toBe("<p>x and <mark>y</mark></p>"));
 });
 
 describe("paste conversion", () => {

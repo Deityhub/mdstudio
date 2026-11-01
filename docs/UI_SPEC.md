@@ -17,10 +17,16 @@ Header with the Fraunces wordmark and an "Open editor" button. Hero: "Write once
   - **Link** (Mod-K) and **Image** open dialogs. The link dialog edits the link under the caret; the image dialog requires alt text and accepts a URL or an uploaded file (stored in the draft).
   - **Code block** menu: fences the selection or current line with a language, switches the language inside a block, or removes the fence.
   - **Table** menu: Insert table (rows and columns dialog), and, inside a table, add or delete rows and columns, column alignment and Format table. Tab / Shift-Tab move between cells and Tab past the last cell adds a row.
-  - **Insert** menu: Outdent / Indent · Footnote, Horizontal rule, Highlight, Inline math, Math block · Alert (Note, Tip, Important, Warning, Caution) · Diagram (Mermaid starters: flowchart, sequence, class, state, entity relationship, Gantt, pie) · HTML (collapsible section, keyboard key, subscript, superscript, mark) · Keyboard shortcuts.
-  - **Profile warnings:** a tool the selected platform won't render keeps working but carries a warning dot (buttons) or icon (menu items) and a hint such as "Renders on GitHub and Obsidian only". The same table drives the Checks panel, so the two never disagree.
-  - Math and Mermaid tools insert the syntax; rendering them in the preview comes with the KaTeX/Mermaid feature.
-- **Editor** (CodeMirror, line numbers) and **Preview** (`.md-preview`) with two-way scroll sync.
+  - **Insert** menu: Outdent / Indent · Footnote, Horizontal rule, Highlight, Inline math, Math block · Alert (Note, Tip, Important, Warning, Caution) · Diagram (Mermaid starters: flowchart, sequence, class, state, entity relationship, Gantt, pie) · HTML (collapsible section, keyboard key, subscript, superscript) · Keyboard shortcuts.
+  - Every Insert-menu entry has an icon, and nested menus (Alert, Diagram, HTML) use icons too.
+  - **Profile warnings:** a tool the selected platform won't render keeps working but carries a warning dot (buttons) or icon (menu items) and a hint such as "Renders on GitHub and Obsidian only". In menus the hint appears instantly on hover or keyboard focus, and the warning icon sits next to the submenu arrow. Raw HTML reads "may be removed or shown differently on other platforms": HTML is only partly supported (GitHub keeps `<details>`, `<kbd>`, `<sub>` and `<sup>`, for example) and each platform filters it differently. The same table drives the Checks panel, so the two never disagree.
+  - Math and Mermaid tools insert the syntax, and the preview renders it for the GitHub and Obsidian profiles (see Preview below).
+- **Editor** (CodeMirror, line numbers) and **Preview** (`.md-preview`) with two-way scroll sync. The studio is a fixed shell: only the editor, preview and side panels scroll, never the page.
+  - **Highlights:** `==text==` renders as a marker highlight for the Obsidian profile; other profiles show the text unchanged.
+  - **Smooth updates:** the preview replaces only the blocks that changed, so images, math and diagrams don't flash while you type; a diagram being edited keeps its previous version on screen until the new one is ready.
+  - **Math:** `$x$`, `$$…$$` and ```` ```math ```` render with KaTeX for GitHub and Obsidian; `$5 and $10` stays text. KaTeX loads the first time a document needs it.
+  - **Diagrams:** ```` ```mermaid ```` blocks render as SVG for GitHub and Obsidian; an invalid diagram keeps its code and shows the error beneath it. Other profiles show the source, as their platforms do.
+  - **Export:** "Copy rendered HTML" and "Download standalone .html" include the rendered math (the standalone file embeds the KaTeX stylesheet and fonts) and inline SVG diagrams.
 - **Side panel buttons:** Checks (badge with the count of warnings and errors), Outline, Front matter.
 - **Status bar:** words · reading time · image count · save status (Saving… / Saved in this browser / Not saved) · target platform.
 
