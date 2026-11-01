@@ -9,7 +9,7 @@
 - [x] **Portability Linter:** Real-time syntax checker with selectable profiles (Strict CommonMark, GitHub, dev.to, Obsidian).
 - [x] **Import Pipeline:** Support for `.md` file imports, drag-and-drop, and rich HTML-to-Markdown paste conversion.
 - [x] **Export Pipeline:** Standard `.md`, clipboard copy, self-contained `.md` with base64 embedded images, and standalone `.html`.
-- [x] **Draft Library:** Local-first IndexedDB persistence (`idb-keyval`) with autosave debounce (400ms).
+- [x] **Draft Library:** Local-first IndexedDB persistence with autosave debounce (400ms).
 - [x] **Writing Aids:** Live word count, character count, reading time estimation, and click-to-navigate outline.
 - [x] **BYOK AI Assistant:** Direct browser streaming integration for OpenAI, Anthropic, Gemini, and custom OpenAI-compatible models.
 - [x] **Responsive Workspace:** Full phone and tablet responsiveness with single-pane view switching and drawer-based panels.

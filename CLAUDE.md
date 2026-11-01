@@ -72,7 +72,7 @@ All backend code lives in or is scaffolded via `infra/`:
 - Two-way scroll ratio synchronization with the preview pane.
 
 ### 3. Local Storage (`src/lib/documentStore.ts`)
-- Client persistence uses IndexedDB (`idb-keyval`).
+- Client persistence uses raw IndexedDB (no wrapper library). The database is `mdstudio-db` / store `mdstudio-store`, kept for compatibility with drafts saved by earlier versions.
 - All document mutations go through the `documentStore` interface so local storage can seamlessly sync with D1/SQLite later.
 
 ### 4. Client-Side AI Engine (`src/lib/ai-provider.ts` & `AiWriter.tsx`)

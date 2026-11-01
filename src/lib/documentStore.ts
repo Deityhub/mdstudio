@@ -1,5 +1,3 @@
-import { get, set, del, keys, getMany } from "idb-keyval";
-
 export type MdDocument = {
   id: string;
   title: string;
@@ -10,34 +8,109 @@ export type MdDocument = {
   updatedAt: number;
 };
 
+/** Minimal key-value backend. IndexedDB in the browser, a Map in tests. */
+export type KeyValueStore = {
+  get<T>(key: string): Promise<T | undefined>;
+  set(key: string, value: unknown): Promise<void>;
+  del(key: string): Promise<void>;
+  /** Every value whose key starts with `prefix`. */
+  values<T>(prefix: string): Promise<T[]>;
+};
+
+const DB_NAME = "mdstudio-db";
+const STORE = "mdstudio-store";
+
+let dbPromise: Promise<IDBDatabase> | undefined;
+
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") return reject(new Error("IndexedDB is not available"));
+    const req = indexedDB.open(DB_NAME);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function db(): Promise<IDBDatabase> {
+  dbPromise ??= openDb().then(
+    (d) => {
+      // Another tab upgrading or the browser evicting the connection: reopen on next use.
+      const reset = () => {
+        dbPromise = undefined;
+      };
+      d.onversionchange = () => {
+        d.close();
+        reset();
+      };
+      d.onclose = reset;
+      return d;
+    },
+    (e) => {
+      dbPromise = undefined;
+      throw e;
+    },
+  );
+  return dbPromise;
+}
+
+/** Resolves on transaction completion, not request success, so a write is durable once awaited. */
+async function run<T>(
+  mode: IDBTransactionMode,
+  op: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
+  const d = await db();
+  return new Promise<T>((resolve, reject) => {
+    const tx = d.transaction(STORE, mode);
+    const req = op(tx.objectStore(STORE));
+    tx.oncomplete = () => resolve(req.result);
+    tx.onerror = tx.onabort = () => reject(tx.error ?? req.error);
+  });
+}
+
+export const indexedDbStore: KeyValueStore = {
+  get: <T>(key: string) => run<T | undefined>("readonly", (s) => s.get(key)),
+  set: async (key, value) => {
+    await run("readwrite", (s) => s.put(value, key));
+  },
+  del: async (key) => {
+    await run("readwrite", (s) => s.delete(key));
+  },
+  values: <T>(prefix: string) =>
+    run<T[]>("readonly", (s) => s.getAll(IDBKeyRange.bound(prefix, prefix + "\uffff"))),
+};
+
 const PREFIX = "doc:";
 
-export const documentStore = {
-  async list(): Promise<MdDocument[]> {
-    const ks = (await keys()).filter((k) => String(k).startsWith(PREFIX));
-    const docs = (await getMany<MdDocument>(ks)).filter((d): d is MdDocument => !!d);
-    return docs.sort((a, b) => b.updatedAt - a.updatedAt);
-  },
-  get: (id: string) => get<MdDocument>(PREFIX + id),
-  async save(doc: MdDocument) {
-    await set(PREFIX + doc.id, doc);
-    return doc;
-  },
-  remove: (id: string) => del(PREFIX + id),
-  async create(partial: Partial<MdDocument> = {}): Promise<MdDocument> {
-    const now = Date.now();
-    const doc: MdDocument = {
-      id: crypto.randomUUID().slice(0, 8),
-      title: "Untitled",
-      content: "",
-      images: {},
-      createdAt: now,
-      updatedAt: now,
-      ...partial,
-    };
-    return documentStore.save(doc);
-  },
-};
+export function createDocumentStore(kv: KeyValueStore) {
+  const store = {
+    async list(): Promise<MdDocument[]> {
+      const docs = (await kv.values<MdDocument>(PREFIX)).filter((d) => !!d);
+      return docs.sort((a, b) => b.updatedAt - a.updatedAt);
+    },
+    get: (id: string) => kv.get<MdDocument>(PREFIX + id),
+    async save(doc: MdDocument) {
+      await kv.set(PREFIX + doc.id, doc);
+      return doc;
+    },
+    remove: (id: string) => kv.del(PREFIX + id),
+    async create(partial: Partial<MdDocument> = {}): Promise<MdDocument> {
+      const now = Date.now();
+      return store.save({
+        id: crypto.randomUUID().slice(0, 8),
+        title: "Untitled",
+        content: "",
+        images: {},
+        createdAt: now,
+        updatedAt: now,
+        ...partial,
+      });
+    },
+  };
+  return store;
+}
+
+export const documentStore = createDocumentStore(indexedDbStore);
 
 export const SAMPLE = `---
 title: Writing portable Markdown

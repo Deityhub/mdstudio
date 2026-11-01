@@ -45,7 +45,7 @@
 | **Export** | Standard `.md`, clipboard copy, self-contained `.md` (base64 compressed images), copy HTML, standalone `.html` with embedded styles, optional text normalization | Done (M1) |
 | **Portability Checks** | AST & line linter with profiles: Strict CommonMark, GitHub, dev.to, Obsidian | Done (M1) |
 | **Metadata** | YAML front matter visual form (title, description, tags, date, canonical URL, cover image) | Done (M1) |
-| **Draft Library** | Local-first IndexedDB storage (`idb-keyval`), instant autosave (400ms debounce), create, duplicate, rename, delete | Done (M1) |
+| **Draft Library** | Local-first IndexedDB storage, instant autosave (400ms debounce), create, duplicate, rename, delete | Done (M1) |
 | **Writing Aids** | Word count, character count, estimated reading time, live heading outline/TOC with click-to-line | Done (M1) |
 | **AI Writing** | BYOK direct browser streaming (OpenAI, Anthropic, Google Gemini, OpenAI-compatible); title/description/tag suggestions; draft topic into new document | Done (M1) |
 | **PWA & Offline** | Installable manifest, offline service worker, app icon badge | Milestone 2 |
@@ -93,7 +93,7 @@
 | **Styling**           | Tailwind CSS v4, shadcn/ui                                                                                                                                          | Native CSS token theming (`src/styles.css`), dark mode support, accessible Radix UI primitives.   |
 | **Editor**            | CodeMirror 6 (client-only dynamic import)                                                                                                                           | Fast, modular, accessible on mobile keyboards, extensible language facets.                        |
 | **Markdown Pipeline** | Unified ecosystem (`remark-parse`, `remark-gfm`, `remark-frontmatter`, `remark-rehype`, `rehype-highlight`, `rehype-sanitize`, `rehype-remark`, `remark-stringify`) | Strict AST-compliant parsing, linting, conversion, and sanitization sharing a single syntax tree. |
-| **Client Storage**    | IndexedDB via `idb-keyval`                                                                                                                                          | Reliable client-side persistence for large drafts and base64 image blobs.                         |
+| **Client Storage**    | IndexedDB (raw, no wrapper library)                                                                                                                                          | Reliable client-side persistence for large drafts and base64 image blobs.                         |
 | **Database ORM**      | Drizzle ORM (SQLite dialect)                                                                                                                                        | Identical type-safe SQL queries run on Cloudflare D1 and `better-sqlite3`.                        |
 | **Object Storage**    | Cloudflare R2 / Local Filesystem                                                                                                                                    | S3-compatible, zero egress costs on Cloudflare; flat directory structure on Docker.               |
 | **Testing**           | Vitest + Playwright                                                                                                                                                 | Fast AST unit tests and end-to-end browser automation.                                            |
@@ -133,7 +133,7 @@
 | Module                                     | Core Responsibilities                                                                  | Key Functions / Interfaces                                                                                                                                                                                                               |
 | ------------------------------------------ | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/lib/markdown.ts`                      | The single pipeline for parsing, rendering, linting, and export transforms.            | `renderMarkdown()`, `checkPortability(text, profile)`, `getOutline(text)`, `getStats(text)`, `splitFrontMatter()`, `joinFrontMatter()`, `normalizeMarkdown()`, `embedImages()`, `htmlToMarkdown()`, `standaloneHtml()`, `finalizeText()` |
-| `src/lib/documentStore.ts`                 | Client persistence layer backed by IndexedDB.                                          | `list()`, `get(id)`, `put(doc)`, `remove(id)`; `MdDocument` model                                                                                                                                                                        |
+| `src/lib/documentStore.ts`                 | Client persistence layer backed by IndexedDB.                                          | `list()`, `get(id)`, `save(doc)`, `create(partial)`, `remove(id)`; `MdDocument` model                                                                                                                                                                        |
 | `src/lib/images.ts`                        | Client-side image handling, resizing, and compression.                                 | `compressImage(file, maxDimension, quality)`, `safeImageName()`, `kb()`                                                                                                                                                                  |
 | `src/lib/ai-provider.ts`                   | Multi-provider HTTP request builder and streaming SSE parser.                          | `buildProviderRequest(config, prompt, systemPrompt)`, `generateWithProvider(config, prompt, systemPrompt, onDelta, signal)`                                                                                                              |
 | `src/components/studio/Studio.tsx`         | Main workspace coordinator: layout, debounce autosave, drawers, panels, import/export. | State coordinator; handles keyboard shortcuts and two-way scroll mapping.                                                                                                                                                                |
@@ -149,7 +149,7 @@
 User keystroke → CodeMirror doc change → Studio.setContent
    ├─ (Deferred render) → unified → markdown AST → hast → rehype-sanitize → React JSX preview
    ├─ (Memoized analysis) → portability checks, table of contents outline, reading stats
-   └─ (Debounce 400ms) → documentStore.put(currentDoc) [IndexedDB]
+   └─ (Debounce 400ms) → documentStore.save(currentDoc) [IndexedDB]
 Scroll sync: Editor onScroll → compute scroll percentage → Preview scrollToRatio (and vice-versa)
 ```
 
