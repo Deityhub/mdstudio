@@ -1,5 +1,21 @@
 # Markdown Studio — Project Roadmap
 
+## Launch readiness (target: v0.1.0)
+- [x] Remove Supabase and Lovable, plain Vite config
+- [x] Format the codebase; lint, test, typecheck and build all green
+- [x] Raw IndexedDB store (no wrapper library)
+- [x] Dependency diet (unused UI components and packages removed)
+- [x] Self-hosted fonts and nonce-based CSP
+- [x] Autosave hardening, checker locations, `local-link` and `unclosed-html` rules
+- [ ] Math (KaTeX) and Mermaid, profile-gated
+- [ ] Complete formatting toolbar
+- [ ] Open-source license, contributor docs and license check
+- [ ] CI (lint, test, build, license, e2e)
+- [ ] Infra blueprints (Cloudflare Workers + D1 + R2, Docker + SQLite)
+- [ ] Release automation (prepare-release, changelog, tags, GHCR + Docker Hub, Cloudflare deploy)
+- [ ] SEO foundation and home page redesign
+- [ ] README and content pages
+
 ## Milestone 1: Core Writing Studio & Portability (Completed)
 - [x] **Editor & Highlighting:** CodeMirror 6 integration with Markdown syntax highlighting, line numbers, search, and history.
 - [x] **Formatting Controls:** Quick-access toolbar (bold, italic, strikethrough, headings, links, code, quotes, lists, tables).
@@ -22,6 +38,9 @@
 - [ ] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.
 - [ ] **Library Organization:** Full-text document search, custom tags, and folder categorization.
 - [ ] **Bulk Import & Export:** Export all drafts as a structured ZIP file; bulk import Markdown folders and archives.
+- [ ] **WYSIWYG Live-Preview Mode:** Optional CodeMirror-decoration mode that hides syntax markers on inactive lines; Markdown stays canonical.
+- [ ] **Obsidian Rendering:** Render `==highlight==` and `[[wiki-links]]` in the Obsidian profile.
+- [ ] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
 - [ ] **Custom Checker Rules:** User-configurable linting rules and warnings for publication standards.
 
 ---

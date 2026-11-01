@@ -35,18 +35,18 @@ Radius: `--radius: 0.5rem` (sm/md/lg/xl derived). Shadows: minimal, soft; prefer
 
 ## Components (shadcn variants)
 - Button: `default` (primary), `secondary` (active toggle), `ghost` (toolbar icons, 40×40 touch targets on mobile), `outline`, `destructive`.
-- Dialog (AI writer, confirmations), Drawer/Sheet (mobile panels & library), DropdownMenu (export), Select (profile, provider), Tabs, Tooltip, Badge (issue counts), Input/Textarea, Switch (normalize, self-contained), Sonner toasts.
+- Dialog (AI writer, delete confirmation), Sheet (library and panels below 1280px), DropdownMenu (export), Select (profile, provider), Tabs, Tooltip, Input/Textarea/Label, Switch (normalize), Sonner toasts. Only these shadcn components are kept in `src/components/ui/`; add new ones when a feature needs them.
 - Icons: lucide-react, 16px in toolbars.
 
 ## Preview styling (`.md-preview`)
 GitHub-like prose on `bg-paper`: max-width ~72ch, headings in Fraunces, links primary with underline, blockquote left border `border`, tables bordered with zebra `muted`, code `code-bg` + mono, task-list checkboxes, images max-width 100%.
 
 ## Layout & breakpoints
-- `< 768px` phone: single pane, Edit/Preview segmented toggle, horizontally scrollable toolbar, panels & library in bottom drawers, status bar condensed.
-- `768–1023px` tablet: same as phone with wider content.
-- `≥ 1024px` desktop: library sidebar (≈240px, collapsible) | editor | preview (split, scroll-synced) | side panel (≈300px, Checks/Outline/Front matter).
-- Focus mode: hides chrome, centers editor.
-- Touch targets ≥ 40px; dialogs scroll within viewport.
+- `< 640px` phone: single pane (Editor / Preview toggle), horizontally scrollable toolbar, panel buttons in a bottom nav, library and panels in sheets, condensed status bar. The spec target is `< 768px`; the 640-767px gap is tracked in `SYSTEM_SPEC.md` §12.
+- `640-1279px`: split view with scroll sync; the library opens as a left sheet and the panels as a right sheet.
+- `>= 1280px` desktop: docked library sidebar (about 240px, collapsible) | editor | preview (scroll-synced) | docked side panel (about 288px, Checks/Outline/Front matter).
+- Focus mode: hides chrome, centers the editor.
+- Touch targets >= 40px; dialogs scroll within the viewport.
 
 ## Voice
 Plain, helpful, writer-first. Explain portability issues in one sentence with a fix ("`==highlight==` isn't standard; use `**bold**` or `<mark>` for GitHub").

@@ -18,7 +18,7 @@ Markdown Studio (mdstudio) is built for writers, developers, technical bloggers,
 
 Before proposing or making changes, read the documentation in this order:
 
-1. `docs/SYSTEM_SPEC.md` — **Master Source of Truth**: full product vision, technical boundaries, UI specs, completed features, and the 18 end-to-end use cases.
+1. `docs/SYSTEM_SPEC.md` — **Master Source of Truth**: full product vision, technical boundaries, UI specs, completed features. The 18 end-to-end use cases live in `docs/PRODUCT_SPEC.md`.
 2. `AGENTS.md` — Non-negotiable structural and architectural invariants.
 3. `roadmap.md` — Phased implementation milestones and pending tasks.
 4. Review the docs and setup proper infra and blueprints for Cloudflare workers + D1 + R2 and Docker + SQLite self-hosting
@@ -61,7 +61,7 @@ All backend code lives in or is scaffolded via `infra/`:
 ## 5. Client & Core Architecture Rules
 
 ### 1. Markdown Engine (`src/lib/markdown.ts`)
-- All Markdown processing lives here. Built on unified: `remark-parse` → `remark-gfm` → `remark-frontmatter` → `remark-rehype` → `rehype-sanitize` → `rehype-react`.
+- All Markdown processing lives here. Built on unified: `remark-parse` → `remark-gfm` → `remark-frontmatter` → `remark-rehype` → `rehype-sanitize` → `rehype-highlight` → `rehype-stringify` (the preview is a sanitized HTML string).
 - Output HTML must **always** pass through `rehype-sanitize` with our configured schema (allowing data URIs for self-contained exports).
 - Portability checks inspect AST and raw lines to flag non-portable syntax: unclosed raw HTML, embedded base64 data URIs, local file references, Obsidian wiki-links, math blocks, Mermaid syntax, and trailing spaces. Anything flagged should be clickable and lead directly to where it was found so it can be fixed.
 - Target profiles supported: **Strict CommonMark**, **GitHub Flavored Markdown**, **Dev.to**, and **Obsidian**. We should also support LaTex
