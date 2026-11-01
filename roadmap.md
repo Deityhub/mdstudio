@@ -1,0 +1,50 @@
+# Markdown Studio — Project Roadmap
+
+## Milestone 1: Core Writing Studio & Portability (Completed)
+- [x] **Editor & Highlighting:** CodeMirror 6 integration with Markdown syntax highlighting, line numbers, search, and history.
+- [x] **Formatting Controls:** Quick-access toolbar (bold, italic, strikethrough, headings, links, code, quotes, lists, tables).
+- [x] **Faithful Preview:** Strict CommonMark + GFM preview rendering via unified/remark/rehype with syntax-highlighted code fences.
+- [x] **Scroll Synchronization:** Bidirectional ratio-based scroll synchronization between editor and preview.
+- [x] **Security:** XSS prevention using `rehype-sanitize` with customized safe attribute allowlists.
+- [x] **Portability Linter:** Real-time syntax checker with selectable profiles (Strict CommonMark, GitHub, dev.to, Obsidian).
+- [x] **Import Pipeline:** Support for `.md` file imports, drag-and-drop, and rich HTML-to-Markdown paste conversion.
+- [x] **Export Pipeline:** Standard `.md`, clipboard copy, self-contained `.md` with base64 embedded images, and standalone `.html`.
+- [x] **Draft Library:** Local-first IndexedDB persistence (`idb-keyval`) with autosave debounce (400ms).
+- [x] **Writing Aids:** Live word count, character count, reading time estimation, and click-to-navigate outline.
+- [x] **BYOK AI Assistant:** Direct browser streaming integration for OpenAI, Anthropic, Gemini, and custom OpenAI-compatible models.
+- [x] **Responsive Workspace:** Full phone and tablet responsiveness with single-pane view switching and drawer-based panels.
+- [x] **Automated Test Suite:** Comprehensive Vitest coverage for rendering parity, sanitizer safety, AST checkers, and paste conversion.
+
+---
+
+## Milestone 2: PWA, Local History & Advanced Library (Target: Q1 2027)
+- [ ] **PWA Support:** Web app manifest, service worker caching, and complete offline installation capability.
+- [ ] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.
+- [ ] **Library Organization:** Full-text document search, custom tags, and folder categorization.
+- [ ] **Bulk Import & Export:** Export all drafts as a structured ZIP file; bulk import Markdown folders and archives.
+- [ ] **Custom Checker Rules:** User-configurable linting rules and warnings for publication standards.
+
+---
+
+## Milestone 3: Accounts, Cloud Sync & Hosted Storage (Target: Q2 2027)
+- [ ] **Activate Server Blueprint:** Transition `infra/` backend blueprints into `src/server/`.
+- [ ] **Authentication System:** Secure cookie-based session management, password authentication (Argon2id/Scrypt), and GitHub OAuth.
+- [ ] **Optimistic Cloud Sync:** Incremental sync engine with monotonic version counters and automatic conflict branch resolution.
+- [ ] **Hosted Image Pipeline:** Drag-and-drop image upload to Cloudflare R2 (hosted) or local disk volume (Docker); auto-rewrites relative paths to CDN URLs.
+- [ ] **Cloud Revision Log:** Immutable server-side document revision history.
+- [ ] **Dual Deployment CI/CD:** GitHub Actions workflows for automated Cloudflare Workers deployment and multi-arch Docker image publication (`ghcr.io`).
+
+---
+
+## Milestone 4: Sharing & Multi-Platform Publishing (Target: Q3 2027)
+- [ ] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML.
+- [ ] **Link Management:** Configurable expiration dates and one-click link revocation.
+- [ ] **GitHub Publishing:** Direct commit and pull-request creation to user GitHub repositories using OAuth or personal access tokens.
+- [ ] **Blogging Integrations:** One-click publishing to dev.to and Hashnode via API integrations.
+
+---
+
+## Milestone 5: Collaboration & Advanced AI (Future)
+- [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
+- [ ] **Local AI Models:** Direct browser integration with local model runners (e.g., WebLLM or local Ollama instances via CORS).
+- [ ] **Inline AI Writing Actions:** In-place selection rewriting, summarization, proofreading, and automated image alt-text generation.

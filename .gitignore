@@ -1,0 +1,17 @@
+node_modules
+dist
+.output
+.nitro
+.tanstack
+.wrangler
+.vinxi
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+coverage
+playwright-report
+test-results
+*.db
+*.db-journal

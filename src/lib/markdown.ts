@@ -1,0 +1,265 @@
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkGfm from "remark-gfm";
+import remarkFrontmatter from "remark-frontmatter";
+import remarkRehype from "remark-rehype";
+import remarkStringify from "remark-stringify";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeHighlight from "rehype-highlight";
+import rehypeStringify from "rehype-stringify";
+import rehypeParse from "rehype-parse";
+import rehypeRemark from "rehype-remark";
+import { visit } from "unist-util-visit";
+import YAML from "yaml";
+import type { Root as MdRoot } from "mdast";
+import type { Root as HastRoot, Element } from "hast";
+
+export type Profile = "commonmark" | "github" | "devto" | "obsidian";
+
+export const PROFILES: { id: Profile; label: string; hint: string }[] = [
+  { id: "github", label: "GitHub (GFM)", hint: "Tables, task lists, footnotes" },
+  { id: "commonmark", label: "Strict CommonMark", hint: "Works everywhere" },
+  { id: "devto", label: "dev.to / Hashnode", hint: "GFM, no raw HTML" },
+  { id: "obsidian", label: "Obsidian", hint: "GFM + highlights, wiki-links" },
+];
+
+const usesGfm = (p: Profile) => p !== "commonmark";
+
+/* ---------------- front matter ---------------- */
+
+export type FrontMatter = Record<string, unknown>;
+
+const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+
+export function splitFrontMatter(md: string): { data: FrontMatter | null; body: string; raw: string } {
+  const m = md.match(FM_RE);
+  if (!m) return { data: null, body: md, raw: "" };
+  try {
+    const data = YAML.parse(m[1] ?? "");
+    return { data: data && typeof data === "object" ? data : {}, body: md.slice(m[0].length), raw: m[0] };
+  } catch {
+    return { data: null, body: md, raw: "" };
+  }
+}
+
+export function joinFrontMatter(data: FrontMatter | null, body: string): string {
+  const clean = Object.fromEntries(
+    Object.entries(data ?? {}).filter(([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0)),
+  );
+  if (Object.keys(clean).length === 0) return body;
+  return `---\n${YAML.stringify(clean).trimEnd()}\n---\n\n${body.replace(/^\n+/, "")}`;
+}
+
+/* ---------------- rendering ---------------- */
+
+const schema = {
+  ...defaultSchema,
+  protocols: { ...defaultSchema.protocols, src: [...(defaultSchema.protocols?.["src"] ?? []), "data"] },
+};
+
+export function basename(path: string) {
+  return decodeURIComponent(path.split(/[\\/]/).pop() ?? path);
+}
+
+function rehypeResolveImages(images: Record<string, string>) {
+  return () => (tree: HastRoot) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "img") return;
+      const src = String(node.properties?.["src"] ?? "");
+      if (!src || /^(https?:|data:)/i.test(src)) return;
+      const hit = images[basename(src)];
+      if (hit) node.properties["src"] = hit;
+    });
+  };
+}
+
+export function renderMarkdown(md: string, profile: Profile = "github", images: Record<string, string> = {}): string {
+  const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
+  if (usesGfm(profile)) p.use(remarkGfm);
+  const file = p
+    .use(remarkRehype)
+    .use(rehypeSanitize, schema)
+    .use(rehypeResolveImages(images))
+    .use(rehypeHighlight, { detect: false, ignoreMissing: true } as never)
+    .use(rehypeStringify)
+    .processSync(md);
+  return String(file);
+}
+
+function parse(md: string, profile: Profile): MdRoot {
+  const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
+  if (usesGfm(profile)) p.use(remarkGfm);
+  return p.parse(md) as MdRoot;
+}
+
+/* ---------------- portability checker ---------------- */
+
+export type Severity = "error" | "warning" | "info";
+export type Issue = { line: number; rule: string; message: string; severity: Severity };
+
+function fencedLines(lines: string[]): Set<number> {
+  const set = new Set<number>();
+  let fence: string | null = null;
+  lines.forEach((l, i) => {
+    const m = l.match(/^\s{0,3}(`{3,}|~{3,})/);
+    if (fence) {
+      set.add(i);
+      if (m?.[1] && m[1][0] === fence[0] && m[1].length >= fence.length && l.trim() === m[1]) fence = null;
+    } else if (m) {
+      fence = m[1] ?? null;
+      set.add(i);
+    }
+  });
+  return set;
+}
+
+export function checkPortability(md: string, profile: Profile = "github"): Issue[] {
+  const issues: Issue[] = [];
+  const lines = md.split(/\r?\n/);
+  const inCode = fencedLines(lines);
+  const add = (line: number, rule: string, message: string, severity: Severity = "warning") =>
+    issues.push({ line, rule, message, severity });
+
+  // AST-based checks
+  const tree = parse(md, profile);
+  visit(tree, (node) => {
+    const line = node.position?.start.line ?? 1;
+    if (node.type === "html") {
+      const v = (node as { value: string }).value.trim();
+      if (!/^<!--[\s\S]*-->$/.test(v))
+        add(line, "raw-html", "Raw HTML is stripped or rendered differently on many platforms.", profile === "devto" ? "error" : "warning");
+    }
+    if (node.type === "image") {
+      const url = (node as { url: string }).url;
+      if (url.startsWith("data:"))
+        add(line, "data-image", "Embedded (base64) image: some platforms like GitHub won't display it.", "info");
+      else if (!/^https?:\/\//i.test(url))
+        add(line, "local-image", "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.");
+    }
+    if (node.type === "code") {
+      const lang = (node as { lang?: string | null }).lang;
+      if ((node as { position?: unknown }).position && lang === "mermaid" && profile !== "github" && profile !== "obsidian")
+        add(line, "mermaid", "Mermaid diagrams only render on GitHub, GitLab and Obsidian.");
+    }
+  });
+
+  const markers = new Set<string>();
+  lines.forEach((l, i) => {
+    const n = i + 1;
+    if (inCode.has(i)) {
+      const m = l.match(/^\s{0,3}(`{3,}|~{3,})\s*$/);
+      // opening fence without language
+      if (m && !inCode.has(i - 1)) add(n, "fence-lang", "Code block has no language, so it won't be highlighted.", "info");
+      return;
+    }
+    if (profile !== "obsidian" && /==[^=\s][^=]*==/.test(l)) add(n, "highlight", "==highlight== isn't standard Markdown.");
+    if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l)) add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
+    if (profile !== "obsidian" && /^\s*\$\$/.test(l)) add(n, "math", "Math blocks ($$) aren't supported on every platform.");
+    if (/^\s*:::/.test(l)) add(n, "container", "Custom ::: containers are not standard Markdown.");
+    if (/\S {2,}$/.test(l) && lines[i + 1]?.trim()) add(n, "trailing-break", "Trailing spaces for line breaks are invisible and often trimmed. Use a backslash (\\) instead.");
+    const lm = l.match(/^\s*([-*+])\s+\S/);
+    if (lm?.[1] && !/^\s*[-*_](\s*[-*_]){2,}\s*$/.test(l)) markers.add(lm[1]);
+    if (profile === "commonmark") {
+      if (/^\s*\|?.*\|.*\|?\s*$/.test(l) && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1] ?? "")) add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
+      if (/^\s*[-*+]\s+\[[ xX]\]/.test(l)) add(n, "gfm-task", "Task lists are a GFM extension.");
+      if (/~~[^~]+~~/.test(l)) add(n, "gfm-strike", "Strikethrough is a GFM extension.");
+    }
+  });
+  if (markers.size > 1) add(1, "mixed-bullets", `Mixed bullet markers (${[...markers].join(" ")}) can split lists. Normalizing on export fixes this.`, "info");
+
+  return issues.sort((a, b) => a.line - b.line);
+}
+
+/* ---------------- outline & stats ---------------- */
+
+export type Heading = { depth: number; text: string; line: number };
+
+export function getOutline(md: string): Heading[] {
+  const out: Heading[] = [];
+  visit(parse(md, "github"), "heading", (node) => {
+    let text = "";
+    visit(node, (c) => {
+      if ("value" in c && typeof c.value === "string" && c.type !== "html") text += c.value;
+    });
+    out.push({ depth: node.depth, text: text.trim() || "(untitled)", line: node.position?.start.line ?? 1 });
+  });
+  return out;
+}
+
+export function getStats(md: string) {
+  const body = splitFrontMatter(md).body.replace(/```[\s\S]*?```/g, " ");
+  const words = (body.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) ?? []).length;
+  return { words, chars: md.length, minutes: Math.max(1, Math.round(words / 230)) };
+}
+
+export function deriveTitle(md: string): string {
+  const { data, body } = splitFrontMatter(md);
+  const t = data?.["title"];
+  if (typeof t === "string" && t.trim()) return t.trim();
+  const h = body.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/m);
+  return h?.[1] ? h[1].replace(/[*_`~[\]]/g, "").trim() : "Untitled";
+}
+
+export function slugify(s: string) {
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "untitled"
+  );
+}
+
+/* ---------------- export ---------------- */
+
+/** Byte-level cleanup that never changes meaning: LF endings, no BOM, single final newline. */
+export function finalizeText(md: string) {
+  return md.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").replace(/\s*$/, "") + "\n";
+}
+
+export function normalizeMarkdown(md: string, profile: Profile = "github"): string {
+  const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
+  if (usesGfm(profile)) p.use(remarkGfm);
+  const out = p
+    .use(remarkStringify, { bullet: "-", fences: true, rule: "-", emphasis: "_", strong: "*", listItemIndent: "one" })
+    .processSync(md);
+  return finalizeText(String(out));
+}
+
+/** Replace local image references with embedded data URIs from the document's image store. */
+export function embedImages(md: string, images: Record<string, string>): string {
+  return md.replace(/(!\[[^\]]*\]\()(<[^>]+>|[^)\s]+)((?:\s+"[^"]*")?\))/g, (all, pre, url, post) => {
+    const clean = url.replace(/^<|>$/g, "");
+    if (/^(https?:|data:)/i.test(clean)) return all;
+    const hit = images[basename(clean)];
+    return hit ? `${pre}${hit}${post}` : all;
+  });
+}
+
+export function htmlToMarkdown(html: string): string {
+  const out = unified()
+    .use(rehypeParse, { fragment: true })
+    .use(rehypeRemark)
+    .use(remarkGfm)
+    .use(remarkStringify, { bullet: "-", fences: true, emphasis: "_", strong: "*", listItemIndent: "one" })
+    .processSync(html);
+  return String(out).trim();
+}
+
+export function standaloneHtml(title: string, bodyHtml: string) {
+  const esc = title.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc}</title>
+<style>body{max-width:720px;margin:40px auto;padding:0 20px;font:16px/1.65 system-ui,sans-serif;color:#1f2328}
+pre{background:#f6f8fa;padding:14px;border-radius:6px;overflow:auto}code{font-family:ui-monospace,monospace;font-size:.9em}
+:not(pre)>code{background:#eff1f3;padding:.15em .35em;border-radius:4px}img{max-width:100%}
+table{border-collapse:collapse}th,td{border:1px solid #d0d7de;padding:6px 12px}
+blockquote{margin:0;padding:0 1em;color:#59636e;border-left:.25em solid #d0d7de}</style>
+</head><body>
+${bodyHtml}
+</body></html>
+`;
+}
