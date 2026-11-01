@@ -1,0 +1,19 @@
+# Self-hosted stack:  docker compose -f infra/docker-compose.yml up -d
+# Backup:  docker compose -f infra/docker-compose.yml exec mdstudio \
+#            sqlite3 /data/studio.db ".backup /data/backup.db"   (after milestone 3)
+services:
+  mdstudio:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: deityhub/mdstudio:latest
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - mdstudio-data:/data
+    restart: unless-stopped
+
+volumes:
+  mdstudio-data:
