@@ -1,0 +1,10 @@
+node_modules
+.output
+.git
+.github
+test-results
+playwright-report
+e2e
+docs
+*.md
+!README.md
