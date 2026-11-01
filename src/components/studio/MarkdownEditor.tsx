@@ -27,6 +27,7 @@ import {
   runCommand,
   type Command,
   type Context,
+  type Edit,
   type Snapshot,
 } from "@/lib/editing";
 
@@ -35,7 +36,9 @@ export type EditorHandle = {
   run: (command: Command) => void;
   undo: () => void;
   redo: () => void;
-  wrap: (before: string, after?: string, placeholder?: string) => void;
+  /** Current text and selection, for commands that need input first (dialogs). */
+  getSnapshot: () => Snapshot;
+  apply: (edit: Edit) => void;
   insert: (text: string) => void;
   goToLine: (line: number) => void;
   scrollToRatio: (r: number) => void;
@@ -50,6 +53,8 @@ type Props = {
   onFiles?: (files: File[]) => void;
   /** Called when the formatting state at the cursor changes (drives toolbar toggle state). */
   onContext?: (context: Context) => void;
+  /** Mod-K: the studio opens its link dialog. */
+  onLinkShortcut?: () => void;
 };
 
 const snapshot = (state: EditorState): Snapshot => ({
@@ -102,7 +107,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
             key: `Mod-Alt-${n}`,
             run: cmd(`h${n}`),
           })),
-          { key: "Mod-k", run: (v) => (api.wrap("[", "](https://)", "link text"), !!v) },
+          { key: "Mod-k", run: () => (cb.current.onLinkShortcut?.(), true) },
           // Tab nests list items; anywhere else it falls through to a plain indent.
           {
             key: "Tab",
@@ -190,14 +195,10 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
       redo(v);
       v.focus();
     },
-    wrap(before, after = before, placeholder = "text") {
+    getSnapshot: () => snapshot(view.current!.state),
+    apply(edit) {
       const v = view.current!;
-      const { from, to } = v.state.selection.main;
-      const sel = v.state.sliceDoc(from, to) || placeholder;
-      v.dispatch({
-        changes: { from, to, insert: before + sel + after },
-        selection: { anchor: from + before.length, head: from + before.length + sel.length },
-      });
+      v.dispatch({ changes: edit.changes, selection: { anchor: edit.from, head: edit.to } });
       v.focus();
     },
     insert(text) {

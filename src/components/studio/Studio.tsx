@@ -15,6 +15,8 @@ import {
   Bold,
   Italic,
   Heading,
+  Minus,
+  Superscript,
   Check,
   IndentDecrease,
   IndentIncrease,
@@ -90,7 +92,18 @@ import {
   splitFrontMatter,
   joinFrontMatter,
 } from "@/lib/markdown";
-import type { Command, Context } from "@/lib/editing";
+import type { Command, Context, Edit, Snapshot } from "@/lib/editing";
+import {
+  CODE_LANGUAGES,
+  codeBlock,
+  findLinkAt,
+  insertFootnote,
+  insertImage,
+  insertLink,
+  insertRule,
+  type FoundLink,
+} from "@/lib/editing-insert";
+import { ImageDialog, LinkDialog, type ImageSubmit, type LinkDialogState } from "./InsertDialogs";
 import type { EditorHandle } from "./MarkdownEditor";
 import { AiWriter } from "./AiWriter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -113,6 +126,7 @@ const NO_CONTEXT: Context = {
   heading: 0,
   quote: false,
   list: null,
+  codeLang: null,
 };
 type SaveState = "saved" | "saving" | "error";
 
@@ -143,6 +157,12 @@ export function Studio({ docId }: { docId: string }) {
   const [library, setLibrary] = useState(true);
   const [focus, setFocus] = useState(false);
   const [ctx, setCtx] = useState<Context>(NO_CONTEXT);
+  const [linkDialog, setLinkDialog] = useState<{
+    open: boolean;
+    initial: LinkDialogState;
+    found: FoundLink | null;
+  }>({ open: false, initial: { text: "", url: "", title: "", editing: false }, found: null });
+  const [imageDialog, setImageDialog] = useState({ open: false, initialAlt: "" });
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
   const [mobileLibrary, setMobileLibrary] = useState(false);
@@ -166,7 +186,6 @@ export function Studio({ docId }: { docId: string }) {
   const editor = useRef<EditorHandle>(null);
   const preview = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const imageInput = useRef<HTMLInputElement>(null);
   const scrollLock = useRef(0);
 
   // load prefs + docs
@@ -280,7 +299,7 @@ export function Studio({ docId }: { docId: string }) {
     navigate({ to: "/editor/$docId", params: { docId: d.id } });
   };
 
-  const addImages = async (files: File[]) => {
+  const addImages = async (files: File[], alt?: string) => {
     if (!doc) return;
     const next = { ...doc.images };
     const refs: string[] = [];
@@ -288,7 +307,8 @@ export function Studio({ docId }: { docId: string }) {
       const data = await compressImage(f);
       const name = safeImageName(f.name || "pasted.png", next);
       next[name] = data;
-      refs.push(`![${name.replace(/\.[a-z0-9]+$/, "")}](./images/${name})`);
+      const label = (files.length === 1 && alt) || name.replace(/\.[a-z0-9]+$/, "");
+      refs.push(`![${label.replace(/[[\]]/g, "\\$&")}](./images/${name})`);
       if (kb(data) > 500)
         toast.warning(`${name} is ${kb(data)} KB. Large embedded images make the file heavy.`);
     }
@@ -372,6 +392,47 @@ export function Studio({ docId }: { docId: string }) {
     );
 
   const run = (command: Command) => () => editor.current?.run(command);
+  /** Applies a pure insertion command to the current selection. */
+  const insert = (fn: (snap: Snapshot) => Edit | null) => () => {
+    const e = editor.current;
+    if (!e) return;
+    const edit = fn(e.getSnapshot());
+    if (edit) e.apply(edit);
+    else e.focus();
+  };
+  const openLink = () => {
+    const e = editor.current;
+    if (!e) return;
+    const snap = e.getSnapshot();
+    const found = findLinkAt(snap);
+    const selected = snap.from === snap.to ? "" : snap.text.slice(snap.from, snap.to);
+    setLinkDialog({
+      open: true,
+      found,
+      initial: found
+        ? { text: found.text, url: found.url, title: found.title, editing: true }
+        : { text: selected, url: "", title: "", editing: false },
+    });
+  };
+  const submitLink = (values: Parameters<typeof insertLink>[1]) => {
+    const e = editor.current;
+    setLinkDialog((d) => ({ ...d, open: false }));
+    if (!e) return;
+    const { found } = linkDialog;
+    e.apply(
+      insertLink(e.getSnapshot(), values, found ? { from: found.from, to: found.to } : undefined),
+    );
+  };
+  const openImage = () => {
+    const snap = editor.current?.getSnapshot();
+    const selected = snap && snap.from !== snap.to ? snap.text.slice(snap.from, snap.to) : "";
+    setImageDialog({ open: true, initialAlt: selected });
+  };
+  const submitImage = async ({ file, ...values }: ImageSubmit) => {
+    setImageDialog((d) => ({ ...d, open: false }));
+    if (file) return addImages([file], values.alt);
+    insert((snap) => insertImage(snap, values))();
+  };
   type Tool = { icon: typeof Bold; label: string; run: () => void; active?: boolean };
   // Grouped as in the design: history | text | links & media | blocks | insert.
   const toolGroups: Tool[][] = [
@@ -391,12 +452,10 @@ export function Studio({ docId }: { docId: string }) {
       { icon: Code, label: "Inline code (Ctrl/⌘+E)", run: run("code"), active: ctx.code },
     ],
     [
-      {
-        icon: Link2,
-        label: "Link (Ctrl/⌘+K)",
-        run: () => editor.current?.wrap("[", "](https://)", "link text"),
-      },
-      { icon: ImageIcon, label: "Image", run: () => imageInput.current?.click() },
+      { icon: Link2, label: "Link (Ctrl/⌘+K)", run: openLink },
+      { icon: ImageIcon, label: "Image", run: openImage },
+      { icon: Superscript, label: "Footnote", run: insert(insertFootnote) },
+      { icon: Minus, label: "Horizontal rule", run: insert(insertRule) },
     ],
     [
       { icon: Quote, label: "Quote (Ctrl/⌘+Shift+.)", run: run("quote"), active: ctx.quote },
@@ -422,11 +481,6 @@ export function Studio({ docId }: { docId: string }) {
       { icon: IndentIncrease, label: "Indent list item (Tab)", run: run("indent") },
     ],
     [
-      {
-        icon: SquareCode,
-        label: "Code block",
-        run: () => editor.current?.wrap("\n```ts\n", "\n```\n", "code"),
-      },
       {
         icon: Table,
         label: "Table",
@@ -469,6 +523,52 @@ export function Studio({ docId }: { docId: string }) {
               {ctx.heading === n && <Check className="h-4 w-4" />}
             </span>
             {n === 0 ? "Paragraph" : `Heading ${n}`}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  const codeMenu = (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant={ctx.codeLang !== null ? "secondary" : "ghost"}
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label="Code block"
+              aria-pressed={ctx.codeLang !== null}
+            >
+              <SquareCode className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Code block</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent
+        align="start"
+        className="max-h-72 overflow-y-auto"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          editor.current?.focus();
+        }}
+      >
+        {ctx.codeLang !== null && (
+          <>
+            <DropdownMenuItem onClick={insert((snap) => codeBlock(snap, ctx.codeLang ?? ""))}>
+              Remove code block
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {[{ id: "", label: "No language" }, ...CODE_LANGUAGES].map((l) => (
+          <DropdownMenuItem key={l.id} onClick={insert((snap) => codeBlock(snap, l.id))}>
+            <span className="flex w-4 justify-center">
+              {ctx.codeLang === l.id && <Check className="h-4 w-4" />}
+            </span>
+            {l.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -738,17 +838,6 @@ export function Studio({ docId }: { docId: string }) {
               e.target.value = "";
             }}
           />
-          <input
-            ref={imageInput}
-            type="file"
-            accept="image/*"
-            multiple
-            hidden
-            onChange={(e) => {
-              addImages([...(e.target.files ?? [])]);
-              e.target.value = "";
-            }}
-          />
           <div className="col-span-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <Select value={profile} onValueChange={(v) => setProfile(v as Profile)}>
               <SelectTrigger
@@ -809,6 +898,7 @@ export function Studio({ docId }: { docId: string }) {
                   <Fragment key={gi}>
                     {gi > 0 && <span aria-hidden className="mx-1 h-6 w-px shrink-0 bg-border" />}
                     {gi === 1 && headingMenu}
+                    {gi === 4 && codeMenu}
                     {group.map((t) => (
                       <Tooltip key={t.label}>
                         <TooltipTrigger asChild>
@@ -853,6 +943,7 @@ export function Studio({ docId }: { docId: string }) {
                           onPaste={onPaste}
                           onFiles={onFiles}
                           onContext={setCtx}
+                          onLinkShortcut={openLink}
                         />
                       </Suspense>
                     </ClientOnly>
@@ -936,6 +1027,20 @@ export function Studio({ docId }: { docId: string }) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <LinkDialog
+          open={linkDialog.open}
+          initial={linkDialog.initial}
+          onOpenChange={(open) => setLinkDialog((d) => ({ ...d, open }))}
+          onSubmit={submitLink}
+          returnFocus={() => editor.current?.focus()}
+        />
+        <ImageDialog
+          open={imageDialog.open}
+          initialAlt={imageDialog.initialAlt}
+          onOpenChange={(open) => setImageDialog((d) => ({ ...d, open }))}
+          onSubmit={submitImage}
+          returnFocus={() => editor.current?.focus()}
+        />
         <Sheet open={compact && mobileLibrary} onOpenChange={setMobileLibrary}>
           <SheetContent
             side="left"
