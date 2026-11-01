@@ -12,7 +12,7 @@
 - [ ] Open-source license, contributor docs and license check (known items for the audit: `elkjs` EPL-2.0 via Mermaid needs an attribution notice; `khroma` is MIT but has no `license` field; `lightningcss` MPL-2.0 is build-time only; KaTeX font lineage is MathJax-derived, see `public/katex/README.md`)
 - [ ] CI (lint, test, build, license, e2e)
 - [x] Infra blueprints (Cloudflare Workers + D1 + R2, Docker + SQLite)
-- [ ] Release automation (prepare-release, changelog, tags, GHCR + Docker Hub, Cloudflare deploy)
+- [x] Release automation (prepare-release, changelog, tags, GHCR + Docker Hub, Cloudflare deploy)
 - [ ] SEO foundation and home page redesign
 - [ ] README and content pages
 
