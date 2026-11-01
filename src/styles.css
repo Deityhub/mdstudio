@@ -215,6 +215,13 @@
 .md-preview li.task-list-item { list-style: none; } .md-preview li.task-list-item input { margin: 0 .4em 0 -1.4em; vertical-align: middle; }
 .md-preview a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
 .md-preview blockquote { padding: 0 1em; color: var(--muted-foreground); border-left: 3px solid var(--primary); }
+.md-preview .md-alert { --alert: var(--info); color: var(--foreground); border-left-color: var(--alert); background: color-mix(in oklch, var(--alert) 8%, transparent); padding: .5em 1em; border-radius: 0 var(--radius) var(--radius) 0; }
+.md-preview .md-alert > :last-child { margin-bottom: 0; }
+.md-preview .md-alert-title { margin: 0 0 .25em; font-weight: 600; color: var(--alert); }
+.md-preview .md-alert-tip { --alert: var(--hl-string); }
+.md-preview .md-alert-important { --alert: var(--hl-title); }
+.md-preview .md-alert-warning { --alert: var(--warning); }
+.md-preview .md-alert-caution { --alert: var(--destructive); }
 .md-preview code { font-family: var(--font-mono); font-size: .86em; background: var(--code-bg); padding: .15em .35em; border-radius: 4px; }
 .md-preview pre { background: var(--code-bg); padding: 1em 1.1em; border-radius: var(--radius); overflow-x: auto; line-height: 1.5; }
 .md-preview pre code { background: none; padding: 0; font-size: .85em; }

@@ -7,6 +7,7 @@ import {
   insertFootnote,
   insertImage,
   insertLink,
+  insertAlert,
   insertRule,
 } from "./editing-insert";
 
@@ -106,5 +107,28 @@ describe("codeBlock", () => {
     expect(getContext(parse("```\nco¦de\n```")).codeLang).toBe("");
     expect(getContext(parse("plain ¦text")).codeLang).toBeNull();
     expect(getContext(parse("```ts\ncode\n```\nafter ¦text")).codeLang).toBeNull();
+  });
+});
+
+describe("insertAlert", () => {
+  const alert = (marked: string, kind: Parameters<typeof insertAlert>[1]) =>
+    applied(marked, (s) => insertAlert(s, kind));
+
+  it("inserts an empty alert with the caret on its body line", () =>
+    expect(alert("¦", "NOTE")).toBe("> [!NOTE]\n> ¦\n"));
+  it("turns the selected lines into an alert", () =>
+    expect(alert("⟦a\nb⟧", "TIP")).toBe("> [!TIP]\n> ⟦a\n> b⟧"));
+  it("turns the caret's line into an alert and keeps the caret", () =>
+    expect(alert("co¦de", "NOTE")).toBe("> [!NOTE]\n> co¦de"));
+  it("changes the kind of an existing alert", () =>
+    expect(alert("> [!NOTE]\n> te¦xt", "WARNING")).toBe("> [!WARNING]\n> te¦xt"));
+  it("removes the alert marker when the same kind is chosen again", () =>
+    expect(alert("> [!NOTE]\n> te¦xt", "NOTE")).toBe("> te¦xt"));
+  it("adds the marker to a plain quote", () =>
+    expect(alert("> te¦xt", "CAUTION")).toBe("> [!CAUTION]\n> te¦xt"));
+  it("reports the alert kind at the cursor", () => {
+    expect(getContext(parse("> [!NOTE]\n> te¦xt")).alert).toBe("NOTE");
+    expect(getContext(parse("> plain ¦quote")).alert).toBeNull();
+    expect(getContext(parse("para¦")).alert).toBeNull();
   });
 });

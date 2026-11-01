@@ -86,6 +86,46 @@ function rehypeResolveImages(images: Record<string, string>) {
   };
 }
 
+const ALERT_TITLES: Record<string, string> = {
+  note: "Note",
+  tip: "Tip",
+  important: "Important",
+  warning: "Warning",
+  caution: "Caution",
+};
+
+/**
+ * GitHub alerts (`> [!NOTE]`) and Obsidian callouts, for the two profiles whose platforms render
+ * them. Runs after sanitizing, so the classes it adds cannot be injected through raw HTML.
+ * GitHub needs the marker alone on the first line; Obsidian also allows a custom title after it.
+ */
+function rehypeAlerts(profile: Profile) {
+  return () => (tree: HastRoot) => {
+    if (profile !== "github" && profile !== "obsidian") return;
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "blockquote") return;
+      const first = node.children.find((c): c is Element => c.type === "element");
+      const text = first?.tagName === "p" ? first.children[0] : undefined;
+      if (!first || !text || text.type !== "text") return;
+      const m = /^\[!(note|tip|important|warning|caution)\]([^\n]*)\n?/i.exec(text.value);
+      if (!m) return;
+      const title = (m[2] ?? "").trim();
+      if (title && profile !== "obsidian") return;
+      const kind = (m[1] ?? "").toLowerCase();
+      text.value = text.value.slice(m[0].length);
+      if (!text.value) first.children.shift();
+      if (!first.children.length) node.children = node.children.filter((c) => c !== first);
+      node.properties = { ...node.properties, className: ["md-alert", `md-alert-${kind}`] };
+      node.children.unshift({
+        type: "element",
+        tagName: "p",
+        properties: { className: ["md-alert-title"] },
+        children: [{ type: "text", value: title || (ALERT_TITLES[kind] ?? kind) }],
+      });
+    });
+  };
+}
+
 export function renderMarkdown(
   md: string,
   profile: Profile = "github",
@@ -96,6 +136,7 @@ export function renderMarkdown(
   const file = p
     .use(remarkRehype)
     .use(rehypeSanitize, schema)
+    .use(rehypeAlerts(profile))
     .use(rehypeResolveImages(images))
     .use(rehypeHighlight, { detect: false, ignoreMissing: true } as never)
     .use(rehypeStringify)
@@ -230,6 +271,21 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
           line,
           "local-image",
           "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.",
+        );
+    }
+    if (node.type === "blockquote" && profile !== "github" && profile !== "obsidian") {
+      const para = (
+        node as { children: { type: string; children?: { type: string; value?: string }[] }[] }
+      ).children[0];
+      const text = para?.type === "paragraph" ? para.children?.[0] : undefined;
+      if (
+        text?.type === "text" &&
+        /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i.test(text.value ?? "")
+      )
+        add(
+          line,
+          "alert",
+          "GitHub-style alerts show as a plain quote outside GitHub and Obsidian.",
         );
     }
     if (node.type === "link" || node.type === "definition") {
@@ -419,7 +475,9 @@ export function standaloneHtml(title: string, bodyHtml: string) {
 pre{background:#f6f8fa;padding:14px;border-radius:6px;overflow:auto}code{font-family:ui-monospace,monospace;font-size:.9em}
 :not(pre)>code{background:#eff1f3;padding:.15em .35em;border-radius:4px}img{max-width:100%}
 table{border-collapse:collapse}th,td{border:1px solid #d0d7de;padding:6px 12px}
-blockquote{margin:0;padding:0 1em;color:#59636e;border-left:.25em solid #d0d7de}</style>
+blockquote{margin:0;padding:0 1em;color:#59636e;border-left:.25em solid #d0d7de}
+.md-alert{--c:#0969da;color:inherit;border-left-color:var(--c);padding:.25em 1em}.md-alert-title{margin:0 0 .25em;font-weight:600;color:var(--c)}
+.md-alert-tip{--c:#1a7f37}.md-alert-important{--c:#8250df}.md-alert-warning{--c:#9a6700}.md-alert-caution{--c:#cf222e}</style>
 </head><body>
 ${bodyHtml}
 </body></html>

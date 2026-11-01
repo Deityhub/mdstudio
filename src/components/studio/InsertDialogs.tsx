@@ -235,3 +235,94 @@ export function ImageDialog({
     </Dialog>
   );
 }
+
+const tableSchema = z.object({
+  rows: z.coerce
+    .number()
+    .int("Use a whole number.")
+    .min(1, "At least 1 row.")
+    .max(50, "At most 50 rows."),
+  cols: z.coerce
+    .number()
+    .int("Use a whole number.")
+    .min(1, "At least 1 column.")
+    .max(12, "At most 12 columns."),
+});
+
+export function TableDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  returnFocus,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (size: { rows: number; cols: number }) => void;
+  returnFocus: () => void;
+}) {
+  const [size, setSize] = useState({ rows: "2", cols: "3" });
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (open) {
+      setSize({ rows: "2", cols: "3" });
+      setError("");
+    }
+  }, [open]);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const parsed = tableSchema.safeParse(size);
+    if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? "Check the size.");
+    onSubmit(parsed.data);
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent onCloseAutoFocus={focusAfterClose(returnFocus)}>
+        <form onSubmit={submit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>Insert table</DialogTitle>
+            <DialogDescription>
+              The header row is added for you; rows below are the body. Press Tab to move between
+              cells.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="table-rows">Body rows</Label>
+              <Input
+                id="table-rows"
+                type="number"
+                min={1}
+                max={50}
+                autoFocus
+                value={size.rows}
+                onChange={(e) => setSize({ ...size, rows: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="table-cols">Columns</Label>
+              <Input
+                id="table-cols"
+                type="number"
+                min={1}
+                max={12}
+                value={size.cols}
+                onChange={(e) => setSize({ ...size, cols: e.target.value })}
+              />
+            </div>
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Insert table</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
