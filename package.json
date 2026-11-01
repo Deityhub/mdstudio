@@ -1,6 +1,17 @@
 {
   "name": "mdstudio",
   "version": "0.0.0",
+  "description": "A local-first Markdown writing studio and portability linter.",
+  "license": "MIT",
+  "author": "Chizoba Jude Ojini",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Deityhub/mdstudio.git"
+  },
+  "homepage": "https://mdstudio.deityhub.com",
+  "bugs": {
+    "url": "https://github.com/Deityhub/mdstudio/issues"
+  },
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -13,7 +24,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "vendor:katex": "node scripts/vendor-katex.mjs"
+    "vendor:katex": "node scripts/vendor-katex.mjs",
+    "licenses": "bun scripts/check-licenses.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"
