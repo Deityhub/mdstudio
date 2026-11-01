@@ -85,6 +85,51 @@ describe("portability checker", () => {
     expect(rules("```md\na ==b==\n```")).not.toContain("highlight"));
 });
 
+describe("portability checker locations", () => {
+  const find = (md: string, rule: string, p: Parameters<typeof checkPortability>[1] = "github") =>
+    checkPortability(md, p).filter((i) => i.rule === rule);
+
+  it("points mixed-bullets at the first line that breaks the pattern", () => {
+    const issues = find("intro\n\n- a\n- b\n\ntext\n\n* c\n", "mixed-bullets");
+    expect(issues.map((i) => i.line)).toEqual([8]);
+  });
+
+  it("flags local file links but not web, mail or anchor links", () => {
+    const md = [
+      "[a](./a.md)",
+      "[b](../b.md)",
+      "[c](/docs/c)",
+      "[d](file:///tmp/d.md)",
+      "[e](https://x.com)",
+      "[f](mailto:a@b.co)",
+      "[g](#section)",
+      "[h](tel:+123)",
+      "[i]: ./ref.md",
+    ].join("\n\n");
+    const lines = find(md, "local-link").map((i) => i.line);
+    expect(lines).toEqual([1, 3, 5, 7, 17]);
+  });
+
+  it("does not report links inside code", () =>
+    expect(find("`[a](./a.md)`\n\n```\n[a](./a.md)\n```", "local-link")).toEqual([]));
+
+  it("flags an unclosed block tag at the line it was opened", () => {
+    const issues = find("text\n\n<div>\n\nmore text\n", "unclosed-html");
+    expect(issues.map((i) => i.line)).toEqual([3]);
+    expect(issues[0]?.message).toContain("<div>");
+  });
+
+  it("flags an unclosed inline tag and a stray closing tag", () => {
+    expect(find("a <b>bold and more", "unclosed-html").map((i) => i.line)).toEqual([1]);
+    expect(find("a </span> b", "unclosed-html").map((i) => i.line)).toEqual([1]);
+  });
+
+  it("accepts balanced, void and self-closing HTML", () => {
+    const md = '<div>\n\ntext\n\n</div>\n\nline<br>break and <img src="x"> and <b>ok</b> <hr/>';
+    expect(find(md, "unclosed-html")).toEqual([]);
+  });
+});
+
 describe("paste conversion", () => {
   it("converts HTML to Markdown", () => {
     expect(

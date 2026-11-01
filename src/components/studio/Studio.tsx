@@ -85,6 +85,17 @@ import {
 import type { EditorHandle } from "./MarkdownEditor";
 import { AiWriter } from "./AiWriter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const NO_IMAGES: Record<string, string> = {};
+type SaveState = "saved" | "saving" | "error";
 
 const MarkdownEditor = lazy(() => import("./MarkdownEditor"));
 
@@ -154,12 +165,51 @@ export function Studio({ docId }: { docId: string }) {
     refreshList();
   }, [docId, refreshList]);
 
-  // autosave
+  // autosave: debounced, but any unsaved draft is flushed before it can be lost
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const saveSeq = useRef(0);
+  const pending = useRef<MdDocument | null>(null);
+  const flush = useCallback(() => {
+    const d = pending.current;
+    if (!d) return;
+    pending.current = null;
+    const seq = ++saveSeq.current;
+    return documentStore
+      .save(d)
+      .then(refreshList)
+      .then(() => {
+        if (seq === saveSeq.current) setSaveState("saved");
+      })
+      .catch((error) => {
+        console.error(error);
+        if (seq !== saveSeq.current) return;
+        setSaveState("error");
+        // fixed id: repeated failures update one toast instead of stacking
+        toast.error("Couldn't save this draft in the browser.", {
+          id: "autosave-error",
+          description:
+            "Your text is still on screen. Export it or free up storage, then keep typing to retry.",
+        });
+      });
+  }, [refreshList]);
   useEffect(() => {
     if (!doc) return;
-    const t = setTimeout(() => documentStore.save(doc).then(refreshList), 400);
+    pending.current = doc;
+    setSaveState("saving");
+    const t = setTimeout(flush, 400);
     return () => clearTimeout(t);
-  }, [doc, refreshList]);
+  }, [doc, flush]);
+  // Flush on draft switch, leaving the studio, hiding the tab (mobile) and closing it.
+  useEffect(() => {
+    const onHide = () => document.visibilityState === "hidden" && flush();
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+      flush();
+    };
+  }, [docId, flush]);
 
   const update = useCallback((patch: Partial<MdDocument>) => {
     setDoc((d) => {
@@ -173,7 +223,7 @@ export function Studio({ docId }: { docId: string }) {
 
   const content = doc?.content ?? "";
   const deferred = useDeferredValue(content);
-  const images = doc?.images ?? {};
+  const images = doc?.images ?? NO_IMAGES;
   const html = useMemo(
     () => renderMarkdown(deferred, profile, images),
     [deferred, profile, images],
@@ -280,8 +330,9 @@ export function Studio({ docId }: { docId: string }) {
     setMobileLibrary(false);
     navigate({ to: "/editor/$docId", params: { docId: c.id } });
   };
+  const [toDelete, setToDelete] = useState<MdDocument | null>(null);
   const remove = async (d: MdDocument) => {
-    if (!confirm(`Delete "${d.title}"? This can't be undone.`)) return;
+    setToDelete(null);
     await documentStore.remove(d.id);
     const rest = docs.filter((x) => x.id !== d.id);
     if (d.id === docId) {
@@ -413,7 +464,7 @@ export function Studio({ docId }: { docId: string }) {
                 variant="ghost"
                 size="icon"
                 className="h-10 w-10 text-destructive"
-                onClick={() => remove(d)}
+                onClick={() => setToDelete(d)}
                 aria-label="Delete"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -709,7 +760,7 @@ export function Studio({ docId }: { docId: string }) {
                   )}
                 >
                   <article
-                    className="md-preview mx-auto max-w-[720px] px-4 py-5 sm:px-8 sm:py-8"
+                    className="md-preview mx-auto max-w-180 px-4 py-5 sm:px-8 sm:py-8"
                     dangerouslySetInnerHTML={{ __html: html }}
                   />
                 </section>
@@ -719,7 +770,17 @@ export function Studio({ docId }: { docId: string }) {
               <span>{stats.words.toLocaleString()} words</span>
               <span>{stats.minutes} min read</span>
               <span>{Object.keys(images).length} images</span>
-              <span className="ml-auto hidden md:inline">
+              <span
+                role="status"
+                className={cn("ml-auto", saveState === "error" && "text-destructive")}
+              >
+                {saveState === "saving"
+                  ? "Saving…"
+                  : saveState === "error"
+                    ? "Not saved"
+                    : "Saved in this browser"}
+              </span>
+              <span className="hidden md:inline">
                 {PROFILES.find((p) => p.id === profile)?.label}
               </span>
             </footer>
@@ -748,6 +809,24 @@ export function Studio({ docId }: { docId: string }) {
             {panelButtons}
           </nav>
         )}
+        <Dialog open={toDelete !== null} onOpenChange={(open) => !open && setToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete this draft?</DialogTitle>
+              <DialogDescription>
+                “{toDelete?.title}” will be removed from this browser. This can't be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setToDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => toDelete && remove(toDelete)}>
+                Delete draft
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Sheet open={compact && mobileLibrary} onOpenChange={setMobileLibrary}>
           <SheetContent
             side="left"
