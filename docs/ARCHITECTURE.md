@@ -9,7 +9,7 @@
 | UI kit | shadcn/ui (Radix) in `src/components/ui`, Vaul drawers, Sonner toasts, lucide-react icons |
 | Editor | CodeMirror 6 (`@codemirror/lang-markdown`, language-data, search, history) |
 | Markdown | unified: remark-parse, remark-gfm, remark-frontmatter, remark-rehype, rehype-highlight, rehype-sanitize, rehype-stringify; rehype-parse + rehype-remark + remark-stringify for HTML→MD; `yaml` for front matter |
-| Storage | IndexedDB via `idb-keyval` |
+| Storage | IndexedDB (raw, no wrapper library) |
 | Tests | Vitest + Testing Library + jsdom |
 
 ## Routes
