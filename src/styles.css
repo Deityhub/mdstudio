@@ -352,6 +352,7 @@
   margin: 0 0 1em;
   overflow-x: auto;
   overflow-y: hidden;
+  padding: 0.5em 0;
 }
 .md-preview code {
   font-family: var(--font-mono);

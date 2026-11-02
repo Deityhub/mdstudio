@@ -34,6 +34,7 @@ describe("export", () => {
       { render: svg, fetchAsset },
     );
     expect(withMath).toContain(css);
+    expect(withMath).toContain(".katex-display{overflow-x:auto;overflow-y:hidden;padding:.5em 0}");
     const without = await standaloneDocument(
       "T",
       "plain",
