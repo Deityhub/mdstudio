@@ -63,7 +63,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/ui/layout";
 import { HistoryPanel } from "@/components/studio/HistoryPanel";
+import { Library } from "@/components/studio/Library";
 import { historyStore, type Revision } from "@/lib/storage/history";
+import { resolveFolder } from "@/lib/storage/library";
 import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
 import {
@@ -223,7 +225,15 @@ export function Studio({ docId }: { docId: string }) {
     localStorage.setItem("md:normalize", on ? "1" : "0");
   };
 
-  const refreshList = useCallback(() => documentStore.list().then(setDocs), []);
+  const [folderNames, setFolderNames] = useState<string[]>([]);
+  const refreshList = useCallback(
+    () =>
+      Promise.all([documentStore.list(), documentStore.folders.list()]).then(([d, f]) => {
+        setDocs(d);
+        setFolderNames(f);
+      }),
+    [],
+  );
   useEffect(() => {
     setMissing(false);
     documentStore.get(docId).then((d) => (d ? setDoc(d) : setMissing(true)));
@@ -470,15 +480,36 @@ export function Studio({ docId }: { docId: string }) {
     setMobileLibrary(false);
     navigate({ to: "/editor/$docId", params: { docId: c.id } });
   };
-  const [renaming, setRenaming] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const renameFocus = useRef(false);
-  const rename = async (d: MdDocument, name: string) => {
-    setRenaming(null);
-    if (name.trim() === (d.name ?? "").trim()) return;
-    if (d.id === doc?.id) return update({ name: name.trim() });
-    const saved = { ...d, name: name.trim() };
+  const libraryDocs = useMemo(
+    () => docs.map((d) => (d.id === doc?.id ? { ...d, ...doc } : d)),
+    [docs, doc],
+  );
+  /** Applies a library-only change to a draft, on screen or in storage. */
+  const patchDraft = async (d: MdDocument, patch: Partial<MdDocument>) => {
+    if (d.id === doc?.id) return update(patch);
+    const saved = { ...d, ...patch };
     await documentStore.save({ ...saved, title: docTitle(saved) });
+    refreshList();
+  };
+  const rename = (d: MdDocument, name: string) => {
+    if (name.trim() === (d.name ?? "").trim()) return;
+    return patchDraft(d, { name: name.trim() });
+  };
+  const move = async (d: MdDocument, folder: string | undefined) => {
+    const target = resolveFolder(folder, [...folderNames, ...docs.flatMap((x) => x.folder ?? [])]);
+    if (target === d.folder) return;
+    if (target) await documentStore.folders.add(target);
+    return patchDraft(d, { folder: target });
+  };
+  const createFolder = async (name: string) => {
+    const existing = [...folderNames, ...docs.flatMap((x) => x.folder ?? [])];
+    const target = resolveFolder(name, existing);
+    if (!target) return;
+    if (existing.includes(target)) {
+      toast.info(`A folder named “${target}” already exists`);
+      return;
+    }
+    await documentStore.folders.add(target);
     refreshList();
   };
   const [toDelete, setToDelete] = useState<MdDocument | null>(null);
@@ -488,6 +519,19 @@ export function Studio({ docId }: { docId: string }) {
     historyStore.clear(d.id).catch(console.error);
     const rest = docs.filter((x) => x.id !== d.id);
     if (d.id === docId) {
+      if (rest[0]) navigate({ to: "/editor/$docId", params: { docId: rest[0].id } });
+      else newDoc(SAMPLE);
+    } else refreshList();
+  };
+
+  const deleteFolder = async (name: string) => {
+    const inside = docs.filter((d) => d.folder === name);
+    if (doc && inside.some((d) => d.id === doc.id)) pending.current = null;
+    await Promise.all(inside.map((d) => documentStore.remove(d.id)));
+    inside.forEach((d) => historyStore.clear(d.id).catch(console.error));
+    await documentStore.folders.remove(name);
+    if (inside.some((d) => d.id === docId)) {
+      const rest = docs.filter((d) => d.folder !== name);
       if (rest[0]) navigate({ to: "/editor/$docId", params: { docId: rest[0].id } });
       else newDoc(SAMPLE);
     } else refreshList();
@@ -582,131 +626,19 @@ export function Studio({ docId }: { docId: string }) {
     </Button>
   ));
   const libraryContent = (
-    <aside className="flex min-h-0 flex-1 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex items-center justify-between px-3 py-3">
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Drafts
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10"
-          onClick={() => newDoc()}
-          aria-label="New draft"
-        >
-          <FilePlus className="h-4 w-4" />
-        </Button>
-      </div>
-      <nav className="flex-1 overflow-y-auto px-2 pb-3">
-        {docs.map((d) => (
-          <div
-            key={d.id}
-            className={cn(
-              "group flex items-center rounded-md",
-              d.id === docId ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
-            )}
-          >
-            {renaming === d.id ? (
-              <form
-                className="flex min-w-0 flex-1 items-center gap-1 p-1"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  rename(d, renameValue);
-                }}
-              >
-                <Input
-                  autoFocus
-                  aria-label="Draft name"
-                  className="h-8 min-w-0 flex-1"
-                  value={renameValue}
-                  placeholder={d.id === doc?.id ? doc.title : d.title}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onFocus={(e) => e.currentTarget.select()}
-                  onKeyDown={(e) => e.key === "Escape" && setRenaming(null)}
-                />
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  aria-label="Save name"
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  aria-label="Cancel rename"
-                  onClick={() => setRenaming(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </form>
-            ) : (
-              <>
-                <Link
-                  to="/editor/$docId"
-                  params={{ docId: d.id }}
-                  onClick={() => setMobileLibrary(false)}
-                  className="min-w-0 flex-1 px-2 py-2"
-                >
-                  <div className="truncate text-sm font-medium">
-                    {d.id === doc?.id ? doc.title : d.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(d.updatedAt).toLocaleDateString()}
-                  </div>
-                </Link>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="mr-1 h-10 w-10 shrink-0 xl:opacity-0 xl:focus-visible:opacity-100 xl:group-hover:opacity-100 data-[state=open]:opacity-100"
-                      aria-label={`Options for ${d.id === doc?.id ? doc.title : d.title}`}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    onCloseAutoFocus={(e) => {
-                      // let the rename input keep the focus it just took
-                      if (renameFocus.current) e.preventDefault();
-                      renameFocus.current = false;
-                    }}
-                  >
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        renameFocus.current = true;
-                        setRenameValue(d.id === doc?.id ? (doc.name ?? "") : (d.name ?? ""));
-                        setRenaming(d.id);
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => duplicate(d)}>
-                      <CopyPlus className="h-3.5 w-3.5" /> Duplicate
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onSelect={() => setToDelete(d)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            )}
-          </div>
-        ))}
-      </nav>
-      <p className="border-t border-sidebar-border px-3 py-2 text-xs text-muted-foreground">
-        Saved in this browser
-      </p>
-    </aside>
+    <Library
+      docs={libraryDocs}
+      folders={folderNames}
+      activeId={docId}
+      onCreateFolder={createFolder}
+      onDeleteFolder={deleteFolder}
+      onNew={() => newDoc()}
+      onOpen={() => setMobileLibrary(false)}
+      onRename={rename}
+      onDuplicate={duplicate}
+      onDelete={setToDelete}
+      onMove={move}
+    />
   );
   const panelContent = (
     <div className="flex-1 overflow-y-auto p-3">

@@ -44,6 +44,30 @@ describe("documentStore", () => {
   });
 });
 
+describe("folders", () => {
+  it("keeps folder names, so an empty folder survives", async () => {
+    const store = createDocumentStore(memoryStore());
+    expect(await store.folders.list()).toEqual([]);
+    await store.folders.add("Blog");
+    await store.folders.add("archive");
+    expect(await store.folders.list()).toEqual(["archive", "Blog"]);
+  });
+  it("ignores a name that exists in another case, and removes by name", async () => {
+    const store = createDocumentStore(memoryStore());
+    await store.folders.add("Blog");
+    await store.folders.add("blog");
+    expect(await store.folders.list()).toEqual(["Blog"]);
+    await store.folders.remove("BLOG");
+    expect(await store.folders.list()).toEqual([]);
+  });
+  it("does not show up among the documents", async () => {
+    const store = createDocumentStore(memoryStore());
+    await store.folders.add("Blog");
+    await store.create();
+    expect(await store.list()).toHaveLength(1);
+  });
+});
+
 describe("docTitle", () => {
   it("derives the title from the content", () =>
     expect(docTitle({ content: "# From heading" })).toBe("From heading"));

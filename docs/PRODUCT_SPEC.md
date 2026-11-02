@@ -35,7 +35,7 @@ Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: Rea
 | U10 | Use on phone | Done |
 | U11 | Publish directly to GitHub repo / dev.to / Hashnode / Ghost / WordPress | Planned |
 | U12 | Version history and restore | Done |
-| U13 | Collections, tags, search across drafts | Planned |
+| U13 | Collections, tags, search across drafts | Done |
 | U14 | Templates per platform (Astro, Hugo, Jekyll, Docusaurus, dev.to) | Planned |
 | U15 | Accounts + cross-device sync, share links, collaboration | Planned |
 | U16 | Image hosting / upload to absolute URLs | Planned |
