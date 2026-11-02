@@ -19,6 +19,7 @@ import {
   Archive,
   FolderUp,
   FileUp,
+  MonitorDown,
   Download,
   Copy,
   FilePlus,
@@ -70,6 +71,7 @@ import { Library } from "@/components/studio/Library";
 import { historyStore, type Revision } from "@/lib/storage/history";
 import { normalizeFolder, resolveFolder } from "@/lib/storage/library";
 import { buildArchive, parseArchive, type ImportedDoc } from "@/lib/storage/archive";
+import { useInstallPrompt, useOnline } from "@/lib/pwa/hooks";
 import { createZip, readZip, ZIP_LIMITS, type ZipEntry } from "@/lib/storage/zip";
 import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
@@ -200,6 +202,8 @@ export function Studio({ docId }: { docId: string }) {
   const [normalize, setNormalize] = useState(false);
   const editor = useRef<EditorHandle>(null);
   const preview = useRef<HTMLDivElement>(null);
+  const install = useInstallPrompt();
+  const online = useOnline();
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const scrollLock = useRef(0);
@@ -815,6 +819,29 @@ export function Studio({ docId }: { docId: string }) {
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            {install && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 px-2 sm:px-3"
+                aria-label="Install mdstudio"
+                onClick={() => install()}
+              >
+                <MonitorDown className="h-4 w-4" />{" "}
+                <span className="hidden xl:inline">Install</span>
+              </Button>
+            )}
+            <AiWriter
+              key={docId}
+              content={content}
+              onCreate={newDoc}
+              onApply={(metadata) => {
+                setContent(joinFrontMatter({ ...fm.data, ...metadata }, fm.body));
+                if (compact) setMobilePanel("meta");
+                else setPanel("meta");
+                toast.success("AI suggestions applied to front matter");
+              }}
+            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -823,7 +850,7 @@ export function Studio({ docId }: { docId: string }) {
                   className="h-10 px-2 sm:px-3"
                   aria-label="Import Markdown"
                 >
-                  <Upload className="h-4 w-4" /> <span className="hidden lg:inline">Import</span>
+                  <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -847,20 +874,14 @@ export function Studio({ docId }: { docId: string }) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <AiWriter
-              key={docId}
-              content={content}
-              onCreate={newDoc}
-              onApply={(metadata) => {
-                setContent(joinFrontMatter({ ...fm.data, ...metadata }, fm.body));
-                if (compact) setMobilePanel("meta");
-                else setPanel("meta");
-                toast.success("AI suggestions applied to front matter");
-              }}
-            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" className="h-10 px-2 sm:px-3" aria-label="Export">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-10 px-2 sm:px-3"
+                  aria-label="Export"
+                >
                   <Download className="h-4 w-4" />
                   <span className="hidden sm:inline">Export</span>
                 </Button>
@@ -1131,6 +1152,7 @@ export function Studio({ docId }: { docId: string }) {
               <span>{stats.words.toLocaleString()} words</span>
               <span>{stats.minutes} min read</span>
               <span>{Object.keys(images).length} images</span>
+              {!online && <span>Offline, your drafts are still saved here</span>}
               <span
                 role="status"
                 className={cn("ml-auto", saveState === "error" && "text-destructive")}

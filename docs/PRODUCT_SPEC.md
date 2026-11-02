@@ -39,7 +39,7 @@ Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: Rea
 | U14 | Templates per platform (Astro, Hugo, Jekyll, Docusaurus, dev.to) | Planned |
 | U15 | Accounts + cross-device sync, share links, collaboration | Planned |
 | U16 | Image hosting / upload to absolute URLs | Planned |
-| U17 | Offline PWA install | Planned |
+| U17 | Offline PWA install | Done |
 | U18 | Bulk import/export (zip of .md + images) | Done |
 | U19 | Math (KaTeX) and Mermaid diagrams, shown only where the target platform renders them | Planned (next) |
 | U20 | Complete formatting toolbar covering every supported Markdown construct | Planned (next) |
