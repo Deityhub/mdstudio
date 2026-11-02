@@ -69,5 +69,10 @@ test("renders math and Mermaid", async ({ page }) => {
   await open(page);
   await replaceText(page, "$$\nx^2 + y^2\n$$\n\n```mermaid\ngraph TD\n  A --> B\n```\n");
   await expect(page.locator(".md-preview .katex").first()).toBeVisible();
+  const displayMath = page.locator(".md-preview .katex-display").first();
+  const topPadding = await displayMath.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).paddingTop),
+  );
+  expect(topPadding).toBeGreaterThan(0);
   await expect(page.locator(".md-preview .md-mermaid svg")).toBeVisible({ timeout: 20_000 });
 });

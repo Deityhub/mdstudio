@@ -576,7 +576,7 @@ blockquote{margin:0;padding:0 1em;color:#59636e;border-left:.25em solid #d0d7de}
 .md-alert{--c:#0969da;color:inherit;border-left-color:var(--c);padding:.25em 1em}.md-alert-title{margin:0 0 .25em;font-weight:600;color:var(--c)}
 .md-alert-tip{--c:#1a7f37}.md-alert-important{--c:#8250df}.md-alert-warning{--c:#9a6700}.md-alert-caution{--c:#cf222e}
 mark{background:#fff8c5;color:inherit}
-.md-mermaid{overflow-x:auto;text-align:center;margin:0 0 1em}.md-mermaid svg{max-width:100%;height:auto}.katex-display{overflow-x:auto;overflow-y:hidden}
+.md-mermaid{overflow-x:auto;text-align:center;margin:0 0 1em}.md-mermaid svg{max-width:100%;height:auto}.katex-display{overflow-x:auto;overflow-y:hidden;padding:.5em 0}
 ${extraCss}</style>
 </head><body>
 ${bodyHtml}
