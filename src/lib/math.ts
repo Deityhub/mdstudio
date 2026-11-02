@@ -39,8 +39,13 @@ function addStylesheet() {
   document.head.append(link);
 }
 
+// KaTeX is loaded in the browser only; the server build drops the import (see diagrams.ts).
+const importKatex = import.meta.env.SSR
+  ? () => Promise.reject(new Error("Math renders in the browser only"))
+  : () => import("rehype-katex");
+
 export function ensureMath(): Promise<void> {
-  loading ??= import("rehype-katex")
+  loading ??= importKatex()
     .then((m) => {
       katexPlugin = m.default;
       addStylesheet();
