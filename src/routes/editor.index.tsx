@@ -1,24 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { documentStore, SAMPLE } from "@/lib/documentStore";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/editor/")({
-  head: () => ({
-    meta: [
-      { title: "Editor | Markdown Studio" },
-      {
-        name: "description",
-        content: "Write and preview portable Markdown with live preview, import and export.",
-      },
-      { property: "og:title", content: "Editor | Markdown Studio" },
-      {
-        property: "og:description",
-        content: "Write and preview portable Markdown with live preview, import and export.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      title: "Editor | mdstudio",
+      description: "Write and preview portable Markdown with live preview, import and export.",
+      path: "/editor",
+      noindex: true,
+    }),
   component: EditorIndex,
 });
 

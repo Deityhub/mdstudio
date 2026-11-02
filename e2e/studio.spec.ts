@@ -20,10 +20,10 @@ async function replaceText(page: Page, text: string) {
 test("home page renders and links to the editor", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-  await page
-    .getByRole("link", { name: /editor|start writing|open/i })
-    .first()
-    .click();
+  const github = page.getByRole("link", { name: /mdstudio on github/i });
+  await expect(github).toHaveAttribute("href", "https://github.com/Deityhub/mdstudio");
+  await expect(github).toHaveAttribute("target", "_blank");
+  await page.getByRole("link", { name: /start writing/i }).click();
   await expect(page).toHaveURL(/\/editor/);
   await expect(editor(page)).toBeVisible();
 });

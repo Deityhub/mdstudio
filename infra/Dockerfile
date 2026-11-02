@@ -1,4 +1,4 @@
-# Self-hosted Markdown Studio: Node.js + SQLite, one container, one volume.
+# Self-hosted mdstudio: Node.js + SQLite, one container, one volume.
 # Build from the repository root:  docker build -f infra/Dockerfile -t mdstudio .
 
 FROM oven/bun:1.3.14-alpine AS build

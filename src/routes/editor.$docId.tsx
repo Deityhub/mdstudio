@@ -1,24 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Studio } from "@/components/studio/Studio";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/editor/$docId")({
-  head: () => ({
-    meta: [
-      { title: "Draft | Markdown Studio" },
-      {
-        name: "description",
-        content: "Edit a Markdown draft with a faithful live preview and portability checks.",
-      },
-      { property: "og:title", content: "Draft | Markdown Studio" },
-      {
-        property: "og:description",
-        content: "Edit a Markdown draft with a faithful live preview and portability checks.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      title: "Draft | mdstudio",
+      description: "Edit a Markdown draft with a faithful live preview and portability checks.",
+      path: "/editor",
+      noindex: true,
+    }),
   component: DocPage,
 });
 
