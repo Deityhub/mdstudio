@@ -243,10 +243,49 @@ function rehypeInline(profile: Profile, feature: keyof typeof INLINES) {
   };
 }
 
+const LINE_TAGS = new Set([
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "li",
+  "blockquote",
+  "pre",
+  "table",
+  "tr",
+  "hr",
+]);
+
+/**
+ * Tags each block with the source lines it came from (`data-sl` first, `data-el` last, both
+ * 1-based), so the studio can jump between a block in the preview and its text in the editor.
+ * Runs after sanitizing and only writes numbers, so nothing from the document reaches an
+ * attribute. Off for exports: the lines are a studio detail, not part of the document's HTML.
+ */
+function rehypeSourceLines() {
+  return (tree: HastRoot) => {
+    visit(tree, "element", (node: Element) => {
+      const at = node.position;
+      if (!at || !LINE_TAGS.has(node.tagName)) return;
+      node.properties["dataSl"] = at.start.line;
+      node.properties["dataEl"] = at.end.line;
+    });
+  };
+}
+
+export type RenderOptions = {
+  /** Add `data-sl` and `data-el` source-line attributes to blocks (the studio preview does). */
+  sourceLines?: boolean;
+};
+
 export function renderMarkdown(
   md: string,
   profile: Profile = "github",
   images: Record<string, string> = {},
+  options: RenderOptions = {},
 ): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
@@ -255,10 +294,9 @@ export function renderMarkdown(
   // KaTeX runs after sanitizing (so raw HTML can't smuggle anything past it) with trust off, and
   // only once ensureMath() has loaded it; until then math shows as a code block.
   const katex = mathProfile ? getKatexPlugin() : null;
-  const q = p
-    .use(remarkRehype)
-    .use(rehypeSanitize, schema)
-    .use(rehypeAlerts(profile))
+  const q = p.use(remarkRehype).use(rehypeSanitize, schema);
+  if (options.sourceLines) q.use(rehypeSourceLines);
+  q.use(rehypeAlerts(profile))
     .use(rehypeInline(profile, "highlight"))
     .use(rehypeInline(profile, "wikilink"));
   if (katex) q.use(katex, KATEX_OPTIONS);

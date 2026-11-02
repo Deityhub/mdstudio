@@ -315,3 +315,45 @@ describe("isHttpUrl", () => {
       expect(isHttpUrl(bad)).toBe(false);
   });
 });
+
+describe("source lines for click-through sync", () => {
+  const md =
+    "---\ntitle: x\n---\n\n# Head\n\npara one\nline two\n\n- a\n- b\n  - c\n\n> q\n\n```js\ncode\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---\n";
+  const lines = (html: string) =>
+    [...new DOMParser().parseFromString(html, "text/html").querySelectorAll("[data-sl]")].map(
+      (e) => `${e.tagName.toLowerCase()} ${e.getAttribute("data-sl")}-${e.getAttribute("data-el")}`,
+    );
+
+  it("adds nothing unless asked, so exports stay clean", () => {
+    expect(renderMarkdown(md)).not.toContain("data-sl");
+    expect(renderMarkdown(md, "github", {}, {})).not.toContain("data-el");
+  });
+
+  it("tags each block with its first and last line in the full text, front matter included", () => {
+    expect(lines(renderMarkdown(md, "github", {}, { sourceLines: true }))).toEqual([
+      "h1 5-5",
+      "p 7-8",
+      "li 10-10",
+      "li 11-12",
+      "li 12-12",
+      "blockquote 14-14",
+      "p 14-14",
+      "pre 16-18",
+      "table 20-22",
+      "tr 20-20",
+      "tr 22-22",
+      "hr 24-24",
+    ]);
+  });
+
+  it("only writes numbers, so nothing from the document reaches an attribute", () => {
+    const html = renderMarkdown(
+      '# <img src=x onerror=alert(1)> "quoted"',
+      "github",
+      {},
+      { sourceLines: true },
+    );
+    expect(html).not.toContain("onerror");
+    expect(html).toMatch(/^<h1 data-sl="1" data-el="1">[^<]*<\/h1>$/);
+  });
+});
