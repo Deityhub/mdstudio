@@ -1,6 +1,10 @@
+import { deriveTitle } from "./markdown";
+
 export type MdDocument = {
   id: string;
   title: string;
+  /** Library label set by renaming; the document text is untouched. Blank or absent: derive it. */
+  name?: string;
   content: string;
   /** Local images keyed by file name, stored as data URIs. */
   images: Record<string, string>;
@@ -81,6 +85,10 @@ export const indexedDbStore: KeyValueStore = {
 };
 
 const PREFIX = "doc:";
+
+/** What the library and header show: the user's name for the draft, else what the text says. */
+export const docTitle = (d: { name?: string | undefined; content: string }) =>
+  d.name?.trim() || deriveTitle(d.content);
 
 export function createDocumentStore(kv: KeyValueStore) {
   const store = {

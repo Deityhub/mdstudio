@@ -31,8 +31,12 @@ import {
   Info,
   CircleAlert,
   CheckCircle2,
+  Check,
+  X,
   ListTree,
   Tags,
+  Pencil,
+  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +60,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { documentStore, SAMPLE, type MdDocument } from "@/lib/documentStore";
+import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/layout";
+import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/images";
 import {
   PROFILES,
@@ -66,6 +71,7 @@ import {
   getOutline,
   getStats,
   deriveTitle,
+  isHttpUrl,
   slugify,
   finalizeText,
   normalizeMarkdown,
@@ -148,8 +154,9 @@ export function Studio({ docId }: { docId: string }) {
   const [missing, setMissing] = useState(false);
   const [profile, setProfile] = useState<Profile>("github");
   const [view, setView] = useState<View>("split");
-  const [panel, setPanel] = useState<Panel>("checks");
+  const [panel, setPanel] = useState<Panel>(null);
   const [library, setLibrary] = useState(true);
+  const [libraryWidth, setLibraryWidth] = useState<number>(LIBRARY_WIDTH.default);
   const [focus, setFocus] = useState(false);
   const [ctx, setCtx] = useState<Context>(NO_CONTEXT);
   const [linkDialog, setLinkDialog] = useState<{
@@ -191,12 +198,22 @@ export function Studio({ docId }: { docId: string }) {
     const p = localStorage.getItem("md:profile") as Profile | null;
     if (p && PROFILES.some((x) => x.id === p)) setProfile(p);
     setNormalize(localStorage.getItem("md:normalize") === "1");
+    // Checks start open only on wide screens; below that the editor keeps the room until asked.
+    if (window.matchMedia(`(min-width: ${CHECKS_OPEN_MIN_WIDTH}px)`).matches) setPanel("checks");
+    const w = localStorage.getItem("md:library-width");
+    if (w) setLibraryWidth(clampLibraryWidth(w));
   }, []);
   // Saved where the choice is made, not in an effect: an effect on mount would overwrite the
   // stored value with the default before (or while) it is loaded.
   const chooseProfile = (p: Profile) => {
     setProfile(p);
     localStorage.setItem("md:profile", p);
+  };
+  const resizeLibrary = (width: number, save = true) => {
+    const w = clampLibraryWidth(width);
+    setLibraryWidth(w);
+    if (save) localStorage.setItem("md:library-width", String(w));
+    return w;
   };
   const chooseNormalize = (on: boolean) => {
     setNormalize(on);
@@ -260,7 +277,7 @@ export function Studio({ docId }: { docId: string }) {
     setDoc((d) => {
       if (!d) return d;
       const next = { ...d, ...patch, updatedAt: Date.now() };
-      next.title = deriveTitle(next.content);
+      next.title = docTitle(next);
       return next;
     });
   }, []);
@@ -414,6 +431,17 @@ export function Studio({ docId }: { docId: string }) {
     setMobileLibrary(false);
     navigate({ to: "/editor/$docId", params: { docId: c.id } });
   };
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameFocus = useRef(false);
+  const rename = async (d: MdDocument, name: string) => {
+    setRenaming(null);
+    if (name.trim() === (d.name ?? "").trim()) return;
+    if (d.id === doc?.id) return update({ name: name.trim() });
+    const saved = { ...d, name: name.trim() };
+    await documentStore.save({ ...saved, title: docTitle(saved) });
+    refreshList();
+  };
   const [toDelete, setToDelete] = useState<MdDocument | null>(null);
   const remove = async (d: MdDocument) => {
     setToDelete(null);
@@ -537,39 +565,100 @@ export function Studio({ docId }: { docId: string }) {
               d.id === docId ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
             )}
           >
-            <Link
-              to="/editor/$docId"
-              params={{ docId: d.id }}
-              onClick={() => setMobileLibrary(false)}
-              className="min-w-0 flex-1 px-2 py-2"
-            >
-              <div className="truncate text-sm font-medium">
-                {d.id === docId ? doc?.title : d.title}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {new Date(d.updatedAt).toLocaleDateString()}
-              </div>
-            </Link>
-            <div className="flex shrink-0 pr-1 xl:hidden xl:group-hover:flex">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10"
-                onClick={() => duplicate(d)}
-                aria-label="Duplicate"
+            {renaming === d.id ? (
+              <form
+                className="flex min-w-0 flex-1 items-center gap-1 p-1"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  rename(d, renameValue);
+                }}
               >
-                <CopyPlus className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 text-destructive"
-                onClick={() => setToDelete(d)}
-                aria-label="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+                <Input
+                  autoFocus
+                  aria-label="Draft name"
+                  className="h-8 min-w-0 flex-1"
+                  value={renameValue}
+                  placeholder={d.id === doc?.id ? doc.title : d.title}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onKeyDown={(e) => e.key === "Escape" && setRenaming(null)}
+                />
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  aria-label="Save name"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  aria-label="Cancel rename"
+                  onClick={() => setRenaming(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </form>
+            ) : (
+              <>
+                <Link
+                  to="/editor/$docId"
+                  params={{ docId: d.id }}
+                  onClick={() => setMobileLibrary(false)}
+                  className="min-w-0 flex-1 px-2 py-2"
+                >
+                  <div className="truncate text-sm font-medium">
+                    {d.id === doc?.id ? doc.title : d.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(d.updatedAt).toLocaleDateString()}
+                  </div>
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="mr-1 h-10 w-10 shrink-0 xl:opacity-0 xl:focus-visible:opacity-100 xl:group-hover:opacity-100 data-[state=open]:opacity-100"
+                      aria-label={`Options for ${d.id === doc?.id ? doc.title : d.title}`}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    onCloseAutoFocus={(e) => {
+                      // let the rename input keep the focus it just took
+                      if (renameFocus.current) e.preventDefault();
+                      renameFocus.current = false;
+                    }}
+                  >
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        renameFocus.current = true;
+                        setRenameValue(d.id === doc?.id ? (doc.name ?? "") : (d.name ?? ""));
+                        setRenaming(d.id);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => duplicate(d)}>
+                      <CopyPlus className="h-3.5 w-3.5" /> Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onSelect={() => setToDelete(d)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
           </div>
         ))}
       </nav>
@@ -792,7 +881,47 @@ export function Studio({ docId }: { docId: string }) {
 
         <div className="flex min-h-0 flex-1">
           {/* Library */}
-          {showLibrary && <div className="flex w-60 shrink-0 flex-col">{libraryContent}</div>}
+          {showLibrary && (
+            <div className="relative flex shrink-0 flex-col" style={{ width: libraryWidth }}>
+              {libraryContent}
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize drafts pane"
+                aria-valuemin={LIBRARY_WIDTH.min}
+                aria-valuemax={LIBRARY_WIDTH.max}
+                aria-valuenow={libraryWidth}
+                tabIndex={0}
+                className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none transition-colors hover:bg-ring/40 focus-visible:bg-ring/60 focus-visible:outline-none active:bg-ring/60"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  const el = e.currentTarget;
+                  el.setPointerCapture(e.pointerId);
+                  const left = el.parentElement?.getBoundingClientRect().left ?? 0;
+                  const move = (ev: PointerEvent) => resizeLibrary(ev.clientX - left, false);
+                  const up = (ev: PointerEvent) => {
+                    el.removeEventListener("pointermove", move);
+                    el.removeEventListener("pointerup", up);
+                    el.removeEventListener("pointercancel", up);
+                    resizeLibrary(ev.clientX - left);
+                  };
+                  el.addEventListener("pointermove", move);
+                  el.addEventListener("pointerup", up);
+                  el.addEventListener("pointercancel", up);
+                }}
+                onDoubleClick={() => resizeLibrary(LIBRARY_WIDTH.default)}
+                onKeyDown={(e) => {
+                  const step = e.shiftKey ? 48 : 16;
+                  if (e.key === "ArrowLeft") resizeLibrary(libraryWidth - step);
+                  else if (e.key === "ArrowRight") resizeLibrary(libraryWidth + step);
+                  else if (e.key === "Home") resizeLibrary(LIBRARY_WIDTH.min);
+                  else if (e.key === "End") resizeLibrary(LIBRARY_WIDTH.max);
+                  else return;
+                  e.preventDefault();
+                }}
+              />
+            </div>
+          )}
 
           {/* Editor + preview */}
           <main className="flex min-w-0 flex-1 flex-col">
@@ -1062,6 +1191,7 @@ function FrontMatterForm({
         ? (data[k] as Date).toISOString().slice(0, 10)
         : "";
   const set = (k: string, v: unknown) => onChange({ ...data, [k]: v });
+  const badCanonical = str("canonical_url") !== "" && !isHttpUrl(str("canonical_url"));
   const tags = Array.isArray(data["tags"]) ? (data["tags"] as unknown[]).join(", ") : str("tags");
   return (
     <div className="space-y-3">
@@ -1078,6 +1208,34 @@ function FrontMatterForm({
           />
         </div>
       ))}
+      <div className="space-y-1">
+        <Label htmlFor="fm-canonical">Canonical URL</Label>
+        <Input
+          id="fm-canonical"
+          type="url"
+          placeholder="https://example.com/original-post"
+          value={str("canonical_url")}
+          aria-invalid={badCanonical}
+          aria-describedby="fm-canonical-hint"
+          onChange={(e) => set("canonical_url", e.target.value)}
+        />
+        <p
+          id="fm-canonical-hint"
+          className={cn("text-xs", badCanonical ? "text-destructive" : "text-muted-foreground")}
+        >
+          {badCanonical
+            ? "Use a full http(s) address."
+            : "Where the post was first published, for cross-posting (dev.to reads canonical_url)."}
+        </p>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <Label htmlFor="fm-draft">Draft</Label>
+        <Switch
+          id="fm-draft"
+          checked={data["draft"] === true}
+          onCheckedChange={(on) => set("draft", on ? true : undefined)}
+        />
+      </div>
       <div className="space-y-1">
         <Label htmlFor="fm-description">Description</Label>
         <Textarea

@@ -56,7 +56,7 @@ Fields: title, slug, date, cover image URL, description, tags (comma separated).
 ## 7. Small screens — `06_mobile_editor_view.png`, `07_mobile_preview_view.png`
 - **Below 768px** the studio is a single pane: the view toggle offers Editor and Preview only, and the panel buttons move to a bottom navigation bar.
 - **Below 1280px** the drafts list opens as a left sheet and Checks, Outline and Front matter open as a right sheet, sharing the same panel components as the desktop sidebars.
-- **At 1280px and above** the drafts sidebar and the panel column are docked.
+- **At 1280px and above** the drafts sidebar and the panel column are docked. The drafts sidebar defaults to 288px and can be dragged (or resized with the arrow keys, Home and End; double-click resets) between 240px and 480px; the width is remembered. The Checks panel starts open only from 1536px; below that it stays closed until its button is clicked.
 
 ## Interactions
 - Autosave 400ms after typing. Unsaved edits are flushed immediately when switching drafts, leaving the studio, hiding the tab or closing the page. A failed save shows "Not saved" and one toast.
