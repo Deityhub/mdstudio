@@ -35,6 +35,10 @@ export function securityHeaders(nonce: string): Record<string, string> {
   };
 }
 
+/** Pull request previews are public URLs for reviewers, not pages to index. */
+export const previewHeaders = (preview: boolean): Record<string, string> =>
+  preview ? { "X-Robots-Tag": "noindex, nofollow" } : {};
+
 const nonces = new WeakMap<Request, string>();
 export const setRequestNonce = (request: Request, nonce: string) => nonces.set(request, nonce);
 export const getRequestNonce = (request: Request) => nonces.get(request);

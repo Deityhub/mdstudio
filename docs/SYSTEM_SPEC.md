@@ -383,6 +383,7 @@ CREATE TABLE share_links (
 - **Database:** Cloudflare D1 (Serverless SQLite, 5 GB storage, 5 million reads/day free).
 - **Asset Storage:** Cloudflare R2 (10 GB storage, zero egress bandwidth charges).
 - **Edge Security:** Cloudflare Turnstile bot verification and Workers Rate Limiting.
+- **PR previews:** each pull request into `dev` is deployed as its own Worker (`mdstudio-pr-<number>`, workers.dev, `noindex`) by `.github/workflows/preview.yml` and deleted when the PR closes; see `docs/RELEASING.md`.
 
 ### 9.2 Self-Hosted Tier (Docker — Single Container)
 
