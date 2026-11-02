@@ -15,6 +15,34 @@ async function open(page: Page) {
   return errors;
 }
 
+/** How a draft's text appears in storage; the `images` key that follows tells it from a saved version. */
+const docContent = (text: string) => `"content":${JSON.stringify(text)},"images"`;
+
+/**
+ * The status label says "Saved" before a change has even started saving, so a test that reloads
+ * right after typing can race the debounce. This waits until the text is really in IndexedDB.
+ */
+async function stored(page: Page, needle: string) {
+  await expect
+    .poll(() =>
+      page.evaluate(async (n) => {
+        const db = await new Promise<IDBDatabase>((res, rej) => {
+          const r = indexedDB.open("mdstudio-db");
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+        const all = await new Promise<unknown[]>((res, rej) => {
+          const r = db.transaction("mdstudio-store").objectStore("mdstudio-store").getAll();
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+        db.close();
+        return JSON.stringify(all).includes(n);
+      }, needle),
+    )
+    .toBe(true);
+}
+
 async function replaceText(page: Page, text: string) {
   await editor(page).click();
   await page.keyboard.press("ControlOrMeta+a");
@@ -47,7 +75,7 @@ test("typing updates the preview, with no console errors under the CSP", async (
 test("a draft survives a reload (real IndexedDB)", async ({ page }) => {
   await open(page);
   await replaceText(page, "# Persisted heading\n\nbody");
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, docContent("# Persisted heading\n\nbody"));
   await page.reload();
   await expect(editor(page)).toContainText("Persisted heading");
   await expect(
@@ -98,7 +126,7 @@ test("renames a draft without touching its text, and blank goes back to the head
   await page.keyboard.press("Enter");
   await expect(page.locator("nav").getByText("My renamed draft")).toBeVisible();
   await expect(editor(page)).toContainText("# From the heading");
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, '"name":"My renamed draft"');
   await page.reload();
   await page.locator("nav").getByText("My renamed draft").hover();
   await page
@@ -256,7 +284,8 @@ test("history: the list survives a reload, and an unchanged version has nothing 
   await replaceText(page, "# Kept\n\nbody two");
   await page.getByRole("button", { name: "Save a version now" }).click();
   await expect(page.getByText("Saved by you")).toBeVisible();
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, docContent("# Kept\n\nbody two"));
+  await stored(page, '"kind":"manual"');
   await page.reload();
   await page.getByRole("button", { name: "History", exact: true }).click();
   await page.getByRole("button", { name: /Saved by you/ }).click();
@@ -268,7 +297,7 @@ test("history: the list survives a reload, and an unchanged version has nothing 
 async function newDraft(page: Page, text: string) {
   await page.getByRole("button", { name: "New draft" }).click();
   await replaceText(page, text);
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, docContent(text));
 }
 
 test("library: search by title and text, filter by tag, and clear", async ({ page }) => {
@@ -331,7 +360,7 @@ test("library: create a folder, move drafts in through the menu, and keep it aft
       .evaluate((el) => el.closest("a")!.getBoundingClientRect().left);
   expect(await indent("One")).toBeGreaterThan((await indent("Two")) + 8);
 
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, '"folder":"Blog posts"');
   await page.reload();
   await expect(nav.getByRole("group", { name: "Folder Blog posts" })).toBeVisible();
   await nav.getByRole("button", { name: /^Blog posts/ }).click();
@@ -597,7 +626,7 @@ test("library: rename a folder through its menu, and its drafts follow", async (
   await page.getByLabel("Folder name", { exact: true }).fill("Nope");
   await page.getByRole("button", { name: "Cancel folder rename" }).click();
   await expect(nav.getByRole("group", { name: "Folder POSTS" })).toBeVisible();
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, '"folder":"POSTS"');
   await page.reload();
   await expect(
     nav.getByRole("group", { name: "Folder POSTS" }).getByText("Inside", { exact: true }),
