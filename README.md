@@ -115,7 +115,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request: branch fr
 
 ## Roadmap
 
-Next up: v0.1.0, then an optional WYSIWYG live-preview mode (Markdown stays canonical), accounts with sync, hosted images and share links. Details in [roadmap.md](roadmap.md).
+Next up: v0.1.0, then accounts with sync, hosted images and share links. Details in [roadmap.md](roadmap.md).
 
 ## Contributing, security and license
 

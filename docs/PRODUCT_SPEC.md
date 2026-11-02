@@ -43,9 +43,8 @@ Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: Rea
 | U18 | Bulk import/export (zip of .md + images) | Done |
 | U19 | Math (KaTeX) and Mermaid diagrams, shown only where the target platform renders them | Planned (next) |
 | U20 | Complete formatting toolbar covering every supported Markdown construct | Planned (next) |
-| U21 | Optional WYSIWYG live-preview mode with Markdown as the canonical text | Planned (M2) |
 
 See `FEATURES_ROADMAP.md` for specs and acceptance criteria.
 
 ## Out of scope
-Proprietary syntax extensions as the default output. WYSIWYG is *in* scope as an optional mode (U21): the Markdown text stays the document and the output is always standard Markdown, so a mode that hides Markdown as the only way to edit remains out of scope.
+Proprietary syntax extensions as the default output.
