@@ -11,6 +11,7 @@ const SAMPLES: Record<Exclude<Feature, "html">, { md: string; rule: string }> = 
   math: { md: "$$\nx\n$$", rule: "math" },
   mermaid: { md: "```mermaid\ngraph TD\n```", rule: "mermaid" },
   highlight: { md: "a ==b== c", rule: "highlight" },
+  wikilink: { md: "see [[Page]]", rule: "wiki-link" },
 };
 
 describe("feature support table", () => {

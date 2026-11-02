@@ -541,3 +541,9 @@ html.studio-open body {
   height: 100%;
   overflow: hidden;
 }
+.md-preview .wikilink {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.2em;
+}
