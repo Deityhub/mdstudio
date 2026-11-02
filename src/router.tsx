@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { getRequestNonce } from "./lib/csp";
+import { getRequestNonce } from "./lib/server/csp";
 import { routeTree } from "./routeTree.gen";
 
 // Undefined in dev and in the browser; set by the security-headers middleware in production.

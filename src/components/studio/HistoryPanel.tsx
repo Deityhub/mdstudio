@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { diffLines, diffStats, type DiffRow } from "@/lib/diff";
-import { getStats } from "@/lib/markdown";
-import type { Revision } from "@/lib/history";
+import { diffLines, diffStats, type DiffRow } from "@/lib/editor/diff";
+import { getStats } from "@/lib/markdown/markdown";
+import type { Revision } from "@/lib/storage/history";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<Revision["kind"], string | null> = {

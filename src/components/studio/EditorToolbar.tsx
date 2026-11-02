@@ -63,7 +63,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Command, Context, Edit, Snapshot } from "@/lib/editing";
+import type { Command, Context, Edit, Snapshot } from "@/lib/editor/editing";
 import {
   ALERT_KINDS,
   CODE_LANGUAGES,
@@ -76,9 +76,9 @@ import {
   insertMermaid,
   insertRule,
   wrapTag,
-} from "@/lib/editing-insert";
-import { supportHint, type Feature, type Profile } from "@/lib/markdown";
-import { tableCommand, type TableCommand } from "@/lib/tables";
+} from "@/lib/editor/editing-insert";
+import { supportHint, type Feature, type Profile } from "@/lib/markdown/markdown";
+import { tableCommand, type TableCommand } from "@/lib/editor/tables";
 import type { EditorHandle } from "./MarkdownEditor";
 import { useRovingToolbar } from "./useRovingToolbar";
 

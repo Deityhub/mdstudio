@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ImageValues, LinkValues } from "@/lib/editing-insert";
+import type { ImageValues, LinkValues } from "@/lib/editor/editing-insert";
 
 // Exported Markdown is read by other platforms, so refuse schemes that can run code.
 const SCRIPT_URL = /^\s*(javascript|vbscript):/i;

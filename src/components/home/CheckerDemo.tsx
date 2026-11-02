@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
-import { checkPortability, type Issue, type Severity } from "@/lib/markdown";
-import { PROFILES, type Profile } from "@/lib/profiles";
+import { checkPortability, type Issue, type Severity } from "@/lib/markdown/markdown";
+import { PROFILES, type Profile } from "@/lib/markdown/profiles";
 import { cn } from "@/lib/utils";
 
 export const DEMO_SAMPLE = `# Release notes

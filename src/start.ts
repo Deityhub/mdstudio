@@ -1,9 +1,9 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
 
-import { createNonce, previewHeaders, securityHeaders, setRequestNonce } from "./lib/csp";
+import { createNonce, previewHeaders, securityHeaders, setRequestNonce } from "./lib/server/csp";
 
-import { renderErrorPage } from "./lib/error-page";
+import { renderErrorPage } from "./lib/server/error-page";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {

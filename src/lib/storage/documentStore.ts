@@ -1,4 +1,4 @@
-import { deriveTitle } from "./markdown";
+import { deriveTitle } from "../markdown/markdown";
 
 export type MdDocument = {
   id: string;

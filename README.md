@@ -80,7 +80,7 @@ The app is served on <http://localhost:3000> with data in the `mdstudio-data` vo
 
 ## How it works
 
-- **Engine.** [unified](https://unifiedjs.com): remark-parse, GFM, front matter, math, remark-rehype, rehype-sanitize, then highlighting. The output is always sanitized. All Markdown logic lives in [`src/lib/markdown.ts`](src/lib/markdown.ts).
+- **Engine.** [unified](https://unifiedjs.com): remark-parse, GFM, front matter, math, remark-rehype, rehype-sanitize, then highlighting. The output is always sanitized. All Markdown logic lives in [`src/lib/markdown/markdown.ts`](src/lib/markdown/markdown.ts).
 - **Editor.** CodeMirror 6, loaded only in the browser. Editing commands are pure functions with their own tests.
 - **Storage.** Raw IndexedDB behind a small `documentStore` interface.
 - **Security.** Nonce-based Content-Security-Policy in production, sanitized preview, no server in the writing path.

@@ -12,13 +12,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { type SuggestedMetadata } from "@/lib/ai-writing";
+import { type SuggestedMetadata } from "@/lib/ai/writing";
 import {
   generateWithProvider,
   PROVIDER_URLS,
   type AiConnection,
   type ProviderId,
-} from "@/lib/ai-provider";
+} from "@/lib/ai/provider";
 import {
   Select,
   SelectContent,
@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { renderMarkdown } from "@/lib/markdown";
+import { renderMarkdown } from "@/lib/markdown/markdown";
 
 export function AiWriter({
   content,

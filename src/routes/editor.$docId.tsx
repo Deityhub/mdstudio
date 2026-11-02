@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Studio } from "@/components/studio/Studio";
-import { pageHead } from "@/lib/seo";
+import { pageHead } from "@/lib/site/seo";
 
 export const Route = createFileRoute("/editor/$docId")({
   head: () =>
