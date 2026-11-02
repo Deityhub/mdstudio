@@ -1,10 +1,15 @@
 # UI Spec — Current Screens
 
-Screenshots in `docs/ui-screenshots/` (taken before the home page redesign and the toolbar work; refresh them when those land).
+Screenshots in `docs/ui-screenshots/` are generated from the production build with `bun run screenshots`; rerun it after UI changes.
 Items marked **(planned)** are specified but not built yet.
 
-## 1. Landing `/` — `01_home_page.png`
-Header with the Fraunces wordmark and an "Open editor" button. Hero: "Write once. Render the same everywhere.", subcopy, primary CTA to `/editor`, and a mock editor/preview card. A four-item feature grid (what you see is what ships, portability checks, import/paste/drop, clean export). **(planned)** Full rewrite with a convincing story, live checker demo, FAQ and SEO content in the home redesign PR.
+## 1. Landing `/` — `01_home_page.png`, `08_home_checker_demo.png`
+Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home), a light/dark toggle and a GitHub link (opens the repository in a new tab). Sections, top to bottom:
+- **Hero:** "Write once. Render the same everywhere.", a short description, a primary "Start writing" button to `/editor`, a "Try the checker" anchor, and a decorative (`aria-hidden`) editor/preview mock. The page has exactly one `h1`.
+- **How it works:** Write, Check, Export.
+- **Live checker demo** (`#try-it`): the real portability engine, lazy-loaded behind `ClientOnly`. An editable sample, four target pills with live issue counts, and a clickable report that selects the offending line.
+- **Features** (six cards), **target profiles** (four cards), **About** and **Who it's for**, an eight-question **FAQ** (native `details`, mirrored in FAQPage JSON-LD), a closing call to action, and a footer (copyright and author on the left, GitHub and Changelog on the right).
+- **Theme:** an inline head script applies the saved or OS theme before first paint; the toggle also lives in the studio header.
 
 ## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`
 - **Top bar, row 1:** drafts toggle · wordmark link and current title · Import · AI writer · Export dropdown · Focus mode.

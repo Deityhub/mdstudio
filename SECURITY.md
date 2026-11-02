@@ -8,7 +8,7 @@ version or commit you tested. You will get a reply within a few days.
 
 ## Scope
 
-Markdown Studio renders untrusted Markdown, so reports about HTML sanitization, XSS, the
+mdstudio renders untrusted Markdown, so reports about HTML sanitization, XSS, the
 Content-Security-Policy, Mermaid or KaTeX rendering, and exported documents are especially welcome.
 API keys for the AI writer are held in session memory only and must never be persisted or proxied.
 

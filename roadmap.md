@@ -1,4 +1,4 @@
-# Markdown Studio — Project Roadmap
+# mdstudio — Project Roadmap
 
 ## Launch readiness (target: v0.1.0)
 - [x] Remove Supabase and Lovable, plain Vite config
@@ -9,13 +9,16 @@
 - [x] Autosave hardening, checker locations, `local-link` and `unclosed-html` rules
 - [x] Math (KaTeX) and Mermaid, profile-gated
 - [x] Complete formatting toolbar (marks, headings, lists, links, images, footnotes, rules, code blocks, tables, alerts, math/Mermaid/HTML insertion, profile warnings, keyboard model)
-- [ ] Open-source license, contributor docs and license check (known items for the audit: `elkjs` EPL-2.0 via Mermaid needs an attribution notice; `khroma` is MIT but has no `license` field; `lightningcss` MPL-2.0 is build-time only; KaTeX font lineage is MathJax-derived, see `public/katex/README.md`)
-- [ ] CI (lint, test, build, license, e2e)
+- [x] Open-source license, contributor docs and license check (known items for the audit: `elkjs` EPL-2.0 via Mermaid needs an attribution notice; `khroma` is MIT but has no `license` field; `lightningcss` MPL-2.0 is build-time only; KaTeX font lineage is MathJax-derived, see `public/katex/README.md`)
+- [x] CI (lint, test, build, license, e2e, Docker smoke test)
 - [x] Infra blueprints (Cloudflare Workers + D1 + R2, Docker + SQLite)
 - [x] Release automation (prepare-release, changelog, tags, GHCR + Docker Hub, Cloudflare deploy)
 - [x] SEO foundation (meta, canonical, JSON-LD, sitemap, robots, llms.txt, IndexNow, icons, OG image)
-- [ ] Home page redesign
-- [ ] README and content pages
+- [x] Home page redesign (live checker demo, dark mode, logo)
+- [x] Mermaid dark theme
+- [x] README
+- [ ] Content pages (guides and comparisons)
+- [ ] Cut v0.1.0
 
 ## Milestone 1: Core Writing Studio & Portability (Completed)
 - [x] **Editor & Highlighting:** CodeMirror 6 integration with Markdown syntax highlighting, line numbers, search, and history.
