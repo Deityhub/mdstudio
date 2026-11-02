@@ -55,7 +55,13 @@ test("crawler files are served", async ({ request }) => {
 
   expect(await (await request.get("/llms.txt")).text()).toContain("# mdstudio");
   expect((await request.get("/manifest.webmanifest")).ok()).toBe(true);
-  for (const f of ["/og.png", "/favicon.svg", "/apple-touch-icon.png", "/icon-512.png"])
+  for (const f of [
+    "/og.png",
+    "/favicon.svg",
+    "/favicon.ico",
+    "/apple-touch-icon.png",
+    "/icon-512.png",
+  ])
     expect((await request.get(f)).ok(), f).toBe(true);
 });
 

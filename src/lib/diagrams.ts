@@ -28,7 +28,14 @@ const keyFor = (theme: DiagramTheme, source: string) => `${theme}\n${source}`;
 /** What was last shown at each position in the document (a diagram or an error), kept on screen while a changed one renders. */
 const lastShown: DiagramResult[] = [];
 
-const loadMermaid = () => (mermaid ??= import("mermaid").then((m) => m.default));
+// Mermaid only ever runs in the browser. `import.meta.env.SSR` is a build-time constant, so the
+// server build drops the import and Mermaid (about 9 MB with its layout engines) stays out of the
+// Cloudflare Worker (scripts/bundle-size.ts enforces this).
+const importMermaid = import.meta.env.SSR
+  ? () => Promise.reject(new Error("Mermaid renders in the browser only"))
+  : () => import("mermaid");
+
+const loadMermaid = () => (mermaid ??= importMermaid().then((m) => m.default));
 
 /** Mermaid's config is global, so set the theme right before each render (no await in between). */
 const configure = (m: Mermaid, theme: DiagramTheme) =>

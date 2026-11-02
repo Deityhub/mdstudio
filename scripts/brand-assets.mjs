@@ -1,7 +1,7 @@
 // Renders the PNG brand assets (social card and app icons) from public/favicon.svg and the
 // self-hosted fonts, using the Playwright Chromium already installed for the e2e tests.
 //   bun run brand
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "@playwright/test";
 
 const svg = readFileSync("public/favicon.svg", "utf8");
@@ -44,4 +44,40 @@ for (const [size, name] of [
   [512, "icon-512"],
 ])
   await shot(icon(size), size, size, `public/${name}.png`);
+
+// favicon.ico: browsers that skip the SVG, and crawlers that request /favicon.ico directly. The mark
+// sits on a rounded paper tile so it stays legible at 16px on light and dark tabs.
+const tile = (size) =>
+  `<style>body{margin:0;width:${size}px;height:${size}px;background:transparent}` +
+  `.t{width:${size}px;height:${size}px;border-radius:${Math.round(size * 0.22)}px;background:#f9f5ec;display:grid;place-items:center}` +
+  `svg{width:${Math.round(size * 0.78)}px;height:${Math.round(size * 0.78)}px}</style><div class="t">${svg}</div>`;
+
+/** ICO container with one PNG image per size (supported since Windows Vista and by every browser). */
+const buildIco = (images) => {
+  const head = Buffer.alloc(6 + images.length * 16);
+  head.writeUInt16LE(1, 2); // type: icon
+  head.writeUInt16LE(images.length, 4);
+  let offset = head.length;
+  images.forEach(({ size, png }, i) => {
+    const at = 6 + i * 16;
+    head[at] = size; // width, 0 would mean 256
+    head[at + 1] = size;
+    head.writeUInt16LE(1, at + 4); // colour planes
+    head.writeUInt16LE(32, at + 6); // bits per pixel
+    head.writeUInt32LE(png.length, at + 8);
+    head.writeUInt32LE(offset, at + 12);
+    offset += png.length;
+  });
+  return Buffer.concat([head, ...images.map((i) => i.png)]);
+};
+
+const icoImages = [];
+for (const size of [16, 32, 48]) {
+  const page = await browser.newPage({ viewport: { width: size, height: size } });
+  await page.setContent(tile(size));
+  icoImages.push({ size, png: await page.screenshot({ omitBackground: true }) });
+  await page.close();
+}
+writeFileSync("public/favicon.ico", buildIco(icoImages));
+console.log("public/favicon.ico");
 await browser.close();
