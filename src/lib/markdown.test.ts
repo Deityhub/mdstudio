@@ -258,6 +258,34 @@ describe("highlights", () => {
     expect(html("<mark>x</mark> and ==y==")).toBe("<p>x and <mark>y</mark></p>"));
 });
 
+describe("wiki-links", () => {
+  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "obsidian") =>
+    renderMarkdown(md, p);
+  const link = (text: string, target: string) =>
+    `<span class="wikilink" title="Link to ${target}">${text}</span>`;
+
+  it("renders [[Note]] and [[Note|alias]] for Obsidian", () => {
+    expect(html("see [[Note]]")).toBe(`<p>see ${link("Note", "Note")}</p>`);
+    expect(html("[[Note|the note]]")).toBe(`<p>${link("the note", "Note")}</p>`);
+  });
+  it("shows headings and block references the way Obsidian does", () => {
+    expect(html("[[Note#Part]]")).toContain(link("Note > Part", "Note#Part"));
+    expect(html("[[#Part]]")).toContain(link("Part", "#Part"));
+  });
+  it("works inside headings and lists, and escapes the target", () => {
+    expect(html("# [[A]]")).toContain(link("A", "A"));
+    expect(html("- [[A]] and [[B]]")).toContain(link("B", "B"));
+    expect(html('[[a"b]]')).not.toContain('title="Link to a"b');
+  });
+  it("leaves the text alone elsewhere, and ignores code, embeds and empty links", () => {
+    for (const p of ["github", "commonmark", "devto"] as const)
+      expect(html("[[Note]]", p)).not.toContain("wikilink");
+    expect(html("`[[Note]]`")).not.toContain("wikilink");
+    expect(html("![[image.png]]")).not.toContain("wikilink");
+    expect(html("[[]] and [[ ]]")).not.toContain("wikilink");
+  });
+});
+
 describe("paste conversion", () => {
   it("converts HTML to Markdown", () => {
     expect(

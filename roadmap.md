@@ -1,6 +1,7 @@
 # mdstudio — Project Roadmap
 
 ## Launch readiness (target: v0.1.0)
+
 - [x] Remove Supabase and Lovable, plain Vite config
 - [x] Format the codebase; lint, test, typecheck and build all green
 - [x] Raw IndexedDB store (no wrapper library)
@@ -21,6 +22,7 @@
 - [ ] Cut v0.1.0
 
 ## Milestone 1: Core Writing Studio & Portability (Completed)
+
 - [x] **Editor & Highlighting:** CodeMirror 6 integration with Markdown syntax highlighting, line numbers, search, and history.
 - [x] **Formatting Controls:** Quick-access toolbar (bold, italic, strikethrough, headings, links, code, quotes, lists, tables).
 - [x] **Faithful Preview:** Strict CommonMark + GFM preview rendering via unified/remark/rehype with syntax-highlighted code fences.
@@ -38,18 +40,20 @@
 ---
 
 ## Milestone 2: PWA, Local History & Advanced Library (Target: Q1 2027)
+
 - [ ] **PWA Support:** Web app manifest, service worker caching, and complete offline installation capability.
 - [ ] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.
 - [ ] **Library Organization:** Full-text document search, custom tags, and folder categorization.
 - [ ] **Bulk Import & Export:** Export all drafts as a structured ZIP file; bulk import Markdown folders and archives.
 - [ ] **WYSIWYG Live-Preview Mode:** Optional CodeMirror-decoration mode that hides syntax markers on inactive lines; Markdown stays canonical.
-- [ ] **Obsidian Rendering:** `==highlight==` renders; `[[wiki-links]]` in the Obsidian profile still to do.
+- [x] **Obsidian Rendering:** `==highlight==` and `[[wiki-links]]` (with `|alias` and `#heading`) render in the Obsidian profile. `![[embeds]]` are not rendered.
 - [ ] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
 - [ ] **Custom Checker Rules:** User-configurable linting rules and warnings for publication standards.
 
 ---
 
 ## Milestone 3: Accounts, Cloud Sync & Hosted Storage (Target: Q2 2027)
+
 - [ ] **Activate Server Blueprint:** Transition `infra/` backend blueprints into `src/server/`.
 - [ ] **Authentication System:** Secure cookie-based session management, password authentication (Argon2id/Scrypt), and GitHub OAuth.
 - [ ] **Optimistic Cloud Sync:** Incremental sync engine with monotonic version counters and automatic conflict branch resolution.
@@ -60,6 +64,7 @@
 ---
 
 ## Milestone 4: Sharing & Multi-Platform Publishing (Target: Q3 2027)
+
 - [ ] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML.
 - [ ] **Link Management:** Configurable expiration dates and one-click link revocation.
 - [ ] **GitHub Publishing:** Direct commit and pull-request creation to user GitHub repositories using OAuth or personal access tokens.
@@ -68,6 +73,7 @@
 ---
 
 ## Milestone 5: Collaboration & Advanced AI (Future)
+
 - [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
 - [ ] **Local AI Models:** Direct browser integration with local model runners (e.g., WebLLM or local Ollama instances via CORS).
 - [ ] **Inline AI Writing Actions:** In-place selection rewriting, summarization, proofreading, and automated image alt-text generation.
