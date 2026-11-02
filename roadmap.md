@@ -43,7 +43,7 @@
 
 - [ ] **PWA Support:** Web app manifest, service worker caching, and complete offline installation capability.
 - [x] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.
-- [ ] **Library Organization:** Full-text document search, custom tags, and folder categorization.
+- [x] **Library Organization:** Full-text document search, tags (from front matter) and folder categorization.
 - [ ] **Bulk Import & Export:** Export all drafts as a structured ZIP file; bulk import Markdown folders and archives.
 - [ ] **WYSIWYG Live-Preview Mode:** Optional CodeMirror-decoration mode that hides syntax markers on inactive lines; Markdown stays canonical.
 - [x] **Obsidian Rendering:** `==highlight==` and `[[wiki-links]]` (with `|alias` and `#heading`) render in the Obsidian profile. `![[embeds]]` are not rendered.

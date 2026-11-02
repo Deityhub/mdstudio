@@ -260,3 +260,197 @@ test("history: the list survives a reload, and an unchanged version has nothing 
   await expect(dialog.getByText("Same as the current text")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Restore this version" })).toBeDisabled();
 });
+
+async function newDraft(page: Page, text: string) {
+  await page.getByRole("button", { name: "New draft" }).click();
+  await replaceText(page, text);
+  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+}
+
+test("library: search by title and text, filter by tag, and clear", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "# Alpha post\n\nthe quick brown fox");
+  await newDraft(page, "---\ntags: [rust, web]\n---\n# Beta post\n\nmemory safety notes");
+  await newDraft(page, "---\ntags: [web]\n---\n# Gamma post\n\nsomething else");
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+
+  await page.getByRole("searchbox", { name: "Search drafts" }).fill("brown fox");
+  await expect(nav.getByText("Alpha post")).toBeVisible();
+  await expect(nav.getByText("the quick brown fox")).toBeVisible();
+  await expect(nav.getByText("Beta post")).toBeHidden();
+
+  await page.getByRole("searchbox", { name: "Search drafts" }).fill("zzz-nothing");
+  await expect(nav.getByText("No drafts match.")).toBeVisible();
+  await nav.getByRole("button", { name: "Clear filters" }).click();
+  await expect(nav.getByText("Gamma post")).toBeVisible();
+
+  await page.getByRole("button", { name: /^web\b/ }).click();
+  await expect(nav.getByText("Alpha post")).toBeHidden();
+  await expect(nav.getByText("Beta post")).toBeVisible();
+  await expect(nav.getByText("Gamma post")).toBeVisible();
+  await page.getByRole("button", { name: /^rust\b/ }).click();
+  await expect(nav.getByText("Gamma post")).toBeHidden();
+  await expect(nav.getByText("Beta post")).toBeVisible();
+  await page.getByRole("button", { name: /^rust\b/ }).click();
+  await page.getByRole("button", { name: /^web\b/ }).click();
+  await expect(nav.getByText("Alpha post")).toBeVisible();
+});
+
+test("library: create a folder, move drafts in through the menu, and keep it after a reload", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "# One\n\nbody");
+  await newDraft(page, "# Two\n\nbody");
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+
+  await page.getByRole("button", { name: "New folder" }).click();
+  await page.getByLabel("New folder name").fill("  Blog   posts ");
+  await page.getByRole("button", { name: "Create folder" }).click();
+  const folder = nav.getByRole("group", { name: "Folder Blog posts" });
+  await expect(folder).toBeVisible();
+  await expect(folder.getByText("Empty. Drag drafts here.")).toBeVisible();
+
+  await nav.getByText("One", { exact: true }).hover();
+  await page.getByRole("button", { name: "Options for One" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByLabel("Folder name").fill("blog POSTS");
+  await page.getByRole("button", { name: "Move" }).click();
+  // the typed name reuses the existing folder's spelling instead of making a second one
+  await expect(nav.getByRole("group")).toHaveCount(1);
+  await expect(folder.getByText("One", { exact: true })).toBeVisible();
+  await expect(nav.getByText("Two", { exact: true })).toBeVisible();
+  // a draft in a folder sits inside its indented list; an unfiled one does not
+  const indent = async (name: string) =>
+    nav
+      .getByText(name, { exact: true })
+      .evaluate((el) => el.closest("a")!.getBoundingClientRect().left);
+  expect(await indent("One")).toBeGreaterThan((await indent("Two")) + 8);
+
+  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await page.reload();
+  await expect(nav.getByRole("group", { name: "Folder Blog posts" })).toBeVisible();
+  await nav.getByRole("button", { name: /^Blog posts/ }).click();
+  await expect(nav.getByText("One", { exact: true })).toBeHidden();
+  await nav.getByRole("button", { name: /^Blog posts/ }).click();
+  await expect(nav.getByText("One", { exact: true })).toBeVisible();
+
+  await nav.getByText("One", { exact: true }).hover();
+  await page.getByRole("button", { name: "Options for One" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByLabel("Folder name").fill("");
+  await page.getByRole("button", { name: "Move" }).click();
+  // out of the folder, which stays as an empty one
+  await expect(nav.getByRole("group", { name: "Folder Blog posts" })).toContainText("Empty");
+});
+
+test("library: drag a draft into a folder and back out", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "# Mover\n\nbody");
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  await page.getByRole("button", { name: "New folder" }).click();
+  await page.getByLabel("New folder name").fill("Archive");
+  await page.getByRole("button", { name: "Create folder" }).click();
+  const folder = nav.getByRole("group", { name: "Folder Archive" });
+  const draft = nav.getByText("Mover", { exact: true });
+
+  await draft.dragTo(folder.getByRole("button", { name: /^Archive/ }));
+  await expect(folder.getByText("Mover", { exact: true })).toBeVisible();
+
+  // dropping on the empty part of the list takes it out again
+  await folder
+    .getByText("Mover", { exact: true })
+    .dragTo(nav, { targetPosition: { x: 40, y: 400 } });
+  await expect(folder.getByText("Mover", { exact: true })).toBeHidden();
+  await expect(nav.getByText("Mover", { exact: true })).toBeVisible();
+});
+
+test("library: deleting an empty folder is immediate, one with drafts asks first", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "# Keeper\n\nbody");
+  await newDraft(page, "# Doomed\n\nbody");
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  for (const name of ["Empty one", "Full one"]) {
+    await page.getByRole("button", { name: "New folder" }).click();
+    await page.getByLabel("New folder name").fill(name);
+    await page.getByRole("button", { name: "Create folder" }).click();
+  }
+
+  // empty: no dialog
+  await nav.getByRole("group", { name: "Folder Empty one" }).hover();
+  await page.getByRole("button", { name: "Options for folder Empty one" }).click();
+  await page.getByRole("menuitem", { name: "Delete folder" }).click();
+  await expect(nav.getByRole("group", { name: "Folder Empty one" })).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // with a draft: confirm, and cancel keeps everything
+  await nav.getByText("Doomed", { exact: true }).hover();
+  await page.getByRole("button", { name: "Options for Doomed" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByLabel("Folder name").fill("Full one");
+  await page.getByRole("button", { name: "Move" }).click();
+  const full = nav.getByRole("group", { name: "Folder Full one" });
+  await full.hover();
+  await page.getByRole("button", { name: "Options for folder Full one" }).click();
+  await page.getByRole("menuitem", { name: "Delete folder" }).click();
+  const dialog = page.getByRole("dialog", { name: /Delete folder/ });
+  await expect(dialog).toContainText("1 draft inside will be deleted too");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(full.getByText("Doomed", { exact: true })).toBeVisible();
+
+  await full.hover();
+  await page.getByRole("button", { name: "Options for folder Full one" }).click();
+  await page.getByRole("menuitem", { name: "Delete folder" }).click();
+  await dialog.getByRole("button", { name: "Delete folder and drafts" }).click();
+  await expect(nav.getByText("Doomed", { exact: true })).toHaveCount(0);
+  await expect(nav.getByRole("group", { name: "Folder Full one" })).toHaveCount(0);
+  await expect(nav.getByText("Keeper", { exact: true })).toBeVisible();
+});
+
+test("library: the folder field lists existing folders on click, and only when there are some", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "# Picker\n\nbody");
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  const openMove = async () => {
+    await nav.getByText("Picker", { exact: true }).hover();
+    await page.getByRole("button", { name: "Options for Picker" }).click();
+    await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  };
+
+  // no folders yet: nothing to pick from, just type a name
+  await openMove();
+  await expect(page.getByLabel("Folder name")).toBeFocused();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await page.getByLabel("Folder name").fill("Alpha");
+  await page.getByRole("button", { name: "Move" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
+  await page.getByLabel("New folder name").fill("Beta");
+  await page.getByRole("button", { name: "Create folder" }).click();
+
+  // with folders: opens listing them all, typing narrows, clicking fills the field in
+  await openMove();
+  const list = page.getByRole("listbox", { name: "Existing folders" });
+  await expect(list.getByRole("option")).toHaveCount(2);
+  await page.getByLabel("Folder name").fill("be");
+  await expect(list.getByRole("option")).toHaveCount(1);
+  await page.getByLabel("Folder name").fill("");
+  await list.getByRole("option", { name: "Beta" }).click();
+  await expect(page.getByLabel("Folder name")).toHaveValue("Beta");
+  await expect(list).toHaveCount(0);
+  await page.getByLabel("Folder name").click();
+  await expect(list).toBeVisible();
+  // arrow keys and Enter pick too, and Escape closes the list before the dialog
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Folder name")).toHaveValue("Alpha");
+  await page.getByLabel("Folder name").click();
+  await page.keyboard.press("Escape");
+  await expect(list).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Move to folder" })).toBeVisible();
+  await page.getByRole("button", { name: "Move" }).click();
+  await expect(nav.getByRole("group", { name: "Folder Alpha" })).toContainText("Picker");
+});
