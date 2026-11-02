@@ -50,3 +50,41 @@ describe("patchHtml", () => {
     expect([...c.querySelectorAll("*")].every(live)).toBe(true);
   });
 });
+
+describe("patchHtml with source lines", () => {
+  const b = (sl: number, text: string) => `<p data-sl="${sl}" data-el="${sl}">${text}</p>`;
+
+  it("keeps the live nodes when only the line numbers moved, and updates the numbers", () => {
+    const c = box();
+    patchHtml(c, [b(1, "a"), b(3, "b"), b(5, "c")].join("\n"));
+    c.querySelectorAll("p").forEach(mark);
+    // a line was added above: every block's numbers move down by one
+    patchHtml(c, [b(1, "NEW"), b(4, "a"), b(6, "b"), b(8, "c")].join("\n"));
+    const ps = [...c.querySelectorAll("p")];
+    expect(ps.map((p) => p.getAttribute("data-sl"))).toEqual(["1", "4", "6", "8"]);
+    expect(ps.map(live)).toEqual([false, true, true, true]);
+  });
+
+  it("updates the numbers of nested blocks too", () => {
+    const c = box();
+    const list = (a: number, b2: number) =>
+      `<ul><li data-sl="${a}" data-el="${a}">x</li><li data-sl="${b2}" data-el="${b2}">y</li></ul>`;
+    patchHtml(c, list(1, 2));
+    c.querySelectorAll("li").forEach(mark);
+    patchHtml(c, list(5, 6));
+    const lis = [...c.querySelectorAll("li")];
+    expect(lis.map((l) => l.getAttribute("data-sl"))).toEqual(["5", "6"]);
+    expect(lis.every(live)).toBe(true);
+  });
+});
+
+describe("patchHtml and the active block marker", () => {
+  it("does not replace a block just because it is marked or unmarked as active", () => {
+    const c = box();
+    patchHtml(c, "<p>a</p>\n<p>b</p>");
+    c.querySelectorAll("p").forEach(mark);
+    c.querySelectorAll("p")[1]!.setAttribute("data-active", "");
+    patchHtml(c, "<p>a</p>\n<p>b</p>");
+    expect([...c.querySelectorAll("p")].every(live)).toBe(true);
+  });
+});

@@ -100,6 +100,8 @@ import { useResolvedTheme } from "@/lib/ui/useResolvedTheme";
 import { renderExportBody, standaloneDocument } from "@/lib/markdown/export";
 import { ensureMath, hasMathSyntax, isMathLoaded } from "@/lib/markdown/math";
 import { patchHtml } from "@/lib/markdown/preview-dom";
+import { blockAtLine, lineOfTarget, previewBlocks } from "@/lib/markdown/source-lines";
+import { buildAnchors, lineToY, yToLine, type Anchors } from "@/lib/markdown/scroll-map";
 import { insertTable } from "@/lib/editor/tables";
 import { EditorToolbar, type ToolbarHandle } from "./EditorToolbar";
 import { ShortcutsDialog } from "./ShortcutsDialog";
@@ -206,7 +208,23 @@ export function Studio({ docId }: { docId: string }) {
   const online = useOnline();
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
-  const scrollLock = useRef(0);
+  // When one pane scrolls the other, the other's scroll event is an echo of that and must not scroll
+  // the first one back. Only that echo is ignored (matched by position), so the user's own scrolling
+  // is never dropped.
+  const driven = useRef<{ pane: "editor" | "preview"; top: number; at: number } | null>(null);
+  const drive = (pane: "editor" | "preview", top: number) => {
+    driven.current = { pane, top, at: Date.now() };
+  };
+  const isEcho = (pane: "editor" | "preview", top: number) => {
+    const d = driven.current;
+    if (!d || d.pane !== pane) return false;
+    if (Date.now() - d.at > 300 || Math.abs(top - d.top) > 2) {
+      driven.current = null;
+      return false;
+    }
+    driven.current = null;
+    return true;
+  };
 
   // load prefs + docs
   useEffect(() => {
@@ -343,7 +361,7 @@ export function Studio({ docId }: { docId: string }) {
   // Diagram colors are baked into their SVG, so a theme change re-renders them.
   const theme = useResolvedTheme();
   const html = useMemo(() => {
-    const rendered = renderMarkdown(deferred, profile, images);
+    const rendered = renderMarkdown(deferred, profile, images, { sourceLines: true });
     // known diagrams go straight into the HTML so they never show up as code while typing
     return supports("mermaid", profile) ? withCachedDiagrams(rendered, theme) : rendered;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -353,10 +371,53 @@ export function Studio({ docId }: { docId: string }) {
   const previewBody = useRef<HTMLElement | null>(null);
   const htmlRef = useRef(html);
   htmlRef.current = html;
+  // Click-through sync: the editor cursor's block is marked in the preview, and a click on a block
+  // in the preview puts the cursor on that block's first line.
+  const effectiveView = phone && view === "split" ? "editor" : view;
+  const [cursorLine, setCursorLine] = useState(1);
+  // Images loading, fonts and a resized window change block heights without any re-render.
+  useEffect(() => {
+    const root = previewBody.current;
+    if (!root) return;
+    const watch = new ResizeObserver(() => {
+      anchors.current = undefined;
+    });
+    watch.observe(root);
+    return () => watch.disconnect();
+  }, [effectiveView]);
+  useEffect(() => {
+    const root = previewBody.current;
+    if (!root) return;
+    root.querySelectorAll("[data-active]").forEach((n) => n.removeAttribute("data-active"));
+    if (effectiveView === "preview") return;
+    const block = blockAtLine(root, cursorLine);
+    if (!block) return;
+    block.setAttribute("data-active", "");
+    // bring the block into view without the scroll echoing back to the editor
+    const scroller = preview.current;
+    block.scrollIntoView({ block: "nearest" });
+    if (scroller) drive("preview", scroller.scrollTop);
+  }, [cursorLine, html, effectiveView]);
+  const onPreviewClick = (e: React.MouseEvent) => {
+    if (e.defaultPrevented || e.button !== 0) return;
+    const target = e.target as Element;
+    // leave links and controls alone, and never interrupt selecting text to copy it
+    if (target.closest("a, button, input, summary, textarea")) return;
+    if (!window.getSelection()?.isCollapsed) return;
+    const root = previewBody.current;
+    const line = root ? lineOfTarget(target, root) : null;
+    if (line === null) return;
+    if (effectiveView === "preview") {
+      // the editor is hidden: bring it back, then place the cursor once it has mounted
+      setView(phone ? "editor" : "split");
+      setTimeout(() => editor.current?.placeCursor(line), 150);
+    } else editor.current?.placeCursor(line);
+  };
   const syncPreview = useCallback(
     (el: HTMLElement | null) => {
       if (!el) return;
       patchHtml(el, htmlRef.current);
+      anchors.current = undefined; // block heights may have changed
       if (supports("mermaid", profile))
         hydrateDiagrams(el, renderDiagramFor(theme)).catch((e) => console.error(e));
     },
@@ -369,20 +430,48 @@ export function Studio({ docId }: { docId: string }) {
   const fm = useMemo(() => splitFrontMatter(content), [content]);
 
   /* ---------- scroll sync ---------- */
-  const onEditorScroll = (r: number) => {
-    if (Date.now() - scrollLock.current < 80) return;
-    const el = preview.current;
-    if (!el) return;
-    scrollLock.current = Date.now();
-    el.scrollTop = r * (el.scrollHeight - el.clientHeight);
+  // The two panes are kept at the same place in the text, line by line (see scroll-map.ts); a
+  // plain percentage drifts because code blocks and lists grow at different rates in each pane.
+  const anchors = useRef<Anchors | null | undefined>(undefined);
+  const getAnchors = () => {
+    if (anchors.current === undefined) {
+      const root = previewBody.current;
+      const scroller = preview.current;
+      anchors.current = root && scroller ? buildAnchors(previewBlocks(root, scroller)) : null;
+    }
+    return anchors.current;
   };
-  const onPreviewScroll = () => {
-    if (Date.now() - scrollLock.current < 80) return;
+  const onEditorScroll = ({
+    line,
+    ratio,
+    atEnd,
+    top,
+  }: {
+    line: number;
+    ratio: number;
+    atEnd: boolean;
+    top: number;
+  }) => {
+    if (isEcho("editor", top)) return;
     const el = preview.current;
     if (!el) return;
     const max = el.scrollHeight - el.clientHeight;
-    scrollLock.current = Date.now();
-    editor.current?.scrollToRatio(max > 0 ? el.scrollTop / max : 0);
+    const map = getAnchors();
+    el.scrollTop = atEnd ? max : map ? Math.min(max, lineToY(map, line)) : ratio * max;
+    drive("preview", el.scrollTop);
+  };
+  const onPreviewScroll = () => {
+    const el = preview.current;
+    if (!el || isEcho("preview", el.scrollTop)) return;
+    const max = el.scrollHeight - el.clientHeight;
+    const map = getAnchors();
+    const top =
+      max > 0 && el.scrollTop >= max - 1
+        ? editor.current?.scrollToRatio(1)
+        : map
+          ? editor.current?.scrollToLine(yToLine(map, el.scrollTop))
+          : editor.current?.scrollToRatio(max > 0 ? el.scrollTop / max : 0);
+    if (top !== undefined) drive("editor", top);
   };
 
   /* ---------- import ---------- */
@@ -712,7 +801,6 @@ export function Studio({ docId }: { docId: string }) {
   const errCount = issues.filter((i) => i.severity !== "info").length;
   const showLibrary = library && !focus && !compact;
   const showPanel = panel && !focus && !compact;
-  const effectiveView = phone && view === "split" ? "editor" : view;
   const activePanel = compact ? mobilePanel : panel;
   const goToLine = (line: number) => {
     setView("editor");
@@ -1116,13 +1204,14 @@ export function Studio({ docId }: { docId: string }) {
                           ref={editor}
                           value={content}
                           onChange={setContent}
-                          onScrollRatio={onEditorScroll}
+                          onScroll={onEditorScroll}
                           onPaste={onPaste}
                           onFiles={onFiles}
                           onContext={setCtx}
                           onLinkShortcut={openLink}
                           onFocusToolbar={() => toolbar.current?.focus()}
                           onShowShortcuts={() => setShortcuts(true)}
+                          onCursorLine={setCursorLine}
                         />
                       </Suspense>
                     </ClientOnly>
@@ -1139,6 +1228,7 @@ export function Studio({ docId }: { docId: string }) {
                   )}
                 >
                   <article
+                    onClick={onPreviewClick}
                     ref={(el) => {
                       previewBody.current = el;
                       syncPreview(el); // the pane is created fresh when switching views

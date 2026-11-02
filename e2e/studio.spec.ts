@@ -695,3 +695,180 @@ test("offline: a page that was never saved says so, and the manifest is installa
   await page.goto("/guides/markdown-images");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
+
+const SYNC_DOC = [
+  "# Sync title",
+  "",
+  "first paragraph",
+  "continues here",
+  "",
+  "- item one",
+  "- item two",
+  "",
+  "A [link](#sync-title) and more.",
+  "",
+  "the last paragraph",
+].join("\n");
+
+const activeLine = (page: Page) => page.locator(".cm-activeLine");
+
+test("click-through sync: a click in the preview puts the editor cursor on that block", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, SYNC_DOC);
+  const preview = page.locator(".md-preview");
+  await expect(preview.getByText("first paragraph")).toBeVisible();
+
+  await preview.getByText("first paragraph").click();
+  await expect(activeLine(page)).toHaveText("first paragraph");
+  await preview.getByRole("listitem").filter({ hasText: "item two" }).click();
+  await expect(activeLine(page)).toHaveText("- item two");
+  await preview.getByRole("heading", { name: "Sync title" }).click();
+  await expect(activeLine(page)).toHaveText("# Sync title");
+});
+
+test("click-through sync: the editor cursor marks its block in the preview", async ({ page }) => {
+  await open(page);
+  await replaceText(page, SYNC_DOC);
+  const preview = page.locator(".md-preview");
+  await editor(page).locator(".cm-line", { hasText: "item one" }).click();
+  await expect(preview.locator("[data-active]")).toHaveCount(1);
+  await expect(preview.locator("[data-active]")).toHaveText("item one");
+  await page.keyboard.press("ArrowDown");
+  await expect(preview.locator("[data-active]")).toHaveText("item two");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(preview.locator("[data-active]")).toContainText("A link and more.");
+});
+
+test("click-through sync: links and text selections are left alone", async ({ page }) => {
+  await open(page);
+  await replaceText(page, SYNC_DOC);
+  const preview = page.locator(".md-preview");
+  await editor(page).locator(".cm-line", { hasText: "the last paragraph" }).click();
+  await expect(activeLine(page)).toHaveText("the last paragraph");
+
+  // a link click follows the link, it doesn't move the cursor
+  await preview.getByRole("link", { name: "link" }).click();
+  await expect(activeLine(page)).toHaveText("the last paragraph");
+
+  // dragging to select text in the preview (to copy it) doesn't move the cursor either
+  const para = preview.getByText("first paragraph");
+  const box = (await para.boundingBox())!;
+  await page.mouse.move(box.x + 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 4, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect(activeLine(page)).toHaveText("the last paragraph");
+});
+
+test("click-through sync: from the preview-only view a click brings the editor back", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, SYNC_DOC);
+  await page.getByRole("button", { name: "preview view" }).click();
+  await expect(editor(page)).toHaveCount(0);
+  await page.locator(".md-preview").getByText("the last paragraph").click();
+  await expect(editor(page)).toBeVisible();
+  await expect(activeLine(page)).toHaveText("the last paragraph");
+});
+
+test("click-through sync: typing above never reloads the blocks below, and their lines follow", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, SYNC_DOC);
+  const last = page.locator(".md-preview p", { hasText: "the last paragraph" });
+  await expect(last).toHaveAttribute("data-sl", "11");
+  await last.evaluate((el) => ((el as HTMLElement & { kept?: boolean }).kept = true));
+
+  await editor(page).locator(".cm-line", { hasText: "# Sync title" }).click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.insertText("an added line");
+  await expect(last).toHaveAttribute("data-sl", "12");
+  expect(await last.evaluate((el) => (el as HTMLElement & { kept?: boolean }).kept)).toBe(true);
+});
+
+/** Sections of different shapes: tall in the editor and short in the preview, and the reverse. */
+function longDoc() {
+  const parts: string[] = [];
+  for (let i = 1; i <= 14; i++) {
+    parts.push(`## Section ${i}`, "", `Paragraph for section ${i} with some text.`, "");
+    parts.push(
+      "```ts",
+      ...Array.from({ length: 12 }, (_, n) => `const code${i}x${n} = ${n};`),
+      "```",
+      "",
+    );
+    parts.push(...Array.from({ length: 4 }, (_, n) => `- bullet ${i}.${n}`), "");
+  }
+  return parts.join("\n");
+}
+
+test("scroll sync: both panes stay on the same lines, in either direction", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 800 });
+  await open(page);
+  const text = longDoc();
+  const lines = text.split("\n");
+  await replaceText(page, text);
+  // the preview catches up a moment after typing; wait until it has the whole document
+  await expect(page.locator(".md-preview h2").last()).toHaveText("Section 14");
+
+  /** The document line at the top of the editor, and the lines of the block at the top of the preview. */
+  const tops = () =>
+    page.evaluate((all) => {
+      const scroller = document.querySelector(".cm-scroller")!.getBoundingClientRect();
+      // blank lines and fences repeat, so count from the first line with text that is unique
+      const visible = [...document.querySelectorAll(".cm-line")].filter(
+        (l) => l.getBoundingClientRect().bottom > scroller.top + 2,
+      );
+      const skipped = visible.findIndex((l) => {
+        const t = l.textContent ?? "";
+        return t !== "" && all.indexOf(t) === all.lastIndexOf(t);
+      });
+      const editorLine = all.indexOf(visible[skipped]!.textContent ?? "") + 1 - skipped;
+      const pane = document.querySelector(".md-preview")!.parentElement!.getBoundingClientRect();
+      const leaf = [...document.querySelectorAll(".md-preview [data-sl]")].find(
+        (el) => !el.querySelector("[data-sl]") && el.getBoundingClientRect().bottom > pane.top + 2,
+      )!;
+      return {
+        editorLine,
+        from: Number(leaf.getAttribute("data-sl")),
+        to: Number(leaf.getAttribute("data-el")),
+      };
+    }, lines);
+  const aligned = async () => {
+    const t = await tops();
+    // the preview's top block holds the editor's top line, give or take the blank lines between blocks
+    expect(t.from - 2).toBeLessThanOrEqual(t.editorLine);
+    expect(t.editorLine).toBeLessThanOrEqual(t.to + 2);
+  };
+
+  for (const frac of [0.15, 0.4, 0.65, 0.9]) {
+    await page.locator(".cm-scroller").evaluate((el, f) => {
+      el.scrollTop = f * (el.scrollHeight - el.clientHeight);
+    }, frac);
+    await page.waitForTimeout(300);
+    await aligned();
+  }
+  for (const frac of [0.2, 0.5, 0.8]) {
+    await page.locator(".md-preview").evaluate((el, f) => {
+      const pane = el.parentElement!;
+      pane.scrollTop = f * (pane.scrollHeight - pane.clientHeight);
+    }, frac);
+    await page.waitForTimeout(300);
+    await aligned();
+  }
+
+  // at the very bottom of one, the other is at the bottom too
+  await page.locator(".cm-scroller").evaluate((el) => (el.scrollTop = el.scrollHeight));
+  await page.waitForTimeout(300);
+  const atEnd = await page.locator(".md-preview").evaluate((el) => {
+    const pane = el.parentElement!;
+    return pane.scrollHeight - pane.clientHeight - pane.scrollTop;
+  });
+  expect(atEnd).toBeLessThan(3);
+});

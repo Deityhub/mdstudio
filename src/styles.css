@@ -448,6 +448,20 @@
   color: var(--destructive);
 }
 
+/* Click-through sync: the block holding the editor cursor, and click-to-edit */
+.md-preview [data-active] {
+  /* the same faint tint as the editor's active line; the shadow spreads it a little past the text without moving anything */
+  background: color-mix(in oklch, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 45%, transparent);
+  border-radius: 4px;
+}
+.md-preview [data-sl] {
+  cursor: text;
+}
+.md-preview a {
+  cursor: pointer;
+}
+
 /* CodeMirror */
 .cm-editor {
   height: 100%;

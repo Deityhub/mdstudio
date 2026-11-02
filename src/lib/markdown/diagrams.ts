@@ -130,6 +130,15 @@ const nodeFrom = (doc: Document, html: string) => {
   return t.content.firstElementChild!;
 };
 
+/** Keeps a replaced block's source-line attributes (for click-through sync) on what replaces it. */
+const keepLines = (from: Element, to: Element) => {
+  for (const name of ["data-sl", "data-el"]) {
+    const v = from.getAttribute(name);
+    if (v !== null) to.setAttribute(name, v);
+  }
+  return to;
+};
+
 /**
  * Before the preview is patched: put known diagrams straight into the HTML, and a stale copy of
  * the previous diagram where a changed one is still rendering. Only a brand-new diagram starts
@@ -147,15 +156,21 @@ export function withCachedDiagrams(html: string, theme: DiagramTheme = "light"):
     if (known) {
       lastShown[position] = known;
       pre.replaceWith(
-        nodeFrom(doc, "svg" in known ? figureHtml(known.svg) : failedHtml(source, known.error)),
+        keepLines(
+          pre,
+          nodeFrom(doc, "svg" in known ? figureHtml(known.svg) : failedHtml(source, known.error)),
+        ),
       );
     } else if (previous) {
       pre.replaceWith(
-        nodeFrom(
-          doc,
-          "svg" in previous
-            ? staleHtml(previous.svg, source)
-            : failedHtml(source, previous.error, true),
+        keepLines(
+          pre,
+          nodeFrom(
+            doc,
+            "svg" in previous
+              ? staleHtml(previous.svg, source)
+              : failedHtml(source, previous.error, true),
+          ),
         ),
       );
     }
@@ -190,7 +205,10 @@ export async function hydrateDiagrams(root: HTMLElement, render: DiagramRenderer
     if (!unit.isConnected) continue; // the preview was patched while we waited
     lastShown[position] = result;
     unit.replaceWith(
-      nodeFrom(doc, "svg" in result ? figureHtml(result.svg) : failedHtml(source, result.error)),
+      keepLines(
+        unit,
+        nodeFrom(doc, "svg" in result ? figureHtml(result.svg) : failedHtml(source, result.error)),
+      ),
     );
   }
 }
