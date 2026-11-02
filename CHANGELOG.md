@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.1 (2026-11-02)
+
+### Features
+
+- deploy a preview of every pull request into dev to Cloudflare
+
+### Fixes
+
+- deploy to Cloudflare with wrangler-action v4
+
 ## 0.1.0 (2026-11-02)
 
 ### Features
