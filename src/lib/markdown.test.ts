@@ -7,6 +7,7 @@ import {
   embedImages,
   splitFrontMatter,
   joinFrontMatter,
+  isHttpUrl,
   htmlToMarkdown,
   normalizeMarkdown,
 } from "./markdown";
@@ -291,5 +292,26 @@ describe("paste conversion", () => {
     expect(
       htmlToMarkdown("<h2>Hi</h2><p><strong>bold</strong> <a href='https://a.b'>x</a></p>"),
     ).toBe("## Hi\n\n*bold* [x](https://a.b)".replace("*bold*", "**bold**"));
+  });
+});
+
+describe("front matter flags", () => {
+  it("keeps draft: true and a canonical URL, and drops cleared fields", () => {
+    const md = joinFrontMatter(
+      { title: "T", draft: true, canonical_url: "https://a.dev/x", cover: undefined },
+      "body",
+    );
+    expect(md).toBe("---\ntitle: T\ndraft: true\ncanonical_url: https://a.dev/x\n---\n\nbody");
+    expect(splitFrontMatter(md).data).toMatchObject({ draft: true });
+    expect(joinFrontMatter({ draft: undefined }, "body")).toBe("body");
+  });
+});
+
+describe("isHttpUrl", () => {
+  it("accepts web addresses only", () => {
+    expect(isHttpUrl("https://a.dev/x")).toBe(true);
+    expect(isHttpUrl("http://a.dev")).toBe(true);
+    for (const bad of ["a.dev/x", "javascript:alert(1)", "ftp://a.dev", ""])
+      expect(isHttpUrl(bad)).toBe(false);
   });
 });

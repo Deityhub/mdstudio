@@ -76,3 +76,130 @@ test("renders math and Mermaid", async ({ page }) => {
   expect(topPadding).toBeGreaterThan(0);
   await expect(page.locator(".md-preview .md-mermaid svg")).toBeVisible({ timeout: 20_000 });
 });
+
+test("renames a draft without touching its text, and blank goes back to the heading", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "# From the heading\n\nbody");
+  const row = page.locator("nav").getByText("From the heading");
+  await expect(row).toBeVisible();
+  await page.locator("nav").getByText("From the heading").hover();
+  await page
+    .getByRole("button", { name: /^Options for/ })
+    .first()
+    .click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await page.getByLabel("Draft name").fill("My renamed draft");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("nav").getByText("My renamed draft")).toBeVisible();
+  await expect(editor(page)).toContainText("# From the heading");
+  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await page.reload();
+  await page.locator("nav").getByText("My renamed draft").hover();
+  await page
+    .getByRole("button", { name: /^Options for/ })
+    .first()
+    .click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await page.getByLabel("Draft name").fill("");
+  await page.getByRole("button", { name: "Save name" }).click();
+  await expect(page.locator("nav").getByText("From the heading")).toBeVisible();
+});
+
+test("front matter form sets a canonical URL and a draft flag", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "# Post\n\nbody");
+  await page.getByRole("button", { name: "Front matter" }).first().click();
+  await page.getByRole("button", { name: "Add front matter" }).click();
+  await page.getByLabel("Canonical URL").fill("not a url");
+  await expect(page.getByText("Use a full http(s) address.")).toBeVisible();
+  await page.getByLabel("Canonical URL").fill("https://example.com/post");
+  await page.getByRole("switch", { name: "Draft" }).click();
+  await expect(editor(page)).toContainText("canonical_url: https://example.com/post");
+  await expect(editor(page)).toContainText("draft: true");
+  await page.getByRole("switch", { name: "Draft" }).click();
+  await expect(editor(page)).not.toContainText("draft: true");
+});
+
+test("the drafts pane resizes by drag and keyboard, within limits, and remembers its width", async ({
+  page,
+}) => {
+  await open(page);
+  const handle = page.getByRole("separator", { name: "Resize drafts pane" });
+  const width = async () =>
+    (await handle.evaluate((el) => el.parentElement!.clientWidth)) as number;
+  expect(await width()).toBe(288);
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 120, box.y + 100, { steps: 5 });
+  await page.mouse.up();
+  expect(await width()).toBeGreaterThan(380);
+  await page.mouse.move(box.x + 120, box.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 900, box.y + 100, { steps: 5 });
+  await page.mouse.up();
+  expect(await width()).toBe(480);
+  await handle.focus();
+  await page.keyboard.press("Home");
+  expect(await width()).toBe(240);
+  await page.keyboard.press("ArrowRight");
+  expect(await width()).toBe(256);
+  await page.reload();
+  await expect(handle).toBeVisible();
+  // the saved width is applied just after hydration
+  await expect.poll(width).toBe(256);
+  await handle.dblclick();
+  await expect.poll(width).toBe(288);
+});
+
+test("the Checks panel starts open only on wide screens, and opens on click below that", async ({
+  page,
+}) => {
+  const panel = page.getByText("Portable", { exact: true });
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await open(page);
+  await expect(panel).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.reload();
+  await expect(editor(page)).toBeVisible();
+  await expect(panel).toBeHidden();
+  await page.getByRole("button", { name: "Checks" }).click();
+  await expect(panel).toBeVisible();
+});
+
+test("draft options live in a menu, and the rename field stays put while hovering", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "# Menu draft\n\nbody");
+  const nav = page.locator("nav");
+  await nav.getByText("Menu draft").hover();
+  await page
+    .getByRole("button", { name: /^Options for/ })
+    .first()
+    .click();
+  for (const name of ["Rename", "Duplicate", "Delete"])
+    await expect(page.getByRole("menuitem", { name })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  const input = page.getByLabel("Draft name");
+  await expect(input).toBeFocused();
+  const before = (await input.boundingBox())!.width;
+  await page.mouse.move(0, 0);
+  await input.hover();
+  expect((await input.boundingBox())!.width).toBe(before);
+  await page.keyboard.press("Escape");
+  await expect(input).toBeHidden();
+  await expect(nav.getByText("Menu draft")).toBeVisible();
+  await nav.getByText("Menu draft").hover();
+  await page
+    .getByRole("button", { name: /^Options for/ })
+    .first()
+    .click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await input.fill("Discarded");
+  await page.getByRole("button", { name: "Cancel rename" }).click();
+  await expect(nav.getByText("Menu draft")).toBeVisible();
+  await expect(nav.getByText("Discarded")).toHaveCount(0);
+});

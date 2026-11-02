@@ -47,7 +47,7 @@
 - [ ] **Bulk Import & Export:** Export all drafts as a structured ZIP file; bulk import Markdown folders and archives.
 - [ ] **WYSIWYG Live-Preview Mode:** Optional CodeMirror-decoration mode that hides syntax markers on inactive lines; Markdown stays canonical.
 - [x] **Obsidian Rendering:** `==highlight==` and `[[wiki-links]]` (with `|alias` and `#heading`) render in the Obsidian profile. `![[embeds]]` are not rendered.
-- [ ] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
+- [x] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
 - [ ] **Custom Checker Rules:** User-configurable linting rules and warnings for publication standards.
 
 ---

@@ -529,6 +529,14 @@ export function deriveTitle(md: string): string {
   return h?.[1] ? h[1].replace(/[*_`~[\]]/g, "").trim() : "Untitled";
 }
 
+export const isHttpUrl = (s: string) => {
+  try {
+    return ["http:", "https:"].includes(new URL(s).protocol);
+  } catch {
+    return false;
+  }
+};
+
 export function slugify(s: string) {
   return (
     s

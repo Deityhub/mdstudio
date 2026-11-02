@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDocumentStore, type KeyValueStore } from "./documentStore";
+import { createDocumentStore, docTitle, type KeyValueStore } from "./documentStore";
 
 function memoryStore(): KeyValueStore & { data: Map<string, unknown> } {
   const data = new Map<string, unknown>();
@@ -42,4 +42,13 @@ describe("documentStore", () => {
     expect(await store.get(doc.id)).toBeUndefined();
     expect(await store.list()).toEqual([]);
   });
+});
+
+describe("docTitle", () => {
+  it("derives the title from the content", () =>
+    expect(docTitle({ content: "# From heading" })).toBe("From heading"));
+  it("prefers a name set in the library, trimmed", () =>
+    expect(docTitle({ name: "  My name ", content: "# From heading" })).toBe("My name"));
+  it("falls back to the content when the name is blank", () =>
+    expect(docTitle({ name: "   ", content: "# From heading" })).toBe("From heading"));
 });
