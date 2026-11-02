@@ -9,6 +9,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -617,12 +619,7 @@ export function Studio({ docId }: { docId: string }) {
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
-            <Link
-              to="/"
-              className="min-w-0 truncate font-display text-base font-semibold sm:text-lg"
-            >
-              <span className="text-primary">md</span>studio
-            </Link>
+            <Logo textClassName="text-base sm:text-lg" markClassName="h-6 w-6" />
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}
             </span>
@@ -723,6 +720,7 @@ export function Studio({ docId }: { docId: string }) {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+            <ThemeToggle className="hidden sm:inline-flex" />
             <Button
               variant="ghost"
               size="icon"

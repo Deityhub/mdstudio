@@ -16,14 +16,9 @@ import YAML from "yaml";
 import type { Root as MdRoot, Parent as MdParent } from "mdast";
 import type { Root as HastRoot, Element, ElementContent } from "hast";
 
-export type Profile = "commonmark" | "github" | "devto" | "obsidian";
+import { PROFILES, type Profile } from "./profiles";
 
-export const PROFILES: { id: Profile; label: string; hint: string }[] = [
-  { id: "github", label: "GitHub (GFM)", hint: "Tables, task lists, footnotes" },
-  { id: "commonmark", label: "Strict CommonMark", hint: "Works everywhere" },
-  { id: "devto", label: "dev.to / Hashnode", hint: "GFM, no raw HTML" },
-  { id: "obsidian", label: "Obsidian", hint: "GFM + highlights, wiki-links" },
-];
+export { PROFILES, type Profile };
 
 const usesGfm = (p: Profile) => p !== "commonmark";
 
