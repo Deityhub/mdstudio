@@ -1,16 +1,45 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { EditorState } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  drawSelection,
+} from "@codemirror/view";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+  redo,
+  undo,
+} from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { syntaxHighlighting } from "@codemirror/language";
 import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { classHighlighter } from "@lezer/highlight";
+import {
+  getContext,
+  isListLine,
+  runCommand,
+  type Command,
+  type Context,
+  type Edit,
+  type Snapshot,
+} from "@/lib/editing";
+import { isInTable, tableMove } from "@/lib/tables";
 
 export type EditorHandle = {
-  wrap: (before: string, after?: string, placeholder?: string) => void;
-  linePrefix: (prefix: string) => void;
+  /** Runs a pure editing command (see `lib/editing.ts`) on the current selection. */
+  run: (command: Command) => void;
+  undo: () => void;
+  redo: () => void;
+  /** Current text and selection, for commands that need input first (dialogs). */
+  getSnapshot: () => Snapshot;
+  apply: (edit: Edit) => void;
   insert: (text: string) => void;
   goToLine: (line: number) => void;
   scrollToRatio: (r: number) => void;
@@ -23,7 +52,21 @@ type Props = {
   onScrollRatio?: (r: number) => void;
   onPaste?: (e: ClipboardEvent) => string | null;
   onFiles?: (files: File[]) => void;
+  /** Called when the formatting state at the cursor changes (drives toolbar toggle state). */
+  onContext?: (context: Context) => void;
+  /** Mod-K: the studio opens its link dialog. */
+  onLinkShortcut?: () => void;
+  /** Alt-F10: move keyboard focus to the toolbar (Tab is used for indenting in the editor). */
+  onFocusToolbar?: () => void;
+  /** Mod-/: show the shortcuts list. */
+  onShowShortcuts?: () => void;
 };
+
+const snapshot = (state: EditorState): Snapshot => ({
+  text: state.doc.toString(),
+  from: state.selection.main.from,
+  to: state.selection.main.to,
+});
 
 const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(props, ref) {
   const host = useRef<HTMLDivElement>(null);
@@ -31,11 +74,26 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   const cb = useRef(props);
   cb.current = props;
   const silent = useRef(false);
+  const lastContext = useRef("");
 
   useEffect(() => {
-    const wrapCmd = (before: string, after = before) => (v: EditorView) => {
-      api.wrap(before, after);
-      return !!v;
+    const tabInStructure = (v: EditorView, dir: 1 | -1) => {
+      const snap = snapshot(v.state);
+      if (isInTable(snap)) {
+        const edit = tableMove(snap, dir);
+        if (edit) api.apply(edit);
+        return true; // consumed even at the first cell, so Shift-Tab never inserts spaces in a table
+      }
+      if (isListLine(snap)) return (api.run(dir === 1 ? "indent" : "outdent"), true);
+      return false;
+    };
+    const cmd = (command: Command) => () => (api.run(command), true);
+    const emitContext = (state: EditorState) => {
+      const context = getContext(snapshot(state));
+      const key = JSON.stringify(context);
+      if (key === lastContext.current) return;
+      lastContext.current = key;
+      cb.current.onContext?.(context);
     };
     const state = EditorState.create({
       doc: props.value,
@@ -51,9 +109,25 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         syntaxHighlighting(classHighlighter),
         keymap.of([
-          { key: "Mod-b", run: wrapCmd("**") },
-          { key: "Mod-i", run: wrapCmd("_") },
-          { key: "Mod-k", run: (v) => (api.wrap("[", "](https://)", "link text"), !!v) },
+          { key: "Mod-b", run: cmd("bold") },
+          { key: "Mod-i", run: cmd("italic") },
+          { key: "Mod-e", run: cmd("code") },
+          { key: "Mod-Shift-x", run: cmd("strike") },
+          { key: "Mod-Shift-h", run: cmd("highlight") },
+          { key: "Mod-Shift-7", run: cmd("ordered") },
+          { key: "Mod-Shift-8", run: cmd("bullet") },
+          { key: "Mod-Shift-l", run: cmd("task") },
+          { key: "Mod-Shift-.", run: cmd("quote") },
+          ...([0, 1, 2, 3, 4, 5, 6] as const).map((n) => ({
+            key: `Mod-Alt-${n}`,
+            run: cmd(`h${n}`),
+          })),
+          { key: "Mod-k", run: () => (cb.current.onLinkShortcut?.(), true) },
+          { key: "Alt-F10", run: () => (cb.current.onFocusToolbar?.(), true) },
+          { key: "Mod-/", run: () => (cb.current.onShowShortcuts?.(), true) },
+          // Tab moves between table cells and nests list items; anywhere else it indents.
+          { key: "Tab", run: (v) => tabInStructure(v, 1) },
+          { key: "Shift-Tab", run: (v) => tabInStructure(v, -1) },
           ...searchKeymap,
           ...historyKeymap,
           indentWithTab,
@@ -61,6 +135,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !silent.current) cb.current.onChange(u.state.doc.toString());
+          if (u.docChanged || u.selectionSet) emitContext(u.state);
         }),
         EditorView.domEventHandlers({
           scroll: (_e, v) => {
@@ -69,7 +144,9 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
             cb.current.onScrollRatio?.(max > 0 ? s.scrollTop / max : 0);
           },
           paste: (e, v) => {
-            const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+            const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
+              f.type.startsWith("image/"),
+            );
             if (files.length) {
               e.preventDefault();
               cb.current.onFiles?.(files);
@@ -94,6 +171,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
       ],
     });
     view.current = new EditorView({ state, parent: host.current! });
+    emitContext(state);
     return () => view.current?.destroy();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -111,28 +189,27 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   }, [props.value]);
 
   const api: EditorHandle = {
-    wrap(before, after = before, placeholder = "text") {
+    run(command) {
       const v = view.current!;
-      const { from, to } = v.state.selection.main;
-      const sel = v.state.sliceDoc(from, to) || placeholder;
-      v.dispatch({
-        changes: { from, to, insert: before + sel + after },
-        selection: { anchor: from + before.length, head: from + before.length + sel.length },
-      });
+      const edit = runCommand(snapshot(v.state), command);
+      if (edit)
+        v.dispatch({ changes: edit.changes, selection: { anchor: edit.from, head: edit.to } });
       v.focus();
     },
-    linePrefix(prefix) {
+    undo() {
       const v = view.current!;
-      const { from, to } = v.state.selection.main;
-      const start = v.state.doc.lineAt(from).number;
-      const end = v.state.doc.lineAt(to).number;
-      const changes = [];
-      for (let n = start; n <= end; n++) {
-        const line = v.state.doc.line(n);
-        const stripped = line.text.replace(/^(#{1,6}\s|>\s|-\s|\d+\.\s)/, "");
-        changes.push({ from: line.from, to: line.to, insert: (line.text.startsWith(prefix) ? "" : prefix) + stripped });
-      }
-      v.dispatch({ changes });
+      undo(v);
+      v.focus();
+    },
+    redo() {
+      const v = view.current!;
+      redo(v);
+      v.focus();
+    },
+    getSnapshot: () => snapshot(view.current!.state),
+    apply(edit) {
+      const v = view.current!;
+      v.dispatch({ changes: edit.changes, selection: { anchor: edit.from, head: edit.to } });
       v.focus();
     },
     insert(text) {
@@ -143,7 +220,10 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
     goToLine(line) {
       const v = view.current!;
       const l = v.state.doc.line(Math.min(Math.max(1, line), v.state.doc.lines));
-      v.dispatch({ selection: { anchor: l.from }, effects: EditorView.scrollIntoView(l.from, { y: "start", yMargin: 40 }) });
+      v.dispatch({
+        selection: { anchor: l.from },
+        effects: EditorView.scrollIntoView(l.from, { y: "start", yMargin: 40 }),
+      });
       v.focus();
     },
     scrollToRatio(r) {

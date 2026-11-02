@@ -1,0 +1,102 @@
+// Single SQLite schema shared by Cloudflare D1 and self-hosted better-sqlite3.
+// Authoritative table list: docs/SYSTEM_SPEC.md section 6. Timestamps are Unix milliseconds.
+import { index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash"),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const sessions = sqliteTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
+export const oauthAccounts = sqliteTable(
+  "oauth_accounts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerUserId: text("provider_user_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [unique().on(t.provider, t.providerUserId)],
+);
+
+export const documents = sqliteTable(
+  "documents",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("Untitled"),
+    content: text("content").notNull().default(""),
+    version: integer("version").notNull().default(1),
+    contentHash: text("content_hash").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    deletedAt: integer("deleted_at"),
+  },
+  (t) => [index("idx_documents_user_updated").on(t.userId, t.updatedAt)],
+);
+
+export const documentRevisions = sqliteTable(
+  "document_revisions",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("idx_revisions_doc_version").on(t.documentId, t.version)],
+);
+
+export const assets = sqliteTable("assets", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  documentId: text("document_id").references(() => documents.id, { onDelete: "set null" }),
+  storageKey: text("storage_key").notNull().unique(),
+  fileName: text("file_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  byteSize: integer("byte_size").notNull(),
+  sha256: text("sha256").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
+export const shareLinks = sqliteTable("share_links", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  revisionId: text("revision_id").references(() => documentRevisions.id, {
+    onDelete: "set null",
+  }),
+  slug: text("slug").notNull().unique(),
+  isPublic: integer("is_public").notNull().default(1),
+  viewCount: integer("view_count").notNull().default(0),
+  expiresAt: integer("expires_at"),
+  createdAt: integer("created_at").notNull(),
+});

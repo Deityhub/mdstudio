@@ -1,0 +1,49 @@
+# mdstudio
+
+> mdstudio is a free, open-source, local-first Markdown editor and portability checker. It shows how your Markdown will render on GitHub, dev.to, Obsidian or a strict CommonMark engine, flags syntax that will not travel, and exports clean .md files. Formerly called Markdown Studio.
+
+Write Markdown in a full-featured editor with a complete formatting toolbar and a live preview. The raw Markdown is the single source of truth: the preview shows what other platforms render, with no preview-only syntax. Drafts are saved in the browser (IndexedDB) with no account and are never uploaded unless the writer exports them.
+
+## What it does
+
+- Target profiles: Strict CommonMark, GitHub Flavored Markdown, dev.to, Obsidian. The preview, the checks and the toolbar warnings follow the chosen profile.
+- Portability checker: flags raw HTML, local image paths, base64 images, wiki-links, math, Mermaid and trailing-space line breaks, with clickable issues that jump to the line.
+- Rich Markdown: tables with cell navigation, task lists, footnotes, GitHub alerts, KaTeX math, Mermaid diagrams, syntax-highlighted code blocks.
+- Import and export: open .md files, paste from Google Docs, Notion and the web; export clean UTF-8 Markdown (LF endings) or standalone HTML.
+- Optional AI writing helpers with the writer's own API key (OpenAI, Anthropic, Google Gemini or any OpenAI-compatible endpoint). Keys stay in session memory and requests go directly from the browser to the provider.
+- Free and MIT licensed. Self-host with Docker (`ghcr.io/deityhub/mdstudio` or `deityhub/mdstudio` on Docker Hub).
+
+## Who it is for
+
+- Technical bloggers publishing to dev.to, Hashnode and static site generators.
+- Developers writing READMEs and documentation for GitHub.
+- Obsidian users who share notes outside Obsidian.
+- Documentation teams who need Markdown that renders the same in every tool.
+
+## Common questions
+
+- Is it free? Yes, free to use in the browser and MIT licensed.
+- Are documents private? Yes. They stay in the browser; there is no account.
+- How is it different from other Markdown editors? It checks portability across platforms instead of rendering Markdown its own way.
+
+## Guides
+
+- [Portable Markdown: why it renders differently everywhere](https://mdstudio.deityhub.com/guides/markdown-portability): the six things that break most often and a checklist
+- [CommonMark vs GitHub Flavored Markdown](https://mdstudio.deityhub.com/guides/commonmark-vs-github-flavored-markdown): tables, task lists, strikethrough, footnotes, alerts
+- [Obsidian to GitHub Markdown](https://mdstudio.deityhub.com/guides/obsidian-to-github-markdown): converting wiki-links, highlights, callouts and embeds
+- [Writing Markdown for dev.to and Hashnode](https://mdstudio.deityhub.com/guides/markdown-for-devto-and-hashnode): front matter, images, raw HTML
+- [Markdown line breaks and paragraphs](https://mdstudio.deityhub.com/guides/markdown-line-breaks): soft breaks, hard breaks and the portable choice
+- [Markdown images](https://mdstudio.deityhub.com/guides/markdown-images): paths, hosted URLs, base64 and alt text
+- [Math and Mermaid diagrams in Markdown](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams): where they render and what to do elsewhere
+
+## Links
+
+- [Home](https://mdstudio.deityhub.com/): overview, features and FAQ
+- [All guides](https://mdstudio.deityhub.com/guides): index of the Markdown guides
+- [Editor](https://mdstudio.deityhub.com/editor): open the editor
+- [Source code](https://github.com/Deityhub/mdstudio): README, specification, roadmap
+- [Changelog](https://github.com/Deityhub/mdstudio/blob/main/CHANGELOG.md)
+
+## Author
+
+Chizoba Jude Ojini

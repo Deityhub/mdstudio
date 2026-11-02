@@ -14,6 +14,11 @@ Editor, strict preview, scroll sync, profiles + portability checker, import/drag
 6. **More checks**: heading level skips, duplicate headings/anchors, broken internal anchors, missing alt text, overly long lines in tables, empty links.
 7. **Paste-image from clipboard** and image manager panel (rename, delete unused, size).
 8. **Spellcheck / grammar** toggle (browser native first).
+9. ✅ **Math (KaTeX) and Mermaid**, profile-gated: rendered only where the target platform renders them, flagged elsewhere. AC: sanitize before KaTeX (`trust: false`), Mermaid `securityLevel: "strict"` and lazy-loaded, KaTeX CSS/fonts self-hosted, standalone HTML export embeds both.
+10. **Complete formatting toolbar**: every Markdown/GFM construct and profile extension (headings 1-6, emphasis, code, links, images, quotes, lists, task lists, tables, rules, footnotes, math, diagrams, alerts). AC: grouped, overflow menu on phones, shortcuts in tooltips, tools flagged when the profile can't render them, edit actions are pure tested functions.
+11. **Obsidian profile rendering**: `==highlight==` renders as a marker (done); render `[[wiki-links]]` in the Obsidian profile so the preview matches the platform.
+12. **Studio polish**: rename draft, canonical URL and draft toggle in front matter.
+13. **WYSIWYG live-preview mode** (optional): CodeMirror decorations hide syntax markers on inactive lines, Markdown remains the document. AC: round-trip is lossless by construction, never the default, works on phone.
 
 ## Phase 2 — Library & organization 🔜
 1. **Full-text search** across drafts (MiniSearch in a worker).
@@ -41,7 +46,7 @@ AC: dry-run view; failures shown with fix; no token persisted unless user opts i
 
 ## Phase 5 — Platform & quality 🗓
 1. **PWA**: installable, offline, file-handling for `.md` (File System Access API save-in-place on desktop).
-2. **Optional rendering extensions** behind explicit profile: math (KaTeX), Mermaid, callouts — always flagged as non-portable outside that profile.
+2. **Optional rendering extensions** behind explicit profile: callouts (GitHub alerts) — always flagged as non-portable outside that profile. Math (KaTeX) and Mermaid moved up: see Phase 1, item 9.
 3. **AI extras** (still BYOK): rewrite selection, summarize, SEO check, alt-text suggestions, translate, tone; diff review before apply; token/cost estimate; local models via OpenAI-compatible (Ollama).
 4. **Accessibility**: WCAG AA contrast, full keyboard, screen-reader labels, reduced motion.
 5. **i18n** of UI.

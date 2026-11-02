@@ -1,0 +1,20 @@
+# Cloudflare Workers blueprint for the hosted tier (mdstudio.deityhub.com).
+# Not used by the build yet: the release workflow supplies real ids from repository secrets and
+# milestone 3 activates the bindings. Replace the placeholders before running `wrangler deploy`.
+name = "mdstudio"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+main = ".output/server/index.mjs"
+
+[assets]
+directory = ".output/public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mdstudio"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "infra/migrations"
+
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "mdstudio-assets"

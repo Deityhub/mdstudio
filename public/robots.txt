@@ -1,14 +1,23 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# Search engines and AI assistants are welcome: everything public is meant to be read, cited and
+# summarised. Only the API is off limits. Editor drafts stay private via a noindex tag.
 User-agent: *
 Allow: /
+Disallow: /api/
+
+# AI crawlers, named explicitly so the intent is unambiguous.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: Bytespider
+Allow: /
+Disallow: /api/
+
+Sitemap: https://mdstudio.deityhub.com/sitemap.xml

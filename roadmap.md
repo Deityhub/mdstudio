@@ -1,4 +1,24 @@
-# Markdown Studio — Project Roadmap
+# mdstudio — Project Roadmap
+
+## Launch readiness (target: v0.1.0)
+- [x] Remove Supabase and Lovable, plain Vite config
+- [x] Format the codebase; lint, test, typecheck and build all green
+- [x] Raw IndexedDB store (no wrapper library)
+- [x] Dependency diet (unused UI components and packages removed)
+- [x] Self-hosted fonts and nonce-based CSP
+- [x] Autosave hardening, checker locations, `local-link` and `unclosed-html` rules
+- [x] Math (KaTeX) and Mermaid, profile-gated
+- [x] Complete formatting toolbar (marks, headings, lists, links, images, footnotes, rules, code blocks, tables, alerts, math/Mermaid/HTML insertion, profile warnings, keyboard model)
+- [x] Open-source license, contributor docs and license check (known items for the audit: `elkjs` EPL-2.0 via Mermaid needs an attribution notice; `khroma` is MIT but has no `license` field; `lightningcss` MPL-2.0 is build-time only; KaTeX font lineage is MathJax-derived, see `public/katex/README.md`)
+- [x] CI (lint, test, build, license, e2e, Docker smoke test)
+- [x] Infra blueprints (Cloudflare Workers + D1 + R2, Docker + SQLite)
+- [x] Release automation (prepare-release, changelog, tags, GHCR + Docker Hub, Cloudflare deploy)
+- [x] SEO foundation (meta, canonical, JSON-LD, sitemap, robots, llms.txt, IndexNow, icons, OG image)
+- [x] Home page redesign (live checker demo, dark mode, logo)
+- [x] Mermaid dark theme
+- [x] README
+- [x] Content pages: seven guides rendered with the app's own pipeline
+- [ ] Cut v0.1.0
 
 ## Milestone 1: Core Writing Studio & Portability (Completed)
 - [x] **Editor & Highlighting:** CodeMirror 6 integration with Markdown syntax highlighting, line numbers, search, and history.
@@ -9,7 +29,7 @@
 - [x] **Portability Linter:** Real-time syntax checker with selectable profiles (Strict CommonMark, GitHub, dev.to, Obsidian).
 - [x] **Import Pipeline:** Support for `.md` file imports, drag-and-drop, and rich HTML-to-Markdown paste conversion.
 - [x] **Export Pipeline:** Standard `.md`, clipboard copy, self-contained `.md` with base64 embedded images, and standalone `.html`.
-- [x] **Draft Library:** Local-first IndexedDB persistence (`idb-keyval`) with autosave debounce (400ms).
+- [x] **Draft Library:** Local-first IndexedDB persistence with autosave debounce (400ms).
 - [x] **Writing Aids:** Live word count, character count, reading time estimation, and click-to-navigate outline.
 - [x] **BYOK AI Assistant:** Direct browser streaming integration for OpenAI, Anthropic, Gemini, and custom OpenAI-compatible models.
 - [x] **Responsive Workspace:** Full phone and tablet responsiveness with single-pane view switching and drawer-based panels.
@@ -22,6 +42,9 @@
 - [ ] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.
 - [ ] **Library Organization:** Full-text document search, custom tags, and folder categorization.
 - [ ] **Bulk Import & Export:** Export all drafts as a structured ZIP file; bulk import Markdown folders and archives.
+- [ ] **WYSIWYG Live-Preview Mode:** Optional CodeMirror-decoration mode that hides syntax markers on inactive lines; Markdown stays canonical.
+- [ ] **Obsidian Rendering:** `==highlight==` renders; `[[wiki-links]]` in the Obsidian profile still to do.
+- [ ] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
 - [ ] **Custom Checker Rules:** User-configurable linting rules and warnings for publication standards.
 
 ---

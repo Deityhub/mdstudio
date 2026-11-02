@@ -1,6 +1,7 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkRehype from "remark-rehype";
 import remarkStringify from "remark-stringify";
@@ -10,20 +11,65 @@ import rehypeStringify from "rehype-stringify";
 import rehypeParse from "rehype-parse";
 import rehypeRemark from "rehype-remark";
 import { visit } from "unist-util-visit";
+import { getKatexPlugin, KATEX_OPTIONS, remarkMathGuard } from "./math";
 import YAML from "yaml";
-import type { Root as MdRoot } from "mdast";
-import type { Root as HastRoot, Element } from "hast";
+import type { Root as MdRoot, Parent as MdParent } from "mdast";
+import type { Root as HastRoot, Element, ElementContent } from "hast";
 
-export type Profile = "commonmark" | "github" | "devto" | "obsidian";
+import { PROFILES, type Profile } from "./profiles";
 
-export const PROFILES: { id: Profile; label: string; hint: string }[] = [
-  { id: "github", label: "GitHub (GFM)", hint: "Tables, task lists, footnotes" },
-  { id: "commonmark", label: "Strict CommonMark", hint: "Works everywhere" },
-  { id: "devto", label: "dev.to / Hashnode", hint: "GFM, no raw HTML" },
-  { id: "obsidian", label: "Obsidian", hint: "GFM + highlights, wiki-links" },
-];
+export { PROFILES, type Profile };
 
 const usesGfm = (p: Profile) => p !== "commonmark";
+
+/* ---------------- feature support (shared by the checker and the toolbar) ---------------- */
+
+export type Feature =
+  "table" | "task" | "strike" | "footnote" | "alert" | "math" | "mermaid" | "highlight" | "html";
+
+const GFM_ONLY = { commonmark: false, github: true, devto: true, obsidian: true };
+const GITHUB_AND_OBSIDIAN = { commonmark: false, github: true, devto: false, obsidian: true };
+const NOWHERE = { commonmark: false, github: false, devto: false, obsidian: false };
+
+/**
+ * Where each feature renders. The checker's rules and the toolbar's warnings both read this, so
+ * they cannot disagree (a test enforces it). A feature listed here is one the preview renders
+ * for that profile too, so "supported" means the preview matches the platform.
+ */
+export const FEATURE_SUPPORT: Record<Feature, Record<Profile, boolean>> = {
+  table: GFM_ONLY,
+  task: GFM_ONLY,
+  strike: GFM_ONLY,
+  footnote: GFM_ONLY,
+  alert: GITHUB_AND_OBSIDIAN,
+  math: GITHUB_AND_OBSIDIAN,
+  mermaid: GITHUB_AND_OBSIDIAN,
+  highlight: { ...NOWHERE, obsidian: true },
+  html: NOWHERE,
+};
+
+export const supports = (feature: Feature, profile: Profile) => FEATURE_SUPPORT[feature][profile];
+
+const PROFILE_NAMES: Record<Profile, string> = {
+  github: "GitHub",
+  commonmark: "Strict CommonMark",
+  devto: "dev.to",
+  obsidian: "Obsidian",
+};
+
+/** Why a tool is flagged for this profile, or null when it renders there. */
+export function supportHint(feature: Feature, profile: Profile): string | null {
+  if (supports(feature, profile)) return null;
+  const where = PROFILES.map((p) => p.id)
+    .filter((id) => supports(feature, id))
+    .map((id) => PROFILE_NAMES[id]);
+  if (where.length === 0) return "Raw HTML may be removed or shown differently on other platforms";
+  const list =
+    where.length === 1
+      ? where[0]
+      : `${where.slice(0, -1).join(", ")} and ${where[where.length - 1]}`;
+  return `Renders on ${list} only`;
+}
 
 /* ---------------- front matter ---------------- */
 
@@ -31,12 +77,20 @@ export type FrontMatter = Record<string, unknown>;
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
-export function splitFrontMatter(md: string): { data: FrontMatter | null; body: string; raw: string } {
+export function splitFrontMatter(md: string): {
+  data: FrontMatter | null;
+  body: string;
+  raw: string;
+} {
   const m = md.match(FM_RE);
   if (!m) return { data: null, body: md, raw: "" };
   try {
     const data = YAML.parse(m[1] ?? "");
-    return { data: data && typeof data === "object" ? data : {}, body: md.slice(m[0].length), raw: m[0] };
+    return {
+      data: data && typeof data === "object" ? data : {},
+      body: md.slice(m[0].length),
+      raw: m[0],
+    };
   } catch {
     return { data: null, body: md, raw: "" };
   }
@@ -44,7 +98,9 @@ export function splitFrontMatter(md: string): { data: FrontMatter | null; body: 
 
 export function joinFrontMatter(data: FrontMatter | null, body: string): string {
   const clean = Object.fromEntries(
-    Object.entries(data ?? {}).filter(([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0)),
+    Object.entries(data ?? {}).filter(
+      ([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0),
+    ),
   );
   if (Object.keys(clean).length === 0) return body;
   return `---\n${YAML.stringify(clean).trimEnd()}\n---\n\n${body.replace(/^\n+/, "")}`;
@@ -54,7 +110,10 @@ export function joinFrontMatter(data: FrontMatter | null, body: string): string 
 
 const schema = {
   ...defaultSchema,
-  protocols: { ...defaultSchema.protocols, src: [...(defaultSchema.protocols?.["src"] ?? []), "data"] },
+  protocols: {
+    ...defaultSchema.protocols,
+    src: [...(defaultSchema.protocols?.["src"] ?? []), "data"],
+  },
 };
 
 export function basename(path: string) {
@@ -73,12 +132,99 @@ function rehypeResolveImages(images: Record<string, string>) {
   };
 }
 
-export function renderMarkdown(md: string, profile: Profile = "github", images: Record<string, string> = {}): string {
+const ALERT_TITLES: Record<string, string> = {
+  note: "Note",
+  tip: "Tip",
+  important: "Important",
+  warning: "Warning",
+  caution: "Caution",
+};
+
+/**
+ * GitHub alerts (`> [!NOTE]`) and Obsidian callouts, for the two profiles whose platforms render
+ * them. Runs after sanitizing, so the classes it adds cannot be injected through raw HTML.
+ * GitHub needs the marker alone on the first line; Obsidian also allows a custom title after it.
+ */
+function rehypeAlerts(profile: Profile) {
+  return () => (tree: HastRoot) => {
+    if (profile !== "github" && profile !== "obsidian") return;
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "blockquote") return;
+      const first = node.children.find((c): c is Element => c.type === "element");
+      const text = first?.tagName === "p" ? first.children[0] : undefined;
+      if (!first || !text || text.type !== "text") return;
+      const m = /^\[!(note|tip|important|warning|caution)\]([^\n]*)\n?/i.exec(text.value);
+      if (!m) return;
+      const title = (m[2] ?? "").trim();
+      if (title && profile !== "obsidian") return;
+      const kind = (m[1] ?? "").toLowerCase();
+      text.value = text.value.slice(m[0].length);
+      if (!text.value) first.children.shift();
+      if (!first.children.length) node.children = node.children.filter((c) => c !== first);
+      node.properties = { ...node.properties, className: ["md-alert", `md-alert-${kind}`] };
+      node.children.unshift({
+        type: "element",
+        tagName: "p",
+        properties: { className: ["md-alert-title"] },
+        children: [{ type: "text", value: title || (ALERT_TITLES[kind] ?? kind) }],
+      });
+    });
+  };
+}
+
+const HIGHLIGHT = /==([^=\s](?:[^=\n]*[^=\s])?)==/g;
+
+/**
+ * `==text==` as <mark>, for the profile whose platform renders it (Obsidian). Runs after
+ * sanitizing and only splits text nodes, so no HTML from the document can reach the output.
+ * Code is skipped. A highlight must sit inside one run of text: `==**bold**==` is not matched.
+ */
+function rehypeHighlights(profile: Profile) {
+  return () => (tree: HastRoot) => {
+    if (!supports("highlight", profile)) return;
+    visit(tree, "text", (node, index, parent) => {
+      if (!parent || index === undefined || !node.value.includes("==")) return;
+      if (parent.type === "element" && (parent.tagName === "code" || parent.tagName === "pre"))
+        return;
+      const parts: ElementContent[] = [];
+      let last = 0;
+      for (const m of node.value.matchAll(HIGHLIGHT)) {
+        if (m.index > last) parts.push({ type: "text", value: node.value.slice(last, m.index) });
+        parts.push({
+          type: "element",
+          tagName: "mark",
+          properties: {},
+          children: [{ type: "text", value: m[1] ?? "" }],
+        });
+        last = m.index + m[0].length;
+      }
+      if (!parts.length) return;
+      if (last < node.value.length) parts.push({ type: "text", value: node.value.slice(last) });
+      parent.children.splice(index, 1, ...parts);
+      return index + parts.length;
+    });
+  };
+}
+
+export function renderMarkdown(
+  md: string,
+  profile: Profile = "github",
+  images: Record<string, string> = {},
+): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
-  const file = p
+  const mathProfile = supports("math", profile);
+  if (mathProfile) p.use(remarkMath).use(remarkMathGuard);
+  // KaTeX runs after sanitizing (so raw HTML can't smuggle anything past it) with trust off, and
+  // only once ensureMath() has loaded it; until then math shows as a code block.
+  const katex = mathProfile ? getKatexPlugin() : null;
+  const q = p
     .use(remarkRehype)
     .use(rehypeSanitize, schema)
+    .use(rehypeAlerts(profile))
+    .use(rehypeHighlights(profile));
+  if (katex) q.use(katex, KATEX_OPTIONS);
+  const file = q
     .use(rehypeResolveImages(images))
     .use(rehypeHighlight, { detect: false, ignoreMissing: true } as never)
     .use(rehypeStringify)
@@ -89,7 +235,9 @@ export function renderMarkdown(md: string, profile: Profile = "github", images: 
 function parse(md: string, profile: Profile): MdRoot {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
-  return p.parse(md) as MdRoot;
+  // math is always parsed so the checker can find it (and ignore code and currency) in any profile
+  p.use(remarkMath).use(remarkMathGuard);
+  return p.runSync(p.parse(md), md) as MdRoot;
 }
 
 /* ---------------- portability checker ---------------- */
@@ -104,7 +252,8 @@ function fencedLines(lines: string[]): Set<number> {
     const m = l.match(/^\s{0,3}(`{3,}|~{3,})/);
     if (fence) {
       set.add(i);
-      if (m?.[1] && m[1][0] === fence[0] && m[1].length >= fence.length && l.trim() === m[1]) fence = null;
+      if (m?.[1] && m[1][0] === fence[0] && m[1].length >= fence.length && l.trim() === m[1])
+        fence = null;
     } else if (m) {
       fence = m[1] ?? null;
       set.add(i);
@@ -112,6 +261,67 @@ function fencedLines(lines: string[]): Set<number> {
   });
   return set;
 }
+
+const VOID_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "source",
+  "track",
+  "wbr",
+]);
+const TAG_RE = /<(\/?)([a-zA-Z][\w-]*)\b[^>]*?(\/?)>/g;
+
+/** Anything that is not an anchor, protocol-relative or web/mail/phone URL points at a local file. */
+const isLocalUrl = (url: string) =>
+  url !== "" &&
+  !url.startsWith("#") &&
+  !url.startsWith("//") &&
+  !/^(https?|mailto|tel|sms|ftp):/i.test(url);
+
+/**
+ * Pairs raw HTML open/close tags per parent node (block HTML may open at the root and close
+ * several paragraphs later; inline HTML pairs inside its paragraph).
+ */
+function unclosedHtml(tree: MdRoot, report: (line: number, message: string) => void) {
+  const walk = (parent: MdParent) => {
+    const open: { name: string; line: number }[] = [];
+    for (const child of parent.children) {
+      if (child.type === "html") {
+        const baseLine = child.position?.start.line ?? 1;
+        for (const m of child.value.matchAll(TAG_RE)) {
+          const [, closing, rawName = "", selfClosing] = m;
+          const name = rawName.toLowerCase();
+          if (VOID_TAGS.has(name) || selfClosing) continue;
+          const line = baseLine + (child.value.slice(0, m.index).match(/\n/g)?.length ?? 0);
+          if (!closing) {
+            open.push({ name, line });
+            continue;
+          }
+          const at = open.map((o) => o.name).lastIndexOf(name);
+          if (at < 0) report(line, `Closing </${name}> has no matching opening tag.`);
+          else {
+            // tags opened after the match were never closed
+            for (const o of open.splice(at).slice(1))
+              report(o.line, `<${o.name}> is never closed.`);
+          }
+        }
+      } else if ("children" in child) walk(child as MdParent);
+    }
+    for (const o of open) report(o.line, `<${o.name}> is never closed.`);
+  };
+  walk(tree);
+}
+
+const isDelimiterRow = (l: string) =>
+  l.includes("|") && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(l);
 
 export function checkPortability(md: string, profile: Profile = "github"): Issue[] {
   const issues: Issue[] = [];
@@ -127,45 +337,122 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
     if (node.type === "html") {
       const v = (node as { value: string }).value.trim();
       if (!/^<!--[\s\S]*-->$/.test(v))
-        add(line, "raw-html", "Raw HTML is stripped or rendered differently on many platforms.", profile === "devto" ? "error" : "warning");
+        add(
+          line,
+          "raw-html",
+          "Raw HTML is stripped or rendered differently on many platforms.",
+          profile === "devto" ? "error" : "warning",
+        );
     }
     if (node.type === "image") {
-      const url = (node as { url: string }).url;
+      const { url, alt } = node as { url: string; alt?: string | null };
+      if (!alt?.trim())
+        add(
+          line,
+          "missing-alt",
+          "Image has no alt text. Screen readers and search engines skip it.",
+        );
       if (url.startsWith("data:"))
-        add(line, "data-image", "Embedded (base64) image: some platforms like GitHub won't display it.", "info");
+        add(
+          line,
+          "data-image",
+          "Embedded (base64) image: some platforms like GitHub won't display it.",
+          "info",
+        );
       else if (!/^https?:\/\//i.test(url))
-        add(line, "local-image", "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.");
+        add(
+          line,
+          "local-image",
+          "Local image path won't load elsewhere. Use the self-contained export or a hosted URL.",
+        );
+    }
+    if (
+      ((node.type as string) === "math" || (node.type as string) === "inlineMath") &&
+      !supports("math", profile)
+    )
+      add(line, "math", "Math ($…$ and $$…$$) isn't supported on every platform.");
+    if (node.type === "blockquote" && !supports("alert", profile)) {
+      const para = (
+        node as { children: { type: string; children?: { type: string; value?: string }[] }[] }
+      ).children[0];
+      const text = para?.type === "paragraph" ? para.children?.[0] : undefined;
+      if (
+        text?.type === "text" &&
+        /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i.test(text.value ?? "")
+      )
+        add(
+          line,
+          "alert",
+          "GitHub-style alerts show as a plain quote outside GitHub and Obsidian.",
+        );
+    }
+    if (node.type === "link" || node.type === "definition") {
+      const url = (node as { url: string }).url;
+      if (isLocalUrl(url))
+        add(
+          line,
+          "local-link",
+          `Link to a local file (${url}) will break outside this folder. Use a full URL.`,
+        );
     }
     if (node.type === "code") {
       const lang = (node as { lang?: string | null }).lang;
-      if ((node as { position?: unknown }).position && lang === "mermaid" && profile !== "github" && profile !== "obsidian")
+      if (
+        (node as { position?: unknown }).position &&
+        lang === "mermaid" &&
+        !supports("mermaid", profile)
+      )
         add(line, "mermaid", "Mermaid diagrams only render on GitHub, GitLab and Obsidian.");
     }
   });
 
+  unclosedHtml(tree, (line, message) => add(line, "unclosed-html", message));
+
   const markers = new Set<string>();
+  let firstMarker: string | undefined;
+  let mixedAt = 0;
   lines.forEach((l, i) => {
     const n = i + 1;
     if (inCode.has(i)) {
       const m = l.match(/^\s{0,3}(`{3,}|~{3,})\s*$/);
       // opening fence without language
-      if (m && !inCode.has(i - 1)) add(n, "fence-lang", "Code block has no language, so it won't be highlighted.", "info");
+      if (m && !inCode.has(i - 1))
+        add(n, "fence-lang", "Code block has no language, so it won't be highlighted.", "info");
       return;
     }
-    if (profile !== "obsidian" && /==[^=\s][^=]*==/.test(l)) add(n, "highlight", "==highlight== isn't standard Markdown.");
-    if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l)) add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
-    if (profile !== "obsidian" && /^\s*\$\$/.test(l)) add(n, "math", "Math blocks ($$) aren't supported on every platform.");
+    if (!supports("highlight", profile) && /==[^=\s][^=]*==/.test(l))
+      add(n, "highlight", "==highlight== isn't standard Markdown.");
+    if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l))
+      add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
     if (/^\s*:::/.test(l)) add(n, "container", "Custom ::: containers are not standard Markdown.");
-    if (/\S {2,}$/.test(l) && lines[i + 1]?.trim()) add(n, "trailing-break", "Trailing spaces for line breaks are invisible and often trimmed. Use a backslash (\\) instead.");
+    if (/\S {2,}$/.test(l) && lines[i + 1]?.trim())
+      add(
+        n,
+        "trailing-break",
+        "Trailing spaces for line breaks are invisible and often trimmed. Use a backslash (\\) instead.",
+      );
     const lm = l.match(/^\s*([-*+])\s+\S/);
-    if (lm?.[1] && !/^\s*[-*_](\s*[-*_]){2,}\s*$/.test(l)) markers.add(lm[1]);
-    if (profile === "commonmark") {
-      if (/^\s*\|?.*\|.*\|?\s*$/.test(l) && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1] ?? "")) add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
-      if (/^\s*[-*+]\s+\[[ xX]\]/.test(l)) add(n, "gfm-task", "Task lists are a GFM extension.");
-      if (/~~[^~]+~~/.test(l)) add(n, "gfm-strike", "Strikethrough is a GFM extension.");
+    if (lm?.[1] && !/^\s*[-*_](\s*[-*_]){2,}\s*$/.test(l)) {
+      markers.add(lm[1]);
+      firstMarker ??= lm[1];
+      if (lm[1] !== firstMarker && !mixedAt) mixedAt = n;
     }
+    if (!supports("table", profile) && /\|/.test(l) && isDelimiterRow(lines[i + 1] ?? ""))
+      add(n, "gfm-table", "Tables are a GFM extension, not strict CommonMark.");
+    if (!supports("task", profile) && /^\s*[-*+]\s+\[[ xX]\]/.test(l))
+      add(n, "gfm-task", "Task lists are a GFM extension.");
+    if (!supports("strike", profile) && /~~[^~]+~~/.test(l))
+      add(n, "gfm-strike", "Strikethrough is a GFM extension.");
+    if (!supports("footnote", profile) && /^\[\^[^\]\s]+\]:/.test(l))
+      add(n, "gfm-footnote", "Footnotes are a GFM extension, not strict CommonMark.");
   });
-  if (markers.size > 1) add(1, "mixed-bullets", `Mixed bullet markers (${[...markers].join(" ")}) can split lists. Normalizing on export fixes this.`, "info");
+  if (markers.size > 1)
+    add(
+      mixedAt,
+      "mixed-bullets",
+      `Mixed bullet markers (${[...markers].join(" ")}) can split lists. Normalizing on export fixes this.`,
+      "info",
+    );
 
   return issues.sort((a, b) => a.line - b.line);
 }
@@ -181,7 +468,11 @@ export function getOutline(md: string): Heading[] {
     visit(node, (c) => {
       if ("value" in c && typeof c.value === "string" && c.type !== "html") text += c.value;
     });
-    out.push({ depth: node.depth, text: text.trim() || "(untitled)", line: node.position?.start.line ?? 1 });
+    out.push({
+      depth: node.depth,
+      text: text.trim() || "(untitled)",
+      line: node.position?.start.line ?? 1,
+    });
   });
   return out;
 }
@@ -216,26 +507,41 @@ export function slugify(s: string) {
 
 /** Byte-level cleanup that never changes meaning: LF endings, no BOM, single final newline. */
 export function finalizeText(md: string) {
-  return md.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").replace(/\s*$/, "") + "\n";
+  return (
+    md
+      .replace(/^\uFEFF/, "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\s*$/, "") + "\n"
+  );
 }
 
 export function normalizeMarkdown(md: string, profile: Profile = "github"): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
   const out = p
-    .use(remarkStringify, { bullet: "-", fences: true, rule: "-", emphasis: "_", strong: "*", listItemIndent: "one" })
+    .use(remarkStringify, {
+      bullet: "-",
+      fences: true,
+      rule: "-",
+      emphasis: "_",
+      strong: "*",
+      listItemIndent: "one",
+    })
     .processSync(md);
   return finalizeText(String(out));
 }
 
 /** Replace local image references with embedded data URIs from the document's image store. */
 export function embedImages(md: string, images: Record<string, string>): string {
-  return md.replace(/(!\[[^\]]*\]\()(<[^>]+>|[^)\s]+)((?:\s+"[^"]*")?\))/g, (all, pre, url, post) => {
-    const clean = url.replace(/^<|>$/g, "");
-    if (/^(https?:|data:)/i.test(clean)) return all;
-    const hit = images[basename(clean)];
-    return hit ? `${pre}${hit}${post}` : all;
-  });
+  return md.replace(
+    /(!\[[^\]]*\]\()(<[^>]+>|[^)\s]+)((?:\s+"[^"]*")?\))/g,
+    (all, pre, url, post) => {
+      const clean = url.replace(/^<|>$/g, "");
+      if (/^(https?:|data:)/i.test(clean)) return all;
+      const hit = images[basename(clean)];
+      return hit ? `${pre}${hit}${post}` : all;
+    },
+  );
 }
 
 export function htmlToMarkdown(html: string): string {
@@ -243,13 +549,22 @@ export function htmlToMarkdown(html: string): string {
     .use(rehypeParse, { fragment: true })
     .use(rehypeRemark)
     .use(remarkGfm)
-    .use(remarkStringify, { bullet: "-", fences: true, emphasis: "_", strong: "*", listItemIndent: "one" })
+    .use(remarkStringify, {
+      bullet: "-",
+      fences: true,
+      emphasis: "_",
+      strong: "*",
+      listItemIndent: "one",
+    })
     .processSync(html);
   return String(out).trim();
 }
 
-export function standaloneHtml(title: string, bodyHtml: string) {
-  const esc = title.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+export function standaloneHtml(title: string, bodyHtml: string, extraCss = "") {
+  const esc = title.replace(
+    /[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
+  );
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc}</title>
@@ -257,7 +572,12 @@ export function standaloneHtml(title: string, bodyHtml: string) {
 pre{background:#f6f8fa;padding:14px;border-radius:6px;overflow:auto}code{font-family:ui-monospace,monospace;font-size:.9em}
 :not(pre)>code{background:#eff1f3;padding:.15em .35em;border-radius:4px}img{max-width:100%}
 table{border-collapse:collapse}th,td{border:1px solid #d0d7de;padding:6px 12px}
-blockquote{margin:0;padding:0 1em;color:#59636e;border-left:.25em solid #d0d7de}</style>
+blockquote{margin:0;padding:0 1em;color:#59636e;border-left:.25em solid #d0d7de}
+.md-alert{--c:#0969da;color:inherit;border-left-color:var(--c);padding:.25em 1em}.md-alert-title{margin:0 0 .25em;font-weight:600;color:var(--c)}
+.md-alert-tip{--c:#1a7f37}.md-alert-important{--c:#8250df}.md-alert-warning{--c:#9a6700}.md-alert-caution{--c:#cf222e}
+mark{background:#fff8c5;color:inherit}
+.md-mermaid{overflow-x:auto;text-align:center;margin:0 0 1em}.md-mermaid svg{max-width:100%;height:auto}.katex-display{overflow-x:auto;overflow-y:hidden}
+${extraCss}</style>
 </head><body>
 ${bodyHtml}
 </body></html>
