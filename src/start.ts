@@ -1,7 +1,7 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
 
-import { createNonce, securityHeaders, setRequestNonce } from "./lib/csp";
+import { createNonce, previewHeaders, securityHeaders, setRequestNonce } from "./lib/csp";
 
 import { renderErrorPage } from "./lib/error-page";
 
@@ -28,6 +28,10 @@ const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => 
     for (const [name, value] of Object.entries(securityHeaders(nonce)))
       setResponseHeader(name, value);
   }
+  for (const [name, value] of Object.entries(
+    previewHeaders(import.meta.env.VITE_PREVIEW === "true"),
+  ))
+    setResponseHeader(name, value);
   return next();
 });
 
