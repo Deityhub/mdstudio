@@ -35,7 +35,7 @@ Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and
   - **Math:** `$x$`, `$$…$$` and ```` ```math ```` render with KaTeX for GitHub and Obsidian; `$5 and $10` stays text. KaTeX loads the first time a document needs it.
   - **Diagrams:** ```` ```mermaid ```` blocks render as SVG for GitHub and Obsidian; an invalid diagram keeps its code and shows the error beneath it. Other profiles show the source, as their platforms do.
   - **Export:** "Copy rendered HTML" and "Download standalone .html" include the rendered math (the standalone file embeds the KaTeX stylesheet and fonts) and inline SVG diagrams.
-- **Side panel buttons:** Checks (badge with the count of warnings and errors), Outline, Front matter.
+- **Side panel buttons:** Checks (badge with the count of warnings and errors), Outline, Front matter, History (saved versions of the draft; opening one shows a side-by-side comparison with the current text and a Restore button).
 - **Status bar:** words · reading time · image count · save status (Saving… / Saved in this browser / Not saved) · target platform.
 
 ## 3. Checks panel — `03_editor_checks_panel.png`

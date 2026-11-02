@@ -36,6 +36,7 @@ import {
   ListTree,
   Tags,
   Pencil,
+  History,
   MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,8 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/layout";
+import { HistoryPanel } from "@/components/studio/HistoryPanel";
+import { historyStore, type Revision } from "@/lib/history";
 import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/images";
 import {
@@ -129,7 +132,7 @@ type SaveState = "saved" | "saving" | "error";
 const MarkdownEditor = lazy(() => import("./MarkdownEditor"));
 
 type View = "split" | "editor" | "preview";
-type Panel = "checks" | "outline" | "meta" | null;
+type Panel = "checks" | "outline" | "meta" | "history" | null;
 
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -228,6 +231,8 @@ export function Studio({ docId }: { docId: string }) {
   }, [docId, refreshList]);
 
   // autosave: debounced, but any unsaved draft is flushed before it can be lost
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const [revisions, setRevisions] = useState<Revision[]>([]);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const saveSeq = useRef(0);
   const pending = useRef<MdDocument | null>(null);
@@ -238,6 +243,12 @@ export function Studio({ docId }: { docId: string }) {
     const seq = ++saveSeq.current;
     return documentStore
       .save(d)
+      .then(() =>
+        historyStore
+          .maybeSnapshot(d, Date.now())
+          .then((r) => r && setHistoryVersion((v) => v + 1))
+          .catch((error) => console.error("Couldn't keep a version of this draft", error)),
+      )
       .then(refreshList)
       .then(() => {
         if (seq === saveSeq.current) setSaveState("saved");
@@ -272,6 +283,16 @@ export function Studio({ docId }: { docId: string }) {
       flush();
     };
   }, [docId, flush]);
+
+  const historyOpen = (compact ? mobilePanel : panel) === "history";
+  useEffect(() => {
+    if (!historyOpen || !doc?.id) return;
+    let live = true;
+    historyStore.list(doc.id).then((r) => live && setRevisions(r));
+    return () => {
+      live = false;
+    };
+  }, [historyOpen, doc?.id, historyVersion]);
 
   const update = useCallback((patch: Partial<MdDocument>) => {
     setDoc((d) => {
@@ -420,6 +441,24 @@ export function Studio({ docId }: { docId: string }) {
     toast.success(`${label} copied`);
   };
 
+  /* ---------- history ---------- */
+  const saveVersion = async () => {
+    if (!doc) return;
+    const rev = await historyStore.save(doc, Date.now(), "manual");
+    if (rev) setHistoryVersion((v) => v + 1);
+    toast.success(rev ? "Version saved" : "Nothing new to save since the last version");
+  };
+  const restoreVersion = async (rev: Revision) => {
+    if (!doc) return;
+    // keep what is being replaced, so a restore can itself be undone
+    await historyStore.save(doc, Date.now(), "restore");
+    setContent(rev.content);
+    setHistoryVersion((v) => v + 1);
+    toast.success("Version restored", {
+      description: "The text it replaced is in History, in case you want it back.",
+    });
+  };
+
   /* ---------- library ---------- */
   const newDoc = async (content = "") => {
     const d = await documentStore.create({ content });
@@ -446,6 +485,7 @@ export function Studio({ docId }: { docId: string }) {
   const remove = async (d: MdDocument) => {
     setToDelete(null);
     await documentStore.remove(d.id);
+    historyStore.clear(d.id).catch(console.error);
     const rest = docs.filter((x) => x.id !== d.id);
     if (d.id === docId) {
       if (rest[0]) navigate({ to: "/editor/$docId", params: { docId: rest[0].id } });
@@ -521,6 +561,7 @@ export function Studio({ docId }: { docId: string }) {
       ["checks", errCount ? AlertTriangle : CheckCircle2, "Checks"],
       ["outline", ListTree, "Outline"],
       ["meta", Tags, "Front matter"],
+      ["history", History, "History"],
     ] as const
   ).map(([p, Icon, label]) => (
     <Button
@@ -688,6 +729,14 @@ export function Studio({ docId }: { docId: string }) {
         ) : (
           <p className="text-sm text-muted-foreground">Add headings to build an outline.</p>
         ))}
+      {activePanel === "history" && (
+        <HistoryPanel
+          revisions={revisions}
+          content={content}
+          onSave={saveVersion}
+          onRestore={restoreVersion}
+        />
+      )}
       {activePanel === "meta" && (
         <FrontMatterForm
           data={fm.data}

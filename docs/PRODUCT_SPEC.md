@@ -34,7 +34,7 @@ Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: Rea
 | U9 | AI: suggest title/description/tags; write a draft from a topic | Done |
 | U10 | Use on phone | Done |
 | U11 | Publish directly to GitHub repo / dev.to / Hashnode / Ghost / WordPress | Planned |
-| U12 | Version history and restore | Planned |
+| U12 | Version history and restore | Done |
 | U13 | Collections, tags, search across drafts | Planned |
 | U14 | Templates per platform (Astro, Hugo, Jekyll, Docusaurus, dev.to) | Planned |
 | U15 | Accounts + cross-device sync, share links, collaboration | Planned |
