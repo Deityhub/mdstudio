@@ -77,7 +77,8 @@ import {
 } from "@/lib/markdown";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editing";
 import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editing-insert";
-import { hydrateDiagrams, withCachedDiagrams } from "@/lib/diagrams";
+import { hydrateDiagrams, renderDiagramFor, withCachedDiagrams } from "@/lib/diagrams";
+import { useResolvedTheme } from "@/lib/useResolvedTheme";
 import { renderExportBody, standaloneDocument } from "@/lib/export";
 import { ensureMath, hasMathSyntax, isMathLoaded } from "@/lib/math";
 import { patchHtml } from "@/lib/preview-dom";
@@ -281,12 +282,14 @@ export function Studio({ docId }: { docId: string }) {
         });
       });
   }, [deferred, profile]);
+  // Diagram colors are baked into their SVG, so a theme change re-renders them.
+  const theme = useResolvedTheme();
   const html = useMemo(() => {
     const rendered = renderMarkdown(deferred, profile, images);
     // known diagrams go straight into the HTML so they never show up as code while typing
-    return supports("mermaid", profile) ? withCachedDiagrams(rendered) : rendered;
+    return supports("mermaid", profile) ? withCachedDiagrams(rendered, theme) : rendered;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deferred, profile, images, mathVersion]);
+  }, [deferred, profile, images, mathVersion, theme]);
   // Only the blocks that changed are replaced (see patchHtml), then pending diagrams render.
   // This runs before paint, so the preview never shows an intermediate state.
   const previewBody = useRef<HTMLElement | null>(null);
@@ -296,9 +299,10 @@ export function Studio({ docId }: { docId: string }) {
     (el: HTMLElement | null) => {
       if (!el) return;
       patchHtml(el, htmlRef.current);
-      if (supports("mermaid", profile)) hydrateDiagrams(el).catch((e) => console.error(e));
+      if (supports("mermaid", profile))
+        hydrateDiagrams(el, renderDiagramFor(theme)).catch((e) => console.error(e));
     },
-    [profile],
+    [profile, theme],
   );
   useLayoutEffect(() => syncPreview(previewBody.current), [html, syncPreview]);
   const issues = useMemo(() => checkPortability(deferred, profile), [deferred, profile]);
