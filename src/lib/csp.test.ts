@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildCsp, createNonce, getRequestNonce, securityHeaders, setRequestNonce } from "./csp";
+import {
+  buildCsp,
+  createNonce,
+  getRequestNonce,
+  previewHeaders,
+  securityHeaders,
+  setRequestNonce,
+} from "./csp";
 
 describe("csp", () => {
   it("creates unique base64 nonces of 16 bytes", () => {
@@ -33,5 +40,10 @@ describe("csp", () => {
     setRequestNonce(req, "n1");
     expect(getRequestNonce(req)).toBe("n1");
     expect(getRequestNonce(new Request("http://localhost/"))).toBeUndefined();
+  });
+
+  it("keeps preview deployments out of search results, and only those", () => {
+    expect(previewHeaders(true)).toEqual({ "X-Robots-Tag": "noindex, nofollow" });
+    expect(previewHeaders(false)).toEqual({});
   });
 });

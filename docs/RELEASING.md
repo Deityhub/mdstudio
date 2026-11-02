@@ -42,6 +42,25 @@ want the image to be pulled without logging in.
 The deploy job runs in a `production` GitHub environment, which GitHub creates on first use. You can
 add required reviewers to it under **Settings → Environments** for an approval gate.
 
+## Pull request previews
+
+Every pull request into `dev` gets a live preview, so you can see the change before you merge it.
+The **Preview** workflow builds the PR, deploys it as its own Worker named `mdstudio-pr-<number>` and
+comments the URL on the PR (the same URL appears in the PR's Deployments box). It updates on every
+push, and the Worker is deleted when the PR closes. Previews send `X-Robots-Tag: noindex` and never
+carry the production domain: `infra/worker-config.ts` leaves the custom-domain route out of preview
+builds and refuses preview names that do not look like `mdstudio-pr-<number>`.
+
+One-time setup, in addition to the secrets above:
+
+- Register your account's **workers.dev subdomain** (Cloudflare dashboard → **Workers & Pages** →
+  **Account details** → **Change** next to the subdomain), because previews live at
+  `https://mdstudio-pr-<number>.<your-subdomain>.workers.dev`.
+- Pull requests from forks are skipped (they cannot read the secrets). If a preview fails, the PR
+  comment links to the workflow run.
+- A preview is a separate Worker, so it never touches production data. When milestone 3 adds D1 and
+  R2, give previews their own bindings.
+
 ## Hosted database and storage
 
 The hosted tier does not use D1 or R2 yet. When milestone 3 activates them, create the database and
