@@ -111,6 +111,9 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+      # Tell Bing and other IndexNow engines the site changed. Never blocks a release.
+      - run: bun scripts/indexnow.ts
+        continue-on-error: true
 
   sync-dev:
     name: Open a PR to merge main back into dev

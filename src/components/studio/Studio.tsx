@@ -621,7 +621,7 @@ export function Studio({ docId }: { docId: string }) {
               to="/"
               className="min-w-0 truncate font-display text-base font-semibold sm:text-lg"
             >
-              Markdown<span className="text-primary">Studio</span>
+              <span className="text-primary">md</span>studio
             </Link>
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}

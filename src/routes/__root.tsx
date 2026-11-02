@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { jsonLd, jsonLdScript, pageHead, SITE } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -70,20 +71,19 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   );
 }
 
+const defaults = pageHead({ title: SITE.name, description: SITE.description, path: "/" });
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Markdown Studio" },
-      { name: "description", content: "Write portable Markdown with a faithful live preview." },
-      { property: "og:title", content: "Markdown Studio" },
-      {
-        property: "og:description",
-        content: "Write portable Markdown with a faithful live preview.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "theme-color", content: "#f8f4ec", media: "(prefers-color-scheme: light)" },
+      { name: "theme-color", content: "#1c1a17", media: "(prefers-color-scheme: dark)" },
+      { property: "og:site_name", content: SITE.name },
+      { property: "og:locale", content: "en_US" },
+      // Defaults for any page without its own head (404s); pages set their own with pageHead.
+      ...defaults.meta.filter((m) => !("property" in m && m.property === "og:url")),
     ],
     links: [
       {
@@ -98,8 +98,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: `/fonts/${name}.woff2`,
         crossOrigin: "anonymous" as const,
       })),
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
+    scripts: jsonLd().map(jsonLdScript),
   }),
   shellComponent: RootShell,
   component: RootComponent,

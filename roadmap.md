@@ -13,7 +13,8 @@
 - [ ] CI (lint, test, build, license, e2e)
 - [x] Infra blueprints (Cloudflare Workers + D1 + R2, Docker + SQLite)
 - [x] Release automation (prepare-release, changelog, tags, GHCR + Docker Hub, Cloudflare deploy)
-- [ ] SEO foundation and home page redesign
+- [x] SEO foundation (meta, canonical, JSON-LD, sitemap, robots, llms.txt, IndexNow, icons, OG image)
+- [ ] Home page redesign
 - [ ] README and content pages
 
 ## Milestone 1: Core Writing Studio & Portability (Completed)

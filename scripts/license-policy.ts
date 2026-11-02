@@ -1,4 +1,4 @@
-// Which dependency licenses may ship in Markdown Studio (MIT). Permissive licenses pass; anything
+// Which dependency licenses may ship in mdstudio (MIT). Permissive licenses pass; anything
 // else needs a named, reviewed exception below. Used by scripts/check-licenses.ts and CI.
 
 export const ALLOWED = new Set([

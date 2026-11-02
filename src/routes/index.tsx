@@ -1,26 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, FileDown, ShieldCheck, Upload, Eye } from "lucide-react";
+import { ArrowRight, ArrowUpRight, FileDown, Github, ShieldCheck, Upload, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { faqJsonLd, jsonLdScript, pageHead, SITE } from "@/lib/seo";
+import { AUDIENCES, BRAND, FAQ, LONG_DESCRIPTION } from "@/lib/seo-content";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Markdown Studio: write once, render the same everywhere" },
-      {
-        name: "description",
-        content:
-          "A Markdown writing studio with a faithful live preview, portability checks, import, paste and clean .md export for any platform.",
-      },
-      { property: "og:title", content: "Markdown Studio: write once, render the same everywhere" },
-      {
-        property: "og:description",
-        content:
-          "Faithful live preview, portability checks and clean .md export for GitHub, dev.to, Hashnode and more.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
+  head: () => {
+    const head = pageHead({ title: BRAND.homeTitle, description: BRAND.description, path: "/" });
+    return { ...head, scripts: [jsonLdScript(faqJsonLd())] };
+  },
   component: Index,
 });
 
@@ -52,17 +40,24 @@ function Index() {
     <div className="min-h-screen bg-background">
       <header className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-4 sm:px-6 sm:py-6">
         <span className="min-w-0 font-display text-base font-semibold sm:text-xl">
-          Markdown<span className="text-primary">Studio</span>
+          <span className="text-primary">md</span>studio
         </span>
         <Button asChild variant="ghost">
-          <Link to="/editor">Open editor</Link>
+          <a
+            href={SITE.repo}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="mdstudio on GitHub (opens in a new tab)"
+          >
+            <Github className="h-4 w-4" /> GitHub <ArrowUpRight className="h-4 w-4" />
+          </a>
         </Button>
       </header>
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         <section className="grid gap-12 py-16 items-start md:grid-cols-[1.1fr_1fr] md:py-24">
           <div>
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-primary">
-              Portable Markdown
+              Free Markdown editor
             </p>
             <h1 className="font-display text-4xl sm:text-5xl font-semibold leading-[1.05] tracking-tight md:text-6xl">
               Write once.
@@ -70,8 +65,9 @@ function Index() {
               Render the same <em className="text-primary">everywhere.</em>
             </h1>
             <p className="mt-6 max-w-lg text-lg text-muted-foreground">
-              Draft blog posts and docs with a live preview that matches GitHub, dev.to, Hashnode
-              and static site generators, then export a file that just works.
+              mdstudio is a free, open-source Markdown editor with a live preview that matches
+              GitHub, dev.to and Obsidian, and a checker that flags anything that won&rsquo;t
+              travel. Then export a clean file that just works.
             </p>
             <div className="mt-8 flex gap-3">
               <Button asChild size="lg">
@@ -123,7 +119,58 @@ on two lines.
             </div>
           ))}
         </section>
+        <section className="grid gap-10 border-t border-border py-16 md:grid-cols-[1.2fr_1fr]">
+          <div>
+            <h2 className="font-display text-2xl font-semibold sm:text-3xl">About {BRAND.name}</h2>
+            <p className="mt-4 max-w-prose text-muted-foreground">{LONG_DESCRIPTION}</p>
+          </div>
+          <div>
+            <h2 className="font-display text-xl font-semibold">Who it&rsquo;s for</h2>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-muted-foreground">
+              {AUDIENCES.map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+        <section className="border-t border-border py-16" aria-labelledby="faq-heading">
+          <h2 id="faq-heading" className="font-display text-2xl font-semibold sm:text-3xl">
+            Frequently asked questions
+          </h2>
+          <div className="mt-6 max-w-3xl divide-y divide-border border-y border-border">
+            {FAQ.map((f) => (
+              <details key={f.question} className="group py-4">
+                <summary className="cursor-pointer list-none font-medium marker:hidden [&::-webkit-details-marker]:hidden">
+                  <span className="mr-2 text-primary group-open:hidden">+</span>
+                  <span className="mr-2 hidden text-primary group-open:inline">&minus;</span>
+                  {f.question}
+                </summary>
+                <p className="mt-2 pl-5 text-muted-foreground">{f.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
       </main>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground sm:px-6">
+          <span>
+            &copy; {new Date().getFullYear()} {SITE.author}. MIT licensed.
+          </span>
+          <a className="hover:text-foreground" href={SITE.repo} rel="noopener noreferrer">
+            Source on GitHub
+          </a>
+          <a
+            className="hover:text-foreground"
+            href={`${SITE.repo}/blob/main/CHANGELOG.md`}
+            rel="noopener noreferrer"
+          >
+            Changelog
+          </a>
+          <Link className="hover:text-foreground" to="/editor">
+            Open the editor
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
