@@ -17,7 +17,7 @@
 - [x] Home page redesign (live checker demo, dark mode, logo)
 - [x] Mermaid dark theme
 - [x] README
-- [ ] Content pages (guides and comparisons)
+- [x] Content pages: seven guides rendered with the app's own pipeline
 - [ ] Cut v0.1.0
 
 ## Milestone 1: Core Writing Studio & Portability (Completed)

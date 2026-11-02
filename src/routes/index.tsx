@@ -12,8 +12,9 @@ import {
   Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { SiteHeader } from "@/components/site/SiteHeader";
+import { GUIDES } from "@/lib/guides";
 import { PROFILES } from "@/lib/profiles";
 import { faqJsonLd, jsonLdScript, pageHead, SITE } from "@/lib/seo";
 import { AUDIENCES, BRAND, FAQ, LONG_DESCRIPTION } from "@/lib/seo-content";
@@ -88,26 +89,7 @@ function DemoFallback() {
 function Index() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-4 sm:px-6 sm:py-6">
-        <Logo
-          className="justify-self-start"
-          markClassName="h-8 w-8"
-          textClassName="text-xl sm:text-2xl"
-        />
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
-          <Button asChild variant="ghost">
-            <a
-              href={SITE.repo}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="mdstudio on GitHub (opens in a new tab)"
-            >
-              <Github className="h-4 w-4" /> GitHub <ArrowUpRight className="h-4 w-4" />
-            </a>
-          </Button>
-        </div>
-      </header>
+      <SiteHeader />
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         <section className="grid items-start gap-12 py-16 md:grid-cols-[1.1fr_1fr] md:py-24">
           <div>
@@ -243,6 +225,38 @@ on two lines.
           </div>
         </section>
 
+        <section className="border-t border-border py-16" aria-labelledby="guides-heading">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 id="guides-heading" className="font-display text-2xl font-semibold sm:text-3xl">
+                Guides to portable Markdown
+              </h2>
+              <p className="mt-3 max-w-2xl text-muted-foreground">
+                What differs between GitHub, dev.to, Obsidian and CommonMark, and how to write
+                Markdown that survives all of them.
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/guides">
+                All guides <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {GUIDES.slice(0, 3).map((g) => (
+              <Link
+                key={g.slug}
+                to="/guides/$slug"
+                params={{ slug: g.slug }}
+                className="rounded-xl border border-border bg-card p-5 transition-colors hover:bg-accent"
+              >
+                <h3 className="font-display text-lg font-semibold">{g.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{g.description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         <section className="grid gap-10 border-t border-border py-16 md:grid-cols-[1.2fr_1fr]">
           <div>
             <h2 className="font-display text-2xl font-semibold sm:text-3xl">About {BRAND.name}</h2>
@@ -292,26 +306,7 @@ on two lines.
           </div>
         </section>
       </main>
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground sm:px-6">
-          <span>
-            &copy; {new Date().getFullYear()} {SITE.author}.
-          </span>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-            <span>MIT licensed.</span>
-            <a className="hover:text-foreground" href={SITE.repo} rel="noopener noreferrer">
-              Source on GitHub
-            </a>
-            <a
-              className="hover:text-foreground"
-              href={`${SITE.repo}/blob/main/CHANGELOG.md`}
-              rel="noopener noreferrer"
-            >
-              Changelog
-            </a>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

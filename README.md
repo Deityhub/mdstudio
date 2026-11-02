@@ -37,6 +37,7 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 - **Optional AI writer, bring your own key.** OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint (Ollama, OpenRouter, Groq). Keys stay in session memory and requests go straight from your browser to the provider.
 - **Responsive and themed.** Split view on desktop, single pane with drawers on phones, light and dark mode.
 - **Self-hostable.** One Docker container with SQLite, or Cloudflare Workers.
+- **Guides.** Seven practical [guides to portable Markdown](https://mdstudio.deityhub.com/guides), written in Markdown and rendered by mdstudio itself.
 
 <p align="center">
   <img src="docs/ui-screenshots/09_editor_dark.png" alt="mdstudio in dark mode" width="440">

@@ -26,9 +26,20 @@ Write Markdown in a full-featured editor with a complete formatting toolbar and 
 - Are documents private? Yes. They stay in the browser; there is no account.
 - How is it different from other Markdown editors? It checks portability across platforms instead of rendering Markdown its own way.
 
+## Guides
+
+- [Portable Markdown: why it renders differently everywhere](https://mdstudio.deityhub.com/guides/markdown-portability): the six things that break most often and a checklist
+- [CommonMark vs GitHub Flavored Markdown](https://mdstudio.deityhub.com/guides/commonmark-vs-github-flavored-markdown): tables, task lists, strikethrough, footnotes, alerts
+- [Obsidian to GitHub Markdown](https://mdstudio.deityhub.com/guides/obsidian-to-github-markdown): converting wiki-links, highlights, callouts and embeds
+- [Writing Markdown for dev.to and Hashnode](https://mdstudio.deityhub.com/guides/markdown-for-devto-and-hashnode): front matter, images, raw HTML
+- [Markdown line breaks and paragraphs](https://mdstudio.deityhub.com/guides/markdown-line-breaks): soft breaks, hard breaks and the portable choice
+- [Markdown images](https://mdstudio.deityhub.com/guides/markdown-images): paths, hosted URLs, base64 and alt text
+- [Math and Mermaid diagrams in Markdown](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams): where they render and what to do elsewhere
+
 ## Links
 
 - [Home](https://mdstudio.deityhub.com/): overview, features and FAQ
+- [All guides](https://mdstudio.deityhub.com/guides): index of the Markdown guides
 - [Editor](https://mdstudio.deityhub.com/editor): open the editor
 - [Source code](https://github.com/Deityhub/mdstudio): README, specification, roadmap
 - [Changelog](https://github.com/Deityhub/mdstudio/blob/main/CHANGELOG.md)
