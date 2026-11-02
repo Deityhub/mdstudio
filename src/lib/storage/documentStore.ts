@@ -115,6 +115,13 @@ export function createDocumentStore(kv: KeyValueStore) {
         );
       },
     },
+    /** Gives a folder a new name everywhere: in the folder list and on every draft in it. */
+    async renameFolder(from: string, to: string) {
+      for (const d of await store.list())
+        if (d.folder && byName(d.folder, from) === 0) await store.save({ ...d, folder: to });
+      await store.folders.remove(from);
+      await store.folders.add(to);
+    },
     async list(): Promise<MdDocument[]> {
       const docs = (await kv.values<MdDocument>(PREFIX)).filter((d) => !!d);
       return docs.sort((a, b) => b.updatedAt - a.updatedAt);

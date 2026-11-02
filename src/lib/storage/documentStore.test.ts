@@ -60,6 +60,26 @@ describe("folders", () => {
     await store.folders.remove("BLOG");
     expect(await store.folders.list()).toEqual([]);
   });
+  it("renames a folder and moves its drafts with it", async () => {
+    const store = createDocumentStore(memoryStore());
+    await store.folders.add("Blog");
+    await store.folders.add("Other");
+    const inBlog = await store.create({ content: "a", folder: "Blog" });
+    const inOther = await store.create({ content: "b", folder: "Other" });
+    const loose = await store.create({ content: "c" });
+    await store.renameFolder("blog", "Posts");
+    expect(await store.folders.list()).toEqual(["Other", "Posts"]);
+    expect((await store.get(inBlog.id))?.folder).toBe("Posts");
+    expect((await store.get(inOther.id))?.folder).toBe("Other");
+    expect((await store.get(loose.id))?.folder).toBeUndefined();
+  });
+  it("renames a folder that only exists on its drafts, and can change just the case", async () => {
+    const store = createDocumentStore(memoryStore());
+    const d = await store.create({ content: "a", folder: "notes" });
+    await store.renameFolder("notes", "Notes");
+    expect(await store.folders.list()).toEqual(["Notes"]);
+    expect((await store.get(d.id))?.folder).toBe("Notes");
+  });
   it("does not show up among the documents", async () => {
     const store = createDocumentStore(memoryStore());
     await store.folders.add("Blog");

@@ -143,6 +143,7 @@ export function Library({
   activeId,
   onNew,
   onCreateFolder,
+  onRenameFolder,
   onDeleteFolder,
   onOpen,
   onRename,
@@ -157,6 +158,7 @@ export function Library({
   activeId: string;
   onNew: () => void;
   onCreateFolder: (name: string) => void;
+  onRenameFolder: (from: string, to: string) => void;
   /** Removes the folder and every draft in it. */
   onDeleteFolder: (name: string) => void;
   /** A draft was chosen (lets the mobile sheet close). */
@@ -179,6 +181,8 @@ export function Library({
   const [dragging, setDragging] = useState<string | null>(null);
   /** Where a dragged draft would land: a folder name, "" for the unfiled area, null for nowhere. */
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
+  const [folderRename, setFolderRename] = useState("");
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
 
   const deferredQuery = useDeferredValue(query);
@@ -489,49 +493,110 @@ export function Library({
                   !filtering && "cursor-pointer hover:bg-sidebar-accent/60",
                 )}
               >
-                <button
-                  type="button"
-                  disabled={filtering}
-                  aria-expanded={open}
-                  onClick={() => toggleFolder(folder)}
-                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium disabled:cursor-default"
-                >
-                  {open ? (
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                  )}
-                  {open ? (
-                    <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  ) : (
-                    <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  )}
-                  <span className="truncate">{folder}</span>
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                {renamingFolder === folder ? (
+                  <form
+                    className="flex min-w-0 flex-1 items-center gap-1 p-1"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setRenamingFolder(null);
+                      const name = normalizeFolder(folderRename);
+                      if (name && name !== folder) onRenameFolder(folder, name);
+                    }}
+                  >
+                    <Input
+                      autoFocus
+                      aria-label="Folder name"
+                      className="h-8 min-w-0 flex-1"
+                      maxLength={40}
+                      value={folderRename}
+                      onChange={(e) => setFolderRename(e.target.value)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onKeyDown={(e) => e.key === "Escape" && setRenamingFolder(null)}
+                    />
                     <Button
+                      type="submit"
                       variant="ghost"
                       size="icon"
-                      className="mr-1 h-8 w-8 shrink-0 xl:opacity-0 xl:focus-visible:opacity-100 xl:group-hover/folder:opacity-100 data-[state=open]:opacity-100"
-                      aria-label={`Options for folder ${folder}`}
+                      className="h-8 w-8 shrink-0"
+                      aria-label="Save folder name"
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <Check className="h-4 w-4" />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onSelect={() => {
-                        const n = filed(folder).length;
-                        if (n === 0) onDeleteFolder(folder);
-                        else setFolderToDelete(folder);
-                      }}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      aria-label="Cancel folder rename"
+                      onClick={() => setRenamingFolder(null)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete folder
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </form>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={filtering}
+                      aria-expanded={open}
+                      onClick={() => toggleFolder(folder)}
+                      className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium disabled:cursor-default"
+                    >
+                      {open ? (
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      {open ? (
+                        <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="truncate">{folder}</span>
+                    </button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="mr-1 h-8 w-8 shrink-0 xl:opacity-0 xl:focus-visible:opacity-100 xl:group-hover/folder:opacity-100 data-[state=open]:opacity-100"
+                          aria-label={`Options for folder ${folder}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        onCloseAutoFocus={(e) => {
+                          // let the rename field that was just opened keep the focus it took
+                          if (keepFocus.current) e.preventDefault();
+                          keepFocus.current = false;
+                        }}
+                      >
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            keepFocus.current = true;
+                            setFolderRename(folder);
+                            setRenamingFolder(folder);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Rename folder
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={() => {
+                            const n = filed(folder).length;
+                            if (n === 0) onDeleteFolder(folder);
+                            else setFolderToDelete(folder);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete folder
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
               </div>
               {open && (
                 <div className="ml-4 border-l border-sidebar-border pl-1.5">

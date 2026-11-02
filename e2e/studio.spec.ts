@@ -1,4 +1,8 @@
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { createZip, readZip } from "../src/lib/storage/zip";
 
 const editor = (page: Page) => page.locator(".cm-content");
 
@@ -9,6 +13,34 @@ async function open(page: Page) {
   await page.goto("/editor");
   await expect(editor(page)).toBeVisible();
   return errors;
+}
+
+/** How a draft's text appears in storage; the `images` key that follows tells it from a saved version. */
+const docContent = (text: string) => `"content":${JSON.stringify(text)},"images"`;
+
+/**
+ * The status label says "Saved" before a change has even started saving, so a test that reloads
+ * right after typing can race the debounce. This waits until the text is really in IndexedDB.
+ */
+async function stored(page: Page, needle: string) {
+  await expect
+    .poll(() =>
+      page.evaluate(async (n) => {
+        const db = await new Promise<IDBDatabase>((res, rej) => {
+          const r = indexedDB.open("mdstudio-db");
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+        const all = await new Promise<unknown[]>((res, rej) => {
+          const r = db.transaction("mdstudio-store").objectStore("mdstudio-store").getAll();
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+        db.close();
+        return JSON.stringify(all).includes(n);
+      }, needle),
+    )
+    .toBe(true);
 }
 
 async function replaceText(page: Page, text: string) {
@@ -43,7 +75,7 @@ test("typing updates the preview, with no console errors under the CSP", async (
 test("a draft survives a reload (real IndexedDB)", async ({ page }) => {
   await open(page);
   await replaceText(page, "# Persisted heading\n\nbody");
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, docContent("# Persisted heading\n\nbody"));
   await page.reload();
   await expect(editor(page)).toContainText("Persisted heading");
   await expect(
@@ -94,7 +126,7 @@ test("renames a draft without touching its text, and blank goes back to the head
   await page.keyboard.press("Enter");
   await expect(page.locator("nav").getByText("My renamed draft")).toBeVisible();
   await expect(editor(page)).toContainText("# From the heading");
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, '"name":"My renamed draft"');
   await page.reload();
   await page.locator("nav").getByText("My renamed draft").hover();
   await page
@@ -252,7 +284,8 @@ test("history: the list survives a reload, and an unchanged version has nothing 
   await replaceText(page, "# Kept\n\nbody two");
   await page.getByRole("button", { name: "Save a version now" }).click();
   await expect(page.getByText("Saved by you")).toBeVisible();
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, docContent("# Kept\n\nbody two"));
+  await stored(page, '"kind":"manual"');
   await page.reload();
   await page.getByRole("button", { name: "History", exact: true }).click();
   await page.getByRole("button", { name: /Saved by you/ }).click();
@@ -264,7 +297,7 @@ test("history: the list survives a reload, and an unchanged version has nothing 
 async function newDraft(page: Page, text: string) {
   await page.getByRole("button", { name: "New draft" }).click();
   await replaceText(page, text);
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, docContent(text));
 }
 
 test("library: search by title and text, filter by tag, and clear", async ({ page }) => {
@@ -327,7 +360,7 @@ test("library: create a folder, move drafts in through the menu, and keep it aft
       .evaluate((el) => el.closest("a")!.getBoundingClientRect().left);
   expect(await indent("One")).toBeGreaterThan((await indent("Two")) + 8);
 
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
+  await stored(page, '"folder":"Blog posts"');
   await page.reload();
   await expect(nav.getByRole("group", { name: "Folder Blog posts" })).toBeVisible();
   await nav.getByRole("button", { name: /^Blog posts/ }).click();
@@ -453,4 +486,149 @@ test("library: the folder field lists existing folders on click, and only when t
   await expect(page.getByRole("dialog", { name: "Move to folder" })).toBeVisible();
   await page.getByRole("button", { name: "Move" }).click();
   await expect(nav.getByRole("group", { name: "Folder Alpha" })).toContainText("Picker");
+});
+
+const bytes = (s: string) => new TextEncoder().encode(s);
+
+test("bulk: export every draft as a ZIP, with folders", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "# Loose note\n\nbody");
+  await newDraft(page, "# Filed post\n\nbody");
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  await nav.getByText("Filed post", { exact: true }).hover();
+  await page.getByRole("button", { name: "Options for Filed post" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByLabel("Folder name").fill("Blog");
+  await page.getByRole("button", { name: "Move" }).click();
+
+  await page.getByRole("button", { name: "Export" }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name: /Download all drafts/ }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^mdstudio-drafts-\d{4}-\d{2}-\d{2}\.zip$/);
+  const entries = await readZip(new Uint8Array(readFileSync((await download.path())!)));
+  const byPath = Object.fromEntries(entries.map((e) => [e.path, new TextDecoder().decode(e.data)]));
+  expect(byPath["Blog/filed-post.md"]).toBe("# Filed post\n\nbody");
+  expect(byPath["loose-note.md"]).toBe("# Loose note\n\nbody");
+});
+
+test("bulk: import a ZIP of drafts, folders and images", async ({ page }) => {
+  await open(page);
+  const png = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const zip = await createZip([
+    { path: "Notes/first.md", data: bytes("# First\n\n![pic](images/p.png)") },
+    { path: "Notes/images/p.png", data: png },
+    { path: "second.md", data: bytes("no heading, just words") },
+    { path: "ignored.pdf", data: bytes("x") },
+  ]);
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "export.zip",
+      mimeType: "application/zip",
+      buffer: Buffer.from(zip),
+    });
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  await expect(page.getByText("Imported 2 drafts")).toBeVisible();
+  await expect(nav.getByRole("group", { name: "Folder Notes" }).getByText("First")).toBeVisible();
+  // a file with no heading keeps its file name instead of "Untitled"
+  await expect(nav.getByText("second", { exact: true })).toBeVisible();
+  // the image came along and renders in the preview of the opened draft
+  await nav.getByText("First", { exact: true }).click();
+  await expect(page.locator(".md-preview img[alt='pic']")).toHaveAttribute(
+    "src",
+    /^data:image\/png/,
+  );
+});
+
+test("bulk: import a folder of Markdown files", async ({ page }) => {
+  await open(page);
+  const root = mkdtempSync(join(tmpdir(), "mdstudio-import-"));
+  const dir = join(root, "My notes");
+  mkdirSync(join(dir, "Work"), { recursive: true });
+  writeFileSync(join(dir, "top.md"), "# Top level\n");
+  writeFileSync(join(dir, "Work", "plan.md"), "# The plan\n");
+  writeFileSync(join(dir, "Work", "data.csv"), "a,b");
+  await page.getByLabel("Import a folder").setInputFiles(dir);
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  await expect(page.getByText("Imported 2 drafts")).toBeVisible();
+  await expect(
+    nav.getByRole("group", { name: "Folder My notes" }).getByText("Top level"),
+  ).toBeVisible();
+  await expect(
+    nav.getByRole("group", { name: "Folder My notes / Work" }).getByText("The plan"),
+  ).toBeVisible();
+});
+
+test("bulk: a broken ZIP shows an error and changes nothing", async ({ page }) => {
+  await open(page);
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "bad.zip",
+      mimeType: "application/zip",
+      buffer: Buffer.from("this is not a zip file at all"),
+    });
+  await expect(page.getByText(/doesn't look like a ZIP/)).toBeVisible();
+});
+
+test("library: rename a folder through its menu, and its drafts follow", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "# Inside\n\nbody");
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  for (const name of ["Blog", "Other"]) {
+    await page.getByRole("button", { name: "New folder" }).click();
+    await page.getByLabel("New folder name").fill(name);
+    await page.getByRole("button", { name: "Create folder" }).click();
+  }
+  await nav.getByText("Inside", { exact: true }).hover();
+  await page.getByRole("button", { name: "Options for Inside" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByLabel("Folder name", { exact: true }).fill("Blog");
+  await page.getByRole("button", { name: "Move" }).click();
+
+  const rename = async (from: string, to: string, save: "button" | "enter" = "button") => {
+    await nav.getByRole("group", { name: `Folder ${from}` }).hover();
+    await page.getByRole("button", { name: `Options for folder ${from}` }).click();
+    await page.getByRole("menuitem", { name: "Rename folder" }).click();
+    const field = page.getByLabel("Folder name", { exact: true });
+    await expect(field).toBeFocused();
+    await field.fill(to);
+    if (save === "enter") await page.keyboard.press("Enter");
+    else await page.getByRole("button", { name: "Save folder name" }).click();
+  };
+
+  await rename("Blog", "Posts");
+  const posts = nav.getByRole("group", { name: "Folder Posts" });
+  await expect(posts.getByText("Inside", { exact: true })).toBeVisible();
+  await expect(nav.getByRole("group", { name: "Folder Blog" })).toHaveCount(0);
+
+  // a name that belongs to another folder is refused and nothing changes
+  await rename("Posts", "other");
+  await expect(page.getByText("A folder named “other” already exists")).toBeVisible();
+  await expect(posts.getByText("Inside", { exact: true })).toBeVisible();
+
+  // only the case changes
+  await nav.getByRole("group", { name: "Folder Posts" }).hover();
+  await page.getByRole("button", { name: "Options for folder Posts" }).click();
+  await page.getByRole("menuitem", { name: "Rename folder" }).click();
+  await page.getByLabel("Folder name", { exact: true }).fill("POSTS");
+  await page.keyboard.press("Enter");
+  await expect(nav.getByRole("group", { name: "Folder POSTS" })).toBeVisible();
+
+  // cancelling keeps the name, and the new name survives a reload
+  await nav.getByRole("group", { name: "Folder POSTS" }).hover();
+  await page.getByRole("button", { name: "Options for folder POSTS" }).click();
+  await page.getByRole("menuitem", { name: "Rename folder" }).click();
+  await page.getByLabel("Folder name", { exact: true }).fill("Nope");
+  await page.getByRole("button", { name: "Cancel folder rename" }).click();
+  await expect(nav.getByRole("group", { name: "Folder POSTS" })).toBeVisible();
+  await stored(page, '"folder":"POSTS"');
+  await page.reload();
+  await expect(
+    nav.getByRole("group", { name: "Folder POSTS" }).getByText("Inside", { exact: true }),
+  ).toBeVisible();
 });
