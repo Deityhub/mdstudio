@@ -204,24 +204,30 @@ test("draft options live in a menu, and the rename field stays put while hoverin
   await expect(nav.getByText("Discarded")).toHaveCount(0);
 });
 
+/** The first autosave keeps whatever the draft starts with; wait for it so typing can't race it. */
+async function openHistory(page: Page) {
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(page.getByRole("button", { name: /words/ }).first()).toBeVisible();
+}
+
 test("history: save a version, compare it with the draft and restore it", async ({ page }) => {
   await open(page);
+  await openHistory(page);
   await replaceText(page, "# History draft\n\nfirst line");
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
-  await page.getByRole("button", { name: "History", exact: true }).click();
-  // the first autosave already kept this text, so there is a version and nothing new to save
+  await page.getByRole("button", { name: "Save a version now" }).click();
   // same count as the editor's footer, which skips front matter, code and bare symbols
-  await expect(page.getByText("4 words", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /4 words/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "4 words · Saved by you" })).toBeVisible();
+  await expect(page.getByText("4 words", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Save a version now" }).click();
   await expect(page.getByText("Nothing new to save since the last version")).toBeVisible();
 
   await replaceText(page, "# History draft\n\nsecond line");
   await page.getByRole("button", { name: "Save a version now" }).click();
-  await expect(page.getByText("Saved by you")).toBeVisible();
-
   await replaceText(page, "# History draft\n\nthird line");
-  await page.getByRole("button", { name: /Saved by you/ }).click();
+  await page
+    .getByRole("button", { name: /Saved by you/ })
+    .first()
+    .click();
   const dialog = page.getByRole("dialog", { name: "Compare with the current draft" });
   await expect(dialog.getByText("1 line removed, 1 added since")).toBeVisible();
   await expect(dialog.getByLabel("Line differences")).toContainText("second line");
@@ -242,9 +248,7 @@ test("history: the list survives a reload, and an unchanged version has nothing 
   page,
 }) => {
   await open(page);
-  await replaceText(page, "# Kept\n\nbody");
-  await expect(page.getByRole("status")).toHaveText("Saved in this browser");
-  await page.getByRole("button", { name: "History", exact: true }).click();
+  await openHistory(page);
   await replaceText(page, "# Kept\n\nbody two");
   await page.getByRole("button", { name: "Save a version now" }).click();
   await expect(page.getByText("Saved by you")).toBeVisible();
