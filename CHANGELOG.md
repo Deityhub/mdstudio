@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 (2026-11-02)
+
+### Fixes
+
+- add padding to katex display to fix clipping
+
 ## 0.1.2 (2026-11-02)
 
 ### Fixes
