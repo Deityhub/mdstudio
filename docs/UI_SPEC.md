@@ -11,6 +11,9 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 - **Features** (six cards), **target profiles** (four cards), **About** and **Who it's for**, an eight-question **FAQ** (native `details`, mirrored in FAQPage JSON-LD), a closing call to action, and a footer (copyright and author on the left, GitHub and Changelog on the right).
 - **Theme:** an inline head script applies the saved or OS theme before first paint; the toggle also lives in the studio header.
 
+## 1b. Guides `/guides` and `/guides/$slug`
+Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.
+
 ## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`
 - **Top bar, row 1:** drafts toggle · wordmark link and current title · Import · AI writer · Export dropdown · Focus mode.
 - **Top bar, row 2:** target-platform Select (GitHub, Strict CommonMark, dev.to / Hashnode, Obsidian; remembered per device) · view toggle (Editor / Split / Preview) · panel buttons on mid-size screens.

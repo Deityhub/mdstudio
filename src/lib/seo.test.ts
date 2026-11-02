@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { BRAND, FAQ, FEATURE_LIST } from "./seo-content";
+import { GUIDES } from "./guides";
 import {
   absoluteUrl,
+  articleJsonLd,
+  breadcrumbJsonLd,
   faqJsonLd,
   jsonLdScript,
   INDEXABLE_PATHS,
@@ -89,14 +92,52 @@ describe("jsonLd", () => {
 });
 
 describe("sitemapXml", () => {
-  it("lists every indexable path as an absolute URL", () => {
-    const xml = sitemapXml(["/", "/a&b"]);
+  it("lists every entry as an absolute URL, escaped", () => {
+    const xml = sitemapXml([{ path: "/" }, { path: "/a&b", lastmod: "2026-11-02" }]);
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
     expect(xml).toContain(`<loc>${SITE.url}/</loc>`);
-    expect(xml).toContain(`<loc>${SITE.url}/a&amp;b</loc>`);
+    expect(xml).toContain(`<loc>${SITE.url}/a&amp;b</loc><lastmod>2026-11-02</lastmod>`);
+  });
+  it("includes the home page, the guides index and every guide with its update date", () => {
+    const xml = sitemapXml();
+    expect(xml).toContain(`<loc>${SITE.url}/</loc>`);
+    expect(xml).toContain(`<loc>${SITE.url}/guides</loc>`);
+    for (const g of GUIDES)
+      expect(xml).toContain(
+        `<loc>${SITE.url}/guides/${g.slug}</loc><lastmod>${g.updated}</lastmod>`,
+      );
   });
   it("never lists the editor drafts or API", () => {
-    for (const p of INDEXABLE_PATHS) expect(p).not.toMatch(/^\/(api|editor\/)/);
+    for (const p of INDEXABLE_PATHS) expect(p).not.toMatch(/^\/(api|editor)/);
+  });
+});
+
+describe("articleJsonLd", () => {
+  const g = GUIDES[0]!;
+  const ld = articleJsonLd(g) as Record<string, unknown>;
+  it("describes the guide as an article with author, dates and canonical page", () => {
+    expect(ld).toMatchObject({
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      headline: g.title,
+      description: g.description,
+      datePublished: g.published,
+      dateModified: g.updated,
+      author: { "@type": "Person", name: SITE.author },
+      mainEntityOfPage: `${SITE.url}/guides/${g.slug}`,
+      image: `${SITE.url}/og.png`,
+    });
+  });
+});
+
+describe("breadcrumbJsonLd", () => {
+  it("numbers the trail and makes every item an absolute URL", () => {
+    const ld = breadcrumbJsonLd([
+      { name: "Home", path: "/" },
+      { name: "Guides", path: "/guides" },
+    ]) as { itemListElement: { position: number; item: string; name: string }[] };
+    expect(ld.itemListElement.map((i) => i.position)).toEqual([1, 2]);
+    expect(ld.itemListElement[1]).toMatchObject({ name: "Guides", item: `${SITE.url}/guides` });
   });
 });
 

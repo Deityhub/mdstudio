@@ -1,6 +1,7 @@
 // Single source for everything search engines and AI assistants read: page meta, structured data,
 // the sitemap and the IndexNow payload. No Node APIs, so it runs on Workers, Node and the browser.
 
+import { GUIDES, guidePath, type Guide } from "./guides";
 import { BRAND, FAQ, FEATURE_LIST, LONG_DESCRIPTION, type Faq } from "./seo-content";
 
 export const SITE = {
@@ -17,8 +18,15 @@ export const SITE = {
 
 export const absoluteUrl = (path: string) => `${SITE.url}${path}`;
 
+export type SitemapEntry = { path: string; lastmod?: string };
+
 /** Pages worth indexing. Editor drafts are private and the API is not content. */
-export const INDEXABLE_PATHS: string[] = ["/"];
+export const SITEMAP_ENTRIES: SitemapEntry[] = [
+  { path: "/" },
+  { path: "/guides" },
+  ...GUIDES.map((g) => ({ path: guidePath(g.slug), lastmod: g.updated })),
+];
+export const INDEXABLE_PATHS: string[] = SITEMAP_ENTRIES.map((e) => e.path);
 
 type PageInput = { title: string; description: string; path: string; noindex?: boolean };
 
@@ -104,10 +112,39 @@ export const jsonLdScript = (data: unknown) => ({
 const xmlEscape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export const sitemapXml = (paths: string[] = INDEXABLE_PATHS) =>
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${paths
-    .map((p) => `  <url><loc>${xmlEscape(absoluteUrl(p))}</loc></url>`)
+export const sitemapXml = (entries: SitemapEntry[] = SITEMAP_ENTRIES) =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries
+    .map(
+      (e) =>
+        `  <url><loc>${xmlEscape(absoluteUrl(e.path))}</loc>${e.lastmod ? `<lastmod>${e.lastmod}</lastmod>` : ""}</url>`,
+    )
     .join("\n")}\n</urlset>\n`;
+
+/** Structured data for a guide: a technical article by the site author. */
+export const articleJsonLd = (guide: Guide) => ({
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  headline: guide.title,
+  description: guide.description,
+  datePublished: guide.published,
+  dateModified: guide.updated,
+  inLanguage: "en",
+  author: { "@type": "Person", name: SITE.author },
+  publisher: { "@type": "Person", name: SITE.author },
+  mainEntityOfPage: absoluteUrl(guidePath(guide.slug)),
+  image: absoluteUrl(SITE.image),
+});
+
+export const breadcrumbJsonLd = (trail: { name: string; path: string }[]) => ({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: trail.map((t, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    name: t.name,
+    item: absoluteUrl(t.path),
+  })),
+});
 
 /** Body for https://api.indexnow.org/indexnow (Bing, Yandex, Seznam and others). */
 export const indexNowPayload = (key: string, paths: string[] = INDEXABLE_PATHS) => ({
