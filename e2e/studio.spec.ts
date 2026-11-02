@@ -148,9 +148,10 @@ test("the drafts pane resizes by drag and keyboard, within limits, and remembers
   expect(await width()).toBe(256);
   await page.reload();
   await expect(handle).toBeVisible();
-  expect(await width()).toBe(256);
+  // the saved width is applied just after hydration
+  await expect.poll(width).toBe(256);
   await handle.dblclick();
-  expect(await width()).toBe(288);
+  await expect.poll(width).toBe(288);
 });
 
 test("the Checks panel starts open only on wide screens, and opens on click below that", async ({
