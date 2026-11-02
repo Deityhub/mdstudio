@@ -436,7 +436,7 @@ CREATE TABLE share_links (
 | --- | --- | --- | --- |
 | Obsidian wiki-links | Render what Obsidian renders | `[[wiki-links]]` are silenced in Checks but shown as plain text in the preview (`==highlight==` now renders as a marker) | Roadmap, Phase 1 |
 | Rename draft, canonical URL, draft toggle | Listed in earlier specs | Not implemented (titles come from content) | Studio polish PR |
-| Math and diagram details | Preview = platform | Mermaid always uses its neutral light theme (no dark-mode theme yet); a document with math exports as a ~380 KB file because all KaTeX fonts are embedded; the `$…$` currency guard follows GitHub's rule (no space inside the dollars, no digit right after) | Dark mode and font pruning later |
+| Math and diagram details | Preview = platform | the preview renders Mermaid in its neutral theme in light mode and its dark theme in dark mode (one cached render per theme, re-rendered when the theme toggles), while exports are always light; a document with math exports as a ~380 KB file because all KaTeX fonts are embedded; the `$…$` currency guard follows GitHub's rule (no space inside the dollars, no digit right after) | Font pruning later |
 | Playwright e2e | Listed in the stack | Not installed | With the CI workflow |
 | Drafts from before the DB rename | n/a | Drafts in the old `keyval-store` database are not read (rename was intentional; app unreleased) | None |
 

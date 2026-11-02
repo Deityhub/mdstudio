@@ -467,8 +467,9 @@
 .cm-line {
   padding: 0 24px;
 }
-.cm-gutters {
-  background: transparent;
+/* !important: CodeMirror's built-in light theme sets a grey gutter that otherwise wins in dark mode. */
+.cm-editor .cm-gutters {
+  background: transparent !important;
   border-right: 1px solid var(--border);
   color: var(--muted-foreground);
 }

@@ -10,6 +10,10 @@
 
 export type DiagramResult = { svg: string } | { error: string };
 export type DiagramRenderer = (source: string) => DiagramResult | Promise<DiagramResult>;
+/** A diagram's colors are baked into its SVG, so the preview renders one per page theme. */
+export type DiagramTheme = "light" | "dark";
+
+const MERMAID_THEME: Record<DiagramTheme, string> = { light: "neutral", dark: "dark" };
 
 const SELECTOR = "pre > code.language-mermaid";
 const CACHE_LIMIT = 50;
@@ -19,21 +23,21 @@ let mermaid: Promise<Mermaid> | null = null;
 let counter = 0;
 const cache = new Map<string, DiagramResult>();
 const inflight = new Map<string, Promise<DiagramResult>>();
+/** Light and dark renders of the same source are different SVGs. */
+const keyFor = (theme: DiagramTheme, source: string) => `${theme}\n${source}`;
 /** What was last shown at each position in the document (a diagram or an error), kept on screen while a changed one renders. */
 const lastShown: DiagramResult[] = [];
 
-function loadMermaid() {
-  mermaid ??= import("mermaid").then((m) => {
-    m.default.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      theme: "neutral",
-      fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
-    });
-    return m.default;
+const loadMermaid = () => (mermaid ??= import("mermaid").then((m) => m.default));
+
+/** Mermaid's config is global, so set the theme right before each render (no await in between). */
+const configure = (m: Mermaid, theme: DiagramTheme) =>
+  m.initialize({
+    startOnLoad: false,
+    securityLevel: "strict",
+    theme: MERMAID_THEME[theme] as "neutral" | "dark",
+    fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
   });
-  return mermaid;
-}
 
 /** Mermaid errors are multi-line; the first line says where, the last says what was expected. */
 export function describeDiagramError(error: unknown): string {
@@ -46,9 +50,13 @@ export function describeDiagramError(error: unknown): string {
   return text.slice(0, 240);
 }
 
-export function rememberDiagram(source: string, result: DiagramResult) {
+export function rememberDiagram(
+  source: string,
+  result: DiagramResult,
+  theme: DiagramTheme = "light",
+) {
   if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value!);
-  cache.set(source, result);
+  cache.set(keyFor(theme, source), result);
 }
 
 /** For tests. */
@@ -59,30 +67,37 @@ export function resetDiagramState() {
 }
 
 /** Returns a cached result synchronously, so an unchanged diagram never flickers while typing. */
-export const renderDiagram: DiagramRenderer = (source) => {
-  const hit = cache.get(source);
-  if (hit) return hit;
-  const running = inflight.get(source);
-  if (running) return running;
-  const job = (async (): Promise<DiagramResult> => {
-    const id = `mmd-${counter++}`;
-    let result: DiagramResult;
-    try {
-      const m = await loadMermaid();
-      await m.parse(source); // throws a readable message for invalid input
-      result = { svg: (await m.render(id, source)).svg };
-    } catch (error) {
-      result = { error: describeDiagramError(error) };
-    } finally {
-      document.getElementById(`d${id}`)?.remove(); // Mermaid can leave a scratch node behind
-    }
-    rememberDiagram(source, result);
-    inflight.delete(source);
-    return result;
-  })();
-  inflight.set(source, job);
-  return job;
-};
+export const renderDiagramFor =
+  (theme: DiagramTheme): DiagramRenderer =>
+  (source) => {
+    const key = keyFor(theme, source);
+    const hit = cache.get(key);
+    if (hit) return hit;
+    const running = inflight.get(key);
+    if (running) return running;
+    const job = (async (): Promise<DiagramResult> => {
+      const id = `mmd-${counter++}`;
+      let result: DiagramResult;
+      try {
+        const m = await loadMermaid();
+        await m.parse(source); // throws a readable message for invalid input
+        configure(m, theme);
+        result = { svg: (await m.render(id, source)).svg };
+      } catch (error) {
+        result = { error: describeDiagramError(error) };
+      } finally {
+        document.getElementById(`d${id}`)?.remove(); // Mermaid can leave a scratch node behind
+      }
+      rememberDiagram(source, result, theme);
+      inflight.delete(key);
+      return result;
+    })();
+    inflight.set(key, job);
+    return job;
+  };
+
+/** Exports are light-themed documents, so they always use the light render. */
+export const renderDiagram = renderDiagramFor("light");
 
 /* ------------------------------ markup ------------------------------ */
 
@@ -113,14 +128,14 @@ const nodeFrom = (doc: Document, html: string) => {
  * the previous diagram where a changed one is still rendering. Only a brand-new diagram starts
  * out as its code block.
  */
-export function withCachedDiagrams(html: string): string {
+export function withCachedDiagrams(html: string, theme: DiagramTheme = "light"): string {
   if (!html.includes("language-mermaid")) return html;
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
   let position = 0;
   for (const code of doc.querySelectorAll(SELECTOR)) {
     const pre = code.parentElement!;
     const source = code.textContent ?? "";
-    const known = cache.get(source);
+    const known = cache.get(keyFor(theme, source));
     const previous = lastShown[position];
     if (known) {
       lastShown[position] = known;
