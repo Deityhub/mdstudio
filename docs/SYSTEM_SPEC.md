@@ -1,4 +1,4 @@
-# Markdown Studio — System Specification (Source of Truth)
+# mdstudio — System Specification (Source of Truth)
 
 | Metadata | Details |
 | --- | --- |

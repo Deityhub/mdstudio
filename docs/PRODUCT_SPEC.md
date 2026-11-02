@@ -1,4 +1,4 @@
-# Product Spec — Markdown Studio
+# Product Spec — mdstudio
 
 ## One-liner
 Write, import, check and export Markdown that renders identically on GitHub, dev.to, Hashnode, Ghost, Obsidian, static-site generators and any CommonMark platform — with an optional AI co-writer using your own key.

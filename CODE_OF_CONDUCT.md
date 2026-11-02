@@ -1,6 +1,6 @@
 # Code of conduct
 
-We want Markdown Studio to be a welcoming project. Everyone taking part is expected to:
+We want mdstudio to be a welcoming project. Everyone taking part is expected to:
 
 - Be respectful and assume good intent.
 - Give and accept constructive feedback gracefully.
