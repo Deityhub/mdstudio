@@ -16,6 +16,9 @@ import { toast } from "sonner";
 import {
   Image as ImageIcon,
   Upload,
+  Archive,
+  FolderUp,
+  FileUp,
   Download,
   Copy,
   FilePlus,
@@ -65,7 +68,9 @@ import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/u
 import { HistoryPanel } from "@/components/studio/HistoryPanel";
 import { Library } from "@/components/studio/Library";
 import { historyStore, type Revision } from "@/lib/storage/history";
-import { resolveFolder } from "@/lib/storage/library";
+import { normalizeFolder, resolveFolder } from "@/lib/storage/library";
+import { buildArchive, parseArchive, type ImportedDoc } from "@/lib/storage/archive";
+import { createZip, readZip, ZIP_LIMITS, type ZipEntry } from "@/lib/storage/zip";
 import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
 import {
@@ -136,8 +141,8 @@ const MarkdownEditor = lazy(() => import("./MarkdownEditor"));
 type View = "split" | "editor" | "preview";
 type Panel = "checks" | "outline" | "meta" | "history" | null;
 
-function download(name: string, text: string, type: string) {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+function download(name: string, data: BlobPart, type: string) {
+  const url = URL.createObjectURL(new Blob([data], { type }));
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -196,6 +201,7 @@ export function Studio({ docId }: { docId: string }) {
   const editor = useRef<EditorHandle>(null);
   const preview = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
   const scrollLock = useRef(0);
 
   // load prefs + docs
@@ -376,13 +382,33 @@ export function Studio({ docId }: { docId: string }) {
   };
 
   /* ---------- import ---------- */
-  const importText = async (text: string, name?: string) => {
-    const d = await documentStore.create({
-      content: text,
-      title: deriveTitle(text) || name || "Untitled",
-    });
-    toast.success(`Imported ${name ?? "document"}`);
-    navigate({ to: "/editor/$docId", params: { docId: d.id } });
+  /** Creates drafts (with their folders and images) and opens the first one. */
+  const importDrafts = async (items: ImportedDoc[]) => {
+    if (!items.length) return;
+    const known = [...folderNames, ...docs.flatMap((x) => x.folder ?? [])];
+    let first: MdDocument | undefined;
+    for (const item of items) {
+      const folder = resolveFolder(item.folder, known);
+      if (folder && !known.includes(folder)) {
+        known.push(folder);
+        await documentStore.folders.add(folder);
+      }
+      const titled = deriveTitle(item.content) !== "Untitled";
+      const d = await documentStore.create({
+        content: item.content,
+        images: item.images,
+        title: item.title,
+        // no heading or title in the text: keep the file's name instead of "Untitled"
+        ...(titled ? {} : { name: item.title }),
+        folder,
+      });
+      first ??= d;
+    }
+    toast.success(
+      items.length === 1 ? `Imported ${items[0]!.title}` : `Imported ${items.length} drafts`,
+    );
+    await refreshList();
+    if (first) navigate({ to: "/editor/$docId", params: { docId: first.id } });
   };
 
   const addImages = async (files: File[], alt?: string) => {
@@ -403,14 +429,65 @@ export function Studio({ docId }: { docId: string }) {
   };
 
   const onFiles = async (files: File[]) => {
+    const zips = files.filter((f) => /\.zip$/i.test(f.name) || f.type === "application/zip");
     const imgs = files.filter((f) => f.type.startsWith("image/"));
     const texts = files.filter(
-      (f) => /\.(md|markdown|mdown|txt)$/i.test(f.name) || f.type.startsWith("text/"),
+      (f) =>
+        !zips.includes(f) &&
+        (/\.(md|markdown|mdown|txt)$/i.test(f.name) || f.type.startsWith("text/")),
     );
     if (imgs.length) await addImages(imgs);
-    for (const t of texts) await importText(await readFile(t), t.name);
-    if (!imgs.length && !texts.length)
-      toast.error("Only Markdown, text or image files can be dropped here.");
+    const found: ImportedDoc[] = [];
+    try {
+      for (const z of zips) {
+        const { docs: inZip, skipped } = parseArchive(
+          await readZip(new Uint8Array(await z.arrayBuffer())),
+        );
+        if (!inZip.length) toast.error(`No Markdown files found in ${z.name}`);
+        else if (skipped)
+          toast.info(`Skipped ${skipped} file${skipped === 1 ? "" : "s"} that aren't Markdown`);
+        found.push(...inZip);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't read that ZIP file");
+      return;
+    }
+    for (const t of texts) {
+      const name = t.name.replace(/\.[^.]+$/, "");
+      const content = await readFile(t);
+      found.push({
+        title: deriveTitle(content) === "Untitled" ? name : deriveTitle(content),
+        content,
+        images: {},
+      });
+    }
+    await importDrafts(found);
+    if (!imgs.length && !found.length && !zips.length)
+      toast.error("Only Markdown, text, image or ZIP files can be dropped here.");
+  };
+
+  /** A picked folder: its Markdown files and the images they use, keeping the folder structure. */
+  const onFolder = async (files: File[]) => {
+    const wanted = files.filter((f) =>
+      /\.(md|markdown|mdown|txt|png|jpe?g|gif|webp|svg|avif|bmp)$/i.test(f.name),
+    );
+    if (wanted.length > ZIP_LIMITS.entries) {
+      toast.error(`That folder has too many files (more than ${ZIP_LIMITS.entries})`);
+      return;
+    }
+    if (wanted.reduce((n, f) => n + f.size, 0) > ZIP_LIMITS.totalBytes) {
+      toast.error("That folder is too large to import");
+      return;
+    }
+    const entries: ZipEntry[] = await Promise.all(
+      wanted.map(async (f) => ({
+        path: f.webkitRelativePath || f.name,
+        data: new Uint8Array(await f.arrayBuffer()),
+      })),
+    );
+    const { docs: found } = parseArchive(entries);
+    if (!found.length) toast.error("No Markdown files found in that folder");
+    await importDrafts(found);
   };
 
   const onPaste = (e: ClipboardEvent): string | null => {
@@ -435,6 +512,25 @@ export function Studio({ docId }: { docId: string }) {
     md = normalize ? normalizeMarkdown(md, profile) : finalizeText(md);
     return md;
   };
+  const exportAll = async () => {
+    const all = libraryDocs;
+    const zip = await createZip(
+      buildArchive(
+        all.map((d) => ({
+          title: d.title,
+          content: d.content,
+          images: d.images,
+          folder: d.folder,
+        })),
+      ),
+    );
+    download(
+      `mdstudio-drafts-${new Date().toISOString().slice(0, 10)}.zip`,
+      zip as BlobPart,
+      "application/zip",
+    );
+    toast.success(`Exported ${all.length} draft${all.length === 1 ? "" : "s"}`);
+  };
   const fileBase = () => {
     const s = fm.data?.["slug"];
     return typeof s === "string" && s ? slugify(s) : slugify(doc?.title ?? "untitled");
@@ -444,7 +540,9 @@ export function Studio({ docId }: { docId: string }) {
   const exportAsync = (fn: () => Promise<unknown>) =>
     fn().catch((error) => {
       console.error(error);
-      toast.error("Couldn't prepare the HTML export. Check your connection and try again.");
+      toast.error(
+        "Couldn't prepare the export. Try again, and check your connection if it includes math or diagrams.",
+      );
     });
   const copy = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
@@ -524,6 +622,23 @@ export function Studio({ docId }: { docId: string }) {
     } else refreshList();
   };
 
+  const renameFolder = async (from: string, name: string) => {
+    const target = normalizeFolder(name);
+    if (!target) return;
+    const lower = (x: string) => x.toLowerCase();
+    // another folder with that name (a change of case to this folder's own name is fine)
+    const clash = [...folderNames, ...docs.flatMap((x) => x.folder ?? [])].some(
+      (f) => lower(f) === lower(target) && lower(f) !== lower(from),
+    );
+    if (clash) {
+      toast.error(`A folder named “${target}” already exists`);
+      return;
+    }
+    await documentStore.renameFolder(from, target);
+    // the open draft is held in state and autosaved, so it has to hear about the new name too
+    setDoc((d) => (d?.folder?.toLowerCase() === from.toLowerCase() ? { ...d, folder: target } : d));
+    refreshList();
+  };
   const deleteFolder = async (name: string) => {
     const inside = docs.filter((d) => d.folder === name);
     if (doc && inside.some((d) => d.id === doc.id)) pending.current = null;
@@ -631,6 +746,7 @@ export function Studio({ docId }: { docId: string }) {
       folders={folderNames}
       activeId={docId}
       onCreateFolder={createFolder}
+      onRenameFolder={renameFolder}
       onDeleteFolder={deleteFolder}
       onNew={() => newDoc()}
       onOpen={() => setMobileLibrary(false)}
@@ -699,15 +815,38 @@ export function Studio({ docId }: { docId: string }) {
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 px-2 sm:px-3"
-              aria-label="Import Markdown"
-              onClick={() => fileInput.current?.click()}
-            >
-              <Upload className="h-4 w-4" /> <span className="hidden lg:inline">Import</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 px-2 sm:px-3"
+                  aria-label="Import Markdown"
+                >
+                  <Upload className="h-4 w-4" /> <span className="hidden lg:inline">Import</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
+                  <FileUp className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span>Files or a ZIP…</span>
+                    <span className="text-xs text-muted-foreground">
+                      Markdown, text, or an exported archive
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => folderInput.current?.click()}>
+                  <FolderUp className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span>A folder…</span>
+                    <span className="text-xs text-muted-foreground">
+                      Folders become library folders
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <AiWriter
               key={docId}
               content={content}
@@ -780,6 +919,17 @@ export function Studio({ docId }: { docId: string }) {
                   <Download className="h-4 w-4" /> Download standalone .html
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuLabel>All drafts</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => exportAsync(exportAll)}>
+                  <Archive className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span>Download all drafts (.zip)</span>
+                    <span className="text-xs text-muted-foreground">
+                      One Markdown file each, folders kept
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <div
                   className="flex items-center justify-between gap-3 px-2 py-2"
                   onClick={(e) => e.preventDefault()}
@@ -808,11 +958,23 @@ export function Studio({ docId }: { docId: string }) {
           <input
             ref={fileInput}
             type="file"
-            accept=".md,.markdown,.mdown,.txt,text/markdown,text/plain"
+            accept=".md,.markdown,.mdown,.txt,.zip,text/markdown,text/plain,application/zip"
             multiple
             hidden
             onChange={(e) => {
               onFiles([...(e.target.files ?? [])]);
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={folderInput}
+            type="file"
+            aria-label="Import a folder"
+            // not in the DOM typings yet, but every major browser supports picking a directory
+            {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+            hidden
+            onChange={(e) => {
+              onFolder([...(e.target.files ?? [])]);
               e.target.value = "";
             }}
           />
