@@ -475,8 +475,9 @@
 .cm-activeLine {
   background: color-mix(in oklch, var(--accent) 45%, transparent);
 }
-.cm-activeLineGutter {
-  background: transparent;
+/* CodeMirror's built-in light theme paints the active gutter line blue; dark mode needs it ours. */
+.cm-editor .cm-activeLineGutter {
+  background: transparent !important;
   color: var(--foreground);
 }
 .cm-selectionBackground,

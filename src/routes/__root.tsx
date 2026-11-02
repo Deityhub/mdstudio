@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { jsonLd, jsonLdScript, pageHead, SITE } from "@/lib/seo";
+import { themeInitScript } from "@/lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -103,7 +104,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
-    scripts: jsonLd().map(jsonLdScript),
+    // First so the theme class is set before anything paints.
+    scripts: [{ children: themeInitScript }, ...jsonLd().map(jsonLdScript)],
   }),
   shellComponent: RootShell,
   component: RootComponent,

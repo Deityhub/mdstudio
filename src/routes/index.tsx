@@ -1,8 +1,25 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, FileDown, Github, ShieldCheck, Upload, Eye } from "lucide-react";
+import { lazy, Suspense } from "react";
+import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  FileDown,
+  Github,
+  Lock,
+  Sigma,
+  ShieldCheck,
+  Upload,
+  Eye,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { PROFILES } from "@/lib/profiles";
 import { faqJsonLd, jsonLdScript, pageHead, SITE } from "@/lib/seo";
 import { AUDIENCES, BRAND, FAQ, LONG_DESCRIPTION } from "@/lib/seo-content";
+
+// The checker pulls in the whole Markdown engine, so it loads after the page is interactive.
+const CheckerDemo = lazy(() => import("@/components/home/CheckerDemo"));
 
 export const Route = createFileRoute("/")({
   head: () => {
@@ -11,6 +28,21 @@ export const Route = createFileRoute("/")({
   },
   component: Index,
 });
+
+const steps = [
+  {
+    title: "Write",
+    body: "Draft in a full editor with a complete formatting toolbar, tables, footnotes, math and diagrams.",
+  },
+  {
+    title: "Check",
+    body: "Pick where it will be published. mdstudio previews it the way that platform renders it and flags what won't travel.",
+  },
+  {
+    title: "Export",
+    body: "Copy or download clean Markdown, or a self-contained HTML file. No lock-in, no account.",
+  },
+];
 
 const features = [
   {
@@ -24,6 +56,11 @@ const features = [
     body: "Flags raw HTML, local images, wiki-links and anything else that won't render the same everywhere.",
   },
   {
+    icon: Sigma,
+    title: "Math and diagrams",
+    body: "KaTeX and Mermaid built in, with a warning wherever your target platform can't render them.",
+  },
+  {
     icon: Upload,
     title: "Import, paste, drop",
     body: "Open .md files, or paste from Google Docs, Notion and the web. It's converted to clean Markdown.",
@@ -33,33 +70,51 @@ const features = [
     title: "Clean export",
     body: "Download or copy .md with UTF-8 and LF endings, optional normalizing, and self-contained images.",
   },
+  {
+    icon: Lock,
+    title: "Private by default",
+    body: "Drafts live in your browser. No account, no uploads, and AI keys never leave your session.",
+  },
 ];
+
+function DemoFallback() {
+  return (
+    <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+      Loading the checker…
+    </p>
+  );
+}
 
 function Index() {
   return (
     <div className="min-h-screen bg-background">
       <header className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-4 sm:px-6 sm:py-6">
-        <span className="min-w-0 font-display text-base font-semibold sm:text-xl">
-          <span className="text-primary">md</span>studio
-        </span>
-        <Button asChild variant="ghost">
-          <a
-            href={SITE.repo}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="mdstudio on GitHub (opens in a new tab)"
-          >
-            <Github className="h-4 w-4" /> GitHub <ArrowUpRight className="h-4 w-4" />
-          </a>
-        </Button>
+        <Logo
+          className="justify-self-start"
+          markClassName="h-8 w-8"
+          textClassName="text-xl sm:text-2xl"
+        />
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button asChild variant="ghost">
+            <a
+              href={SITE.repo}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="mdstudio on GitHub (opens in a new tab)"
+            >
+              <Github className="h-4 w-4" /> GitHub <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </Button>
+        </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
-        <section className="grid gap-12 py-16 items-start md:grid-cols-[1.1fr_1fr] md:py-24">
+        <section className="grid items-start gap-12 py-16 md:grid-cols-[1.1fr_1fr] md:py-24">
           <div>
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-primary">
               Free Markdown editor
             </p>
-            <h1 className="font-display text-4xl sm:text-5xl font-semibold leading-[1.05] tracking-tight md:text-6xl">
+            <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
               Write once.
               <br />
               Render the same <em className="text-primary">everywhere.</em>
@@ -69,56 +124,125 @@ function Index() {
               GitHub, dev.to and Obsidian, and a checker that flags anything that won&rsquo;t
               travel. Then export a clean file that just works.
             </p>
-            <div className="mt-8 flex gap-3">
+            <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
                 <Link to="/editor">
                   Start writing <ArrowRight className="h-4 w-4" />
                 </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a href="#try-it">Try the checker</a>
               </Button>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
               No account needed. Drafts stay in your browser.
             </p>
           </div>
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          {/* Decorative: the real, interactive version is further down the page. */}
+          <div
+            aria-hidden="true"
+            className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+          >
             <div className="flex gap-1.5 border-b border-border px-4 py-3">
               <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
               <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
               <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
             </div>
             <div className="grid min-w-0 grid-cols-1 text-sm sm:grid-cols-2">
-              <pre className="min-w-0 overflow-x-auto border-b border-border bg-paper sm:border-b-0 sm:border-r p-5 font-mono text-[13px] leading-relaxed text-muted-foreground">{`# Hello
+              <pre className="min-w-0 overflow-x-auto border-b border-border bg-paper p-5 font-mono text-[13px] leading-relaxed text-muted-foreground sm:border-b-0 sm:border-r">{`# Hello
 Some **bold** text
 on two lines.
 
 - [x] portable
 - [ ] surprises`}</pre>
               <div className="md-preview p-5 text-sm">
-                <h1 className="!mt-0 !text-2xl">Hello</h1>
+                <div className="font-display text-2xl font-semibold">Hello</div>
                 <p>
                   Some <strong>bold</strong> text on two lines.
                 </p>
                 <ul>
                   <li className="task-list-item">
-                    <input type="checkbox" checked disabled readOnly /> portable
+                    <input type="checkbox" checked disabled readOnly tabIndex={-1} /> portable
                   </li>
                   <li className="task-list-item">
-                    <input type="checkbox" disabled /> surprises
+                    <input type="checkbox" disabled tabIndex={-1} /> surprises
                   </li>
                 </ul>
               </div>
             </div>
           </div>
         </section>
-        <section className="grid gap-6 border-t border-border py-16 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((f) => (
-            <div key={f.title}>
-              <f.icon className="h-5 w-5 text-primary" />
-              <h2 className="mt-3 font-display text-lg font-semibold">{f.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
-            </div>
-          ))}
+
+        <section className="border-t border-border py-16" aria-labelledby="how-heading">
+          <h2 id="how-heading" className="font-display text-2xl font-semibold sm:text-3xl">
+            From draft to published, without surprises
+          </h2>
+          <ol className="mt-8 grid gap-8 md:grid-cols-3">
+            {steps.map((s, i) => (
+              <li key={s.title} className="flex gap-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary font-display text-lg font-semibold text-primary-foreground">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="font-display text-lg font-semibold">{s.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </section>
+
+        <section id="try-it" className="scroll-mt-6 border-t border-border py-16">
+          <h2 className="font-display text-2xl font-semibold sm:text-3xl">
+            See what won&rsquo;t travel
+          </h2>
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            This is the real checker running in your browser. Edit the Markdown, switch the target,
+            and watch the report change. The same sample is clean on one platform and broken on
+            another.
+          </p>
+          <div className="mt-8">
+            <ClientOnly fallback={<DemoFallback />}>
+              <Suspense fallback={<DemoFallback />}>
+                <CheckerDemo />
+              </Suspense>
+            </ClientOnly>
+          </div>
+        </section>
+
+        <section className="border-t border-border py-16" aria-labelledby="features-heading">
+          <h2 id="features-heading" className="font-display text-2xl font-semibold sm:text-3xl">
+            Everything a Markdown writer needs
+          </h2>
+          <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => (
+              <div key={f.title}>
+                <f.icon className="h-5 w-5 text-primary" />
+                <h3 className="mt-3 font-display text-lg font-semibold">{f.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-t border-border py-16" aria-labelledby="targets-heading">
+          <h2 id="targets-heading" className="font-display text-2xl font-semibold sm:text-3xl">
+            Pick where you publish
+          </h2>
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            Each target profile changes the preview, the checks and the toolbar warnings, so you
+            find out before your readers do.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {PROFILES.map((p) => (
+              <div key={p.id} className="rounded-xl border border-border bg-card p-5">
+                <h3 className="font-display text-lg font-semibold">{p.label}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{p.hint}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="grid gap-10 border-t border-border py-16 md:grid-cols-[1.2fr_1fr]">
           <div>
             <h2 className="font-display text-2xl font-semibold sm:text-3xl">About {BRAND.name}</h2>
@@ -133,6 +257,7 @@ on two lines.
             </ul>
           </div>
         </section>
+
         <section className="border-t border-border py-16" aria-labelledby="faq-heading">
           <h2 id="faq-heading" className="font-display text-2xl font-semibold sm:text-3xl">
             Frequently asked questions
@@ -150,25 +275,41 @@ on two lines.
             ))}
           </div>
         </section>
+
+        <section className="mb-16 rounded-2xl bg-primary px-6 py-12 text-center text-primary-foreground sm:px-12">
+          <h2 className="font-display text-3xl font-semibold sm:text-4xl">
+            Write something that renders the same everywhere
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl opacity-90">
+            Free, open source and private. Open the editor and start typing.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Button asChild size="lg" variant="secondary">
+              <Link to="/editor">
+                Start writing <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
       </main>
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground sm:px-6">
           <span>
-            &copy; {new Date().getFullYear()} {SITE.author}. MIT licensed.
+            &copy; {new Date().getFullYear()} {SITE.author}.
           </span>
-          <a className="hover:text-foreground" href={SITE.repo} rel="noopener noreferrer">
-            Source on GitHub
-          </a>
-          <a
-            className="hover:text-foreground"
-            href={`${SITE.repo}/blob/main/CHANGELOG.md`}
-            rel="noopener noreferrer"
-          >
-            Changelog
-          </a>
-          <Link className="hover:text-foreground" to="/editor">
-            Open the editor
-          </Link>
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+            <span>MIT licensed.</span>
+            <a className="hover:text-foreground" href={SITE.repo} rel="noopener noreferrer">
+              Source on GitHub
+            </a>
+            <a
+              className="hover:text-foreground"
+              href={`${SITE.repo}/blob/main/CHANGELOG.md`}
+              rel="noopener noreferrer"
+            >
+              Changelog
+            </a>
+          </nav>
         </div>
       </footer>
     </div>
