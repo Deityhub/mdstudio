@@ -27,6 +27,8 @@ jobs:
       - run: bun run licenses
       # Default preset: the Cloudflare Workers bundle that production deploys.
       - run: bun run build
+      # Keeps the Worker well under Cloudflare's 3 MiB free-plan limit and browser-only libraries out.
+      - run: bun run bundle:check
 
   e2e:
     name: End-to-end (Playwright)

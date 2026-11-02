@@ -1,11 +1,11 @@
 # mdstudio — System Specification (Source of Truth)
 
-| Metadata | Details |
-| --- | --- |
-| Status | Living document, v1.0 (2026-11-01) |
-| Author / Owner | Chizoba Jude Ojini |
-| License model | Open source (MIT); official hosted instance + self-host via Docker |
-| Change rule | Any change to architecture, data model, flows, or invariants must update this document in the same pull request. ADRs (§14) record the reasons. |
+| Metadata       | Details                                                                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status         | Living document, v1.0 (2026-11-01)                                                                                                              |
+| Author / Owner | Chizoba Jude Ojini                                                                                                                              |
+| License model  | Open source (MIT); official hosted instance + self-host via Docker                                                                              |
+| Change rule    | Any change to architecture, data model, flows, or invariants must update this document in the same pull request. ADRs (§14) record the reasons. |
 
 ---
 
@@ -16,6 +16,7 @@
 **Who it is for:** Technical writers, developer bloggers, open-source documentation maintainers, students, and engineers who write on multiple platforms and want zero format lock-in.
 
 **Core Jobs to be Done:**
+
 1. **Write with fidelity:** Live preview that strictly matches production platforms.
 2. **Bring content in seamlessly:** Import `.md`, drag-and-drop files, paste raw Markdown, or paste rich text (Google Docs, Notion, web pages) with automatic, clean HTML-to-Markdown conversion.
 3. **Take content out anywhere:** Download `.md`, copy raw Markdown, generate self-contained `.md` (images embedded as base64 data URIs), copy rendered HTML, or export standalone `.html`.
@@ -24,6 +25,7 @@
 6. **Optional cloud sync:** Hosted zero-egress Cloudflare deployment or self-hosted Docker container with SQLite.
 
 ### 1.1 Invariants (Rules Never to Break)
+
 1. **Local-first:** Writing, previewing, linting, and exporting work 100% offline without requiring an account or network connection. The backend is strictly additive.
 2. **Preview = Export:** Strict CommonMark + GFM. The preview must never apply transforms that the exported text lacks (no auto-`<br>` line breaks, no smart quotes).
 3. **Sanitized Output:** Every rendered HTML tree passes through `rehype-sanitize` before DOM insertion to prevent XSS.
@@ -38,31 +40,31 @@
 
 ## 2. Feature Scope & Status
 
-| Area | Feature | Status |
-| --- | --- | --- |
-| **Editor** | CodeMirror 6, syntax highlighting, formatting toolbar, keyboard shortcuts (Mod-B/I/K), search, line numbers | Done (M1) |
-| **Preview** | Live synchronized preview, GitHub-like prose, syntax-highlighted code blocks, two-way scroll ratio sync | Done (M1) |
-| **Workspace** | Split view, editor-only, preview-only, focus mode, responsive mobile drawers & bottom sheets | Done (M1) |
-| **Import** | File picker (`.md`, `.markdown`, `.txt`), drag-and-drop, paste raw text, paste rich HTML with automatic Markdown conversion | Done (M1) |
-| **Export** | Standard `.md`, clipboard copy, self-contained `.md` (base64 compressed images), copy HTML, standalone `.html` with embedded styles, optional text normalization | Done (M1) |
-| **Portability Checks** | AST & line linter with profiles: Strict CommonMark, GitHub, dev.to, Obsidian | Done (M1) |
-| **Metadata** | YAML front matter visual form: title, slug, date, cover image URL, description, tags. Canonical URL and a draft toggle are planned | Done (M1); extras planned |
-| **Draft Library** | Local-first IndexedDB storage, instant autosave (400ms debounce, flushed on draft switch, tab hide and page close, with a visible saved/saving/error status), create, duplicate, delete. Rename is planned | Done (M1); rename planned |
-| **Writing Aids** | Word count, character count, estimated reading time, live heading outline/TOC with click-to-line | Done (M1) |
-| **AI Writing** | BYOK direct browser streaming (OpenAI, Anthropic, Google Gemini, OpenAI-compatible); title/description/tag suggestions; draft topic into new document | Done (M1) |
-| **PWA & Offline** | Installable manifest, offline service worker, app icon badge | Milestone 2 |
-| **Advanced Library** | Full-text draft search, tags, folder organization, bulk import/export ZIP archives | Milestone 2 |
-| **Local History** | Automatic revision snapshots in IndexedDB, visual side-by-side diff, one-click restore | Milestone 2 |
-| **Accounts** | Email + password / magic link, GitHub OAuth | Milestone 3 |
-| **Cloud Sync** | Multi-device synchronization with versioned last-write-wins and automatic conflict forks | Milestone 3 |
-| **Hosted Assets** | Upload images to Cloudflare R2 or local disk storage; rewrites relative refs to absolute CDN URLs | Milestone 3 |
-| **Server History** | Immutable server revision log per document | Milestone 3 |
-| **Share Links** | Read-only public web view (`/s/:slug`) of a specific document version with revoke and expiration options | Milestone 4 |
-| **Publishing Integrations** | Direct push to GitHub repositories via personal access token, dev.to API, Hashnode API | Milestone 4 |
-| **Collaboration** | Optional real-time collaborative editing via Yjs / CRDTs | Post-v1 |
-| **WYSIWYG Editing** | Optional WYSIWYG (live-preview) mode built on CodeMirror decorations that hide syntax markers on inactive lines. The Markdown text stays the document and the output is always standard Markdown; never the default or the only mode | Milestone 2 |
-| **Math & Mermaid** | KaTeX math (`$x$`, `$$…$$`, ```` ```math ````) and Mermaid diagrams, rendered only in profiles whose target platform renders them (GitHub, Obsidian) and left as source or code elsewhere. KaTeX runs after sanitizing with `trust: false` and loads on demand; Mermaid runs with `securityLevel: "strict"`, loads on demand, and shows invalid diagrams as an error under their code. Exports embed rendered math (with the KaTeX stylesheet and fonts) and inline SVG diagrams | Done |
-| **Complete Toolbar** | Formatting toolbar covering every Markdown/GFM construct and each profile's extensions (headings 1-6, emphasis, code, links, images, quotes, lists, task lists, tables, rules, footnotes, math, diagrams, alerts, HTML extras), grouped, keyboard-accessible (roving focus, Alt+F10) and profile-aware (warnings driven by `FEATURE_SUPPORT`). Edit logic is pure functions in `src/lib/editing*.ts` and `tables.ts` | Done. Rendering math and Mermaid in the preview is the next feature |
+| Area                        | Feature                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Status                                                              |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Editor**                  | CodeMirror 6, syntax highlighting, formatting toolbar, keyboard shortcuts (Mod-B/I/K), search, line numbers                                                                                                                                                                                                                                                                                                                                                                | Done (M1)                                                           |
+| **Preview**                 | Live synchronized preview, GitHub-like prose, syntax-highlighted code blocks, two-way scroll ratio sync                                                                                                                                                                                                                                                                                                                                                                    | Done (M1)                                                           |
+| **Workspace**               | Split view, editor-only, preview-only, focus mode, responsive mobile drawers & bottom sheets                                                                                                                                                                                                                                                                                                                                                                               | Done (M1)                                                           |
+| **Import**                  | File picker (`.md`, `.markdown`, `.txt`), drag-and-drop, paste raw text, paste rich HTML with automatic Markdown conversion                                                                                                                                                                                                                                                                                                                                                | Done (M1)                                                           |
+| **Export**                  | Standard `.md`, clipboard copy, self-contained `.md` (base64 compressed images), copy HTML, standalone `.html` with embedded styles, optional text normalization                                                                                                                                                                                                                                                                                                           | Done (M1)                                                           |
+| **Portability Checks**      | AST & line linter with profiles: Strict CommonMark, GitHub, dev.to, Obsidian                                                                                                                                                                                                                                                                                                                                                                                               | Done (M1)                                                           |
+| **Metadata**                | YAML front matter visual form: title, slug, date, cover image URL, description, tags. Canonical URL and a draft toggle are planned                                                                                                                                                                                                                                                                                                                                         | Done (M1); extras planned                                           |
+| **Draft Library**           | Local-first IndexedDB storage, instant autosave (400ms debounce, flushed on draft switch, tab hide and page close, with a visible saved/saving/error status), create, duplicate, delete. Rename is planned                                                                                                                                                                                                                                                                 | Done (M1); rename planned                                           |
+| **Writing Aids**            | Word count, character count, estimated reading time, live heading outline/TOC with click-to-line                                                                                                                                                                                                                                                                                                                                                                           | Done (M1)                                                           |
+| **AI Writing**              | BYOK direct browser streaming (OpenAI, Anthropic, Google Gemini, OpenAI-compatible); title/description/tag suggestions; draft topic into new document                                                                                                                                                                                                                                                                                                                      | Done (M1)                                                           |
+| **PWA & Offline**           | Installable manifest, offline service worker, app icon badge                                                                                                                                                                                                                                                                                                                                                                                                               | Milestone 2                                                         |
+| **Advanced Library**        | Full-text draft search, tags, folder organization, bulk import/export ZIP archives                                                                                                                                                                                                                                                                                                                                                                                         | Milestone 2                                                         |
+| **Local History**           | Automatic revision snapshots in IndexedDB, visual side-by-side diff, one-click restore                                                                                                                                                                                                                                                                                                                                                                                     | Milestone 2                                                         |
+| **Accounts**                | Email + password / magic link, GitHub OAuth                                                                                                                                                                                                                                                                                                                                                                                                                                | Milestone 3                                                         |
+| **Cloud Sync**              | Multi-device synchronization with versioned last-write-wins and automatic conflict forks                                                                                                                                                                                                                                                                                                                                                                                   | Milestone 3                                                         |
+| **Hosted Assets**           | Upload images to Cloudflare R2 or local disk storage; rewrites relative refs to absolute CDN URLs                                                                                                                                                                                                                                                                                                                                                                          | Milestone 3                                                         |
+| **Server History**          | Immutable server revision log per document                                                                                                                                                                                                                                                                                                                                                                                                                                 | Milestone 3                                                         |
+| **Share Links**             | Read-only public web view (`/s/:slug`) of a specific document version with revoke and expiration options                                                                                                                                                                                                                                                                                                                                                                   | Milestone 4                                                         |
+| **Publishing Integrations** | Direct push to GitHub repositories via personal access token, dev.to API, Hashnode API                                                                                                                                                                                                                                                                                                                                                                                     | Milestone 4                                                         |
+| **Collaboration**           | Optional real-time collaborative editing via Yjs / CRDTs                                                                                                                                                                                                                                                                                                                                                                                                                   | Post-v1                                                             |
+| **WYSIWYG Editing**         | Optional WYSIWYG (live-preview) mode built on CodeMirror decorations that hide syntax markers on inactive lines. The Markdown text stays the document and the output is always standard Markdown; never the default or the only mode                                                                                                                                                                                                                                       | Milestone 2                                                         |
+| **Math & Mermaid**          | KaTeX math (`$x$`, `$$…$$`, ` ```math `) and Mermaid diagrams, rendered only in profiles whose target platform renders them (GitHub, Obsidian) and left as source or code elsewhere. KaTeX runs after sanitizing with `trust: false` and loads on demand; Mermaid runs with `securityLevel: "strict"`, loads on demand, and shows invalid diagrams as an error under their code. Exports embed rendered math (with the KaTeX stylesheet and fonts) and inline SVG diagrams | Done                                                                |
+| **Complete Toolbar**        | Formatting toolbar covering every Markdown/GFM construct and each profile's extensions (headings 1-6, emphasis, code, links, images, quotes, lists, task lists, tables, rules, footnotes, math, diagrams, alerts, HTML extras), grouped, keyboard-accessible (roving focus, Alt+F10) and profile-aware (warnings driven by `FEATURE_SUPPORT`). Edit logic is pure functions in `src/lib/editing*.ts` and `tables.ts`                                                       | Done. Rendering math and Mermaid in the preview is the next feature |
 
 ---
 
@@ -91,16 +93,16 @@
 
 ### 3.1 Technology Stack
 
-| Layer                 | Technology                                                                                                                                                          | Justification                                                                                     |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **Framework**         | TanStack Start v1, React 19, Vite 8                                                                                                                                 | Modern full-stack SSR and server functions; compiles to Edge Workers or Node runtime.             |
-| **Styling**           | Tailwind CSS v4, shadcn/ui                                                                                                                                          | Native CSS token theming (`src/styles.css`), dark mode support, accessible Radix UI primitives.   |
-| **Editor**            | CodeMirror 6 (client-only dynamic import)                                                                                                                           | Fast, modular, accessible on mobile keyboards, extensible language facets.                        |
-| **Markdown Pipeline** | Unified ecosystem (`remark-parse`, `remark-gfm`, `remark-frontmatter`, `remark-rehype`, `rehype-sanitize`, `rehype-highlight`, `rehype-stringify`; `rehype-parse` + `rehype-remark` + `remark-stringify` for HTML→MD). The preview is a sanitized HTML string. `remark-math` + `rehype-katex` (math), `mermaid` (diagrams, in the browser only) | Strict AST-compliant parsing, linting, conversion, and sanitization sharing a single syntax tree. |
-| **Client Storage**    | IndexedDB (raw, no wrapper library)                                                                                                                                          | Reliable client-side persistence for large drafts and base64 image blobs.                         |
-| **Database ORM**      | Drizzle ORM (SQLite dialect)                                                                                                                                        | Identical type-safe SQL queries run on Cloudflare D1 and `better-sqlite3`.                        |
-| **Object Storage**    | Cloudflare R2 / Local Filesystem                                                                                                                                    | S3-compatible, zero egress costs on Cloudflare; flat directory structure on Docker.               |
-| **Testing**           | Vitest + Testing Library (unit/integration). Playwright e2e is planned with the CI workflow | Fast AST unit tests now; end-to-end browser automation for flows that need a real browser (IndexedDB, import/export). |
+| Layer                 | Technology                                                                                                                                                                                                                                                                                                                                      | Justification                                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Framework**         | TanStack Start v1, React 19, Vite 8                                                                                                                                                                                                                                                                                                             | Modern full-stack SSR and server functions; compiles to Edge Workers or Node runtime.                                 |
+| **Styling**           | Tailwind CSS v4, shadcn/ui                                                                                                                                                                                                                                                                                                                      | Native CSS token theming (`src/styles.css`), dark mode support, accessible Radix UI primitives.                       |
+| **Editor**            | CodeMirror 6 (client-only dynamic import)                                                                                                                                                                                                                                                                                                       | Fast, modular, accessible on mobile keyboards, extensible language facets.                                            |
+| **Markdown Pipeline** | Unified ecosystem (`remark-parse`, `remark-gfm`, `remark-frontmatter`, `remark-rehype`, `rehype-sanitize`, `rehype-highlight`, `rehype-stringify`; `rehype-parse` + `rehype-remark` + `remark-stringify` for HTML→MD). The preview is a sanitized HTML string. `remark-math` + `rehype-katex` (math), `mermaid` (diagrams, in the browser only) | Strict AST-compliant parsing, linting, conversion, and sanitization sharing a single syntax tree.                     |
+| **Client Storage**    | IndexedDB (raw, no wrapper library)                                                                                                                                                                                                                                                                                                             | Reliable client-side persistence for large drafts and base64 image blobs.                                             |
+| **Database ORM**      | Drizzle ORM (SQLite dialect)                                                                                                                                                                                                                                                                                                                    | Identical type-safe SQL queries run on Cloudflare D1 and `better-sqlite3`.                                            |
+| **Object Storage**    | Cloudflare R2 / Local Filesystem                                                                                                                                                                                                                                                                                                                | S3-compatible, zero egress costs on Cloudflare; flat directory structure on Docker.                                   |
+| **Testing**           | Vitest + Testing Library (unit/integration). Playwright e2e is planned with the CI workflow                                                                                                                                                                                                                                                     | Fast AST unit tests now; end-to-end browser automation for flows that need a real browser (IndexedDB, import/export). |
 
 ### 3.2 Repository Structure
 
@@ -138,55 +140,56 @@
 └── docs/
     └── SYSTEM_SPEC.md         # Master specification and source of truth
 ```
-***
+
+---
 
 ## 4. Core Client Modules
 
-| Module                                     | Core Responsibilities                                                                  | Key Functions / Interfaces                                                                                                                                                                                                               |
-| ------------------------------------------ | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/lib/markdown.ts`                      | The single pipeline for parsing, rendering, linting, and export transforms. Also owns `FEATURE_SUPPORT` (where each feature renders), shared with the toolbar.            | `renderMarkdown()`, `checkPortability(text, profile)`, `getOutline(text)`, `getStats(text)`, `splitFrontMatter()`, `joinFrontMatter()`, `normalizeMarkdown()`, `embedImages()`, `htmlToMarkdown()`, `standaloneHtml()`, `finalizeText()` |
-| `src/lib/documentStore.ts`                 | Client persistence layer on raw IndexedDB (database `mdstudio-db`).                    | `list()`, `get(id)`, `save(doc)`, `create(partial)`, `remove(id)`; `createDocumentStore(kv)` for tests; `MdDocument` model                                                                                                                   |
-| `src/lib/images.ts`                        | Client-side image handling, resizing, and compression.                                 | `compressImage(file, maxDimension, quality)`, `safeImageName()`, `kb()`                                                                                                                                                                  |
-| `src/lib/ai-provider.ts`                   | Multi-provider HTTP request builder and streaming SSE parser.                          | `buildProviderRequest(connection, request)`, `generateWithProvider(connection, request, signal, onEvent)`                                                                                                                              |
-| `src/lib/editing.ts`                       | Pure Markdown editing commands: toggle marks, headings, quote/list/task toggles, list nesting, cursor context. | `runCommand(snapshot, command)`, `getContext(snapshot)`, `applyEdit(text, edit)`, `isListLine(snapshot)`                                                                                                                                |
-| `src/lib/editing-insert.ts`                | Pure insertion commands: links (with detection of the link under the caret), images (alt required), footnotes, rules, code blocks, alerts, math blocks, Mermaid starters, HTML tags and details. | `insertLink`, `findLinkAt`, `insertImage`, `insertFootnote`, `insertRule`, `codeBlock`, `insertBlock`                                                                                                                   |
-| `src/lib/blocks.ts`                        | Structural scanning shared by commands and cursor context: fenced code, GFM tables, alert quotes, whole lines. | `fenceAt`, `tableAt`, `quoteBlockAt`, `wholeLines`, `splitCells`                                                                                                                                                                         |
-| `src/lib/tables.ts`                        | Pure GFM table commands: insert, add/delete rows and columns, alignment, format, Tab navigation. | `insertTable`, `tableCommand`, `tableMove`, `isInTable`                                                                                                                                                                                  |
-| `src/components/studio/EditorToolbar.tsx`  | The formatting toolbar (menus, profile warnings, roving focus) built on the pure commands and `FEATURE_SUPPORT`. | `EditorToolbar`, `useRovingToolbar`                                                                                                                                                                                                      |
-| `src/lib/math.ts`                          | On-demand KaTeX loading, the `$5 and $10` guard, and embedding KaTeX CSS and fonts for exports. | `ensureMath`, `hasMathSyntax`, `remarkMathGuard`, `katexCssForExport`                                                                                                                                                                    |
-| `src/lib/diagrams.ts`                      | On-demand Mermaid rendering with a result cache; swaps diagram blocks in the preview and in exported HTML. | `renderDiagram`, `hydrateDiagrams`, `inlineDiagrams`                                                                                                                                                                                    |
-| `src/lib/preview-dom.ts`                   | Updates the preview block by block so unchanged content (images, math, diagrams) is never rebuilt. | `patchHtml`                                                                                                                                                                                                                              |
-| `src/lib/export.ts`                        | Async rendering for "Copy rendered HTML" and "Download standalone .html". | `renderExportBody`, `standaloneDocument`                                                                                                                                                                                                 |
-| `src/lib/csp.ts`                           | Per-request nonce and the Content-Security-Policy / security headers (§8).             | `createNonce()`, `buildCsp(nonce)`, `securityHeaders(nonce)`                                                                                                                                                                             |
-| `src/components/studio/Studio.tsx`         | Main workspace coordinator: layout, debounce autosave, drawers, panels, import/export. | State coordinator; handles keyboard shortcuts and two-way scroll mapping.                                                                                                                                                                |
-| `src/components/studio/MarkdownEditor.tsx` | CodeMirror 6 React wrapper with line numbers, keymaps, and paste handlers.             | Exposes imperative `EditorHandle` (`run`, `undo`, `redo`, `getSnapshot`, `apply`, `insert`, `goToLine`, `scrollToRatio`, `focus`).                                                                                                                                |
+| Module                                     | Core Responsibilities                                                                                                                                                                            | Key Functions / Interfaces                                                                                                                                                                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/markdown.ts`                      | The single pipeline for parsing, rendering, linting, and export transforms. Also owns `FEATURE_SUPPORT` (where each feature renders), shared with the toolbar.                                   | `renderMarkdown()`, `checkPortability(text, profile)`, `getOutline(text)`, `getStats(text)`, `splitFrontMatter()`, `joinFrontMatter()`, `normalizeMarkdown()`, `embedImages()`, `htmlToMarkdown()`, `standaloneHtml()`, `finalizeText()` |
+| `src/lib/documentStore.ts`                 | Client persistence layer on raw IndexedDB (database `mdstudio-db`).                                                                                                                              | `list()`, `get(id)`, `save(doc)`, `create(partial)`, `remove(id)`; `createDocumentStore(kv)` for tests; `MdDocument` model                                                                                                               |
+| `src/lib/images.ts`                        | Client-side image handling, resizing, and compression.                                                                                                                                           | `compressImage(file, maxDimension, quality)`, `safeImageName()`, `kb()`                                                                                                                                                                  |
+| `src/lib/ai-provider.ts`                   | Multi-provider HTTP request builder and streaming SSE parser.                                                                                                                                    | `buildProviderRequest(connection, request)`, `generateWithProvider(connection, request, signal, onEvent)`                                                                                                                                |
+| `src/lib/editing.ts`                       | Pure Markdown editing commands: toggle marks, headings, quote/list/task toggles, list nesting, cursor context.                                                                                   | `runCommand(snapshot, command)`, `getContext(snapshot)`, `applyEdit(text, edit)`, `isListLine(snapshot)`                                                                                                                                 |
+| `src/lib/editing-insert.ts`                | Pure insertion commands: links (with detection of the link under the caret), images (alt required), footnotes, rules, code blocks, alerts, math blocks, Mermaid starters, HTML tags and details. | `insertLink`, `findLinkAt`, `insertImage`, `insertFootnote`, `insertRule`, `codeBlock`, `insertBlock`                                                                                                                                    |
+| `src/lib/blocks.ts`                        | Structural scanning shared by commands and cursor context: fenced code, GFM tables, alert quotes, whole lines.                                                                                   | `fenceAt`, `tableAt`, `quoteBlockAt`, `wholeLines`, `splitCells`                                                                                                                                                                         |
+| `src/lib/tables.ts`                        | Pure GFM table commands: insert, add/delete rows and columns, alignment, format, Tab navigation.                                                                                                 | `insertTable`, `tableCommand`, `tableMove`, `isInTable`                                                                                                                                                                                  |
+| `src/components/studio/EditorToolbar.tsx`  | The formatting toolbar (menus, profile warnings, roving focus) built on the pure commands and `FEATURE_SUPPORT`.                                                                                 | `EditorToolbar`, `useRovingToolbar`                                                                                                                                                                                                      |
+| `src/lib/math.ts`                          | On-demand KaTeX loading, the `$5 and $10` guard, and embedding KaTeX CSS and fonts for exports.                                                                                                  | `ensureMath`, `hasMathSyntax`, `remarkMathGuard`, `katexCssForExport`                                                                                                                                                                    |
+| `src/lib/diagrams.ts`                      | On-demand Mermaid rendering with a result cache; swaps diagram blocks in the preview and in exported HTML.                                                                                       | `renderDiagram`, `hydrateDiagrams`, `inlineDiagrams`                                                                                                                                                                                     |
+| `src/lib/preview-dom.ts`                   | Updates the preview block by block so unchanged content (images, math, diagrams) is never rebuilt.                                                                                               | `patchHtml`                                                                                                                                                                                                                              |
+| `src/lib/export.ts`                        | Async rendering for "Copy rendered HTML" and "Download standalone .html".                                                                                                                        | `renderExportBody`, `standaloneDocument`                                                                                                                                                                                                 |
+| `src/lib/csp.ts`                           | Per-request nonce and the Content-Security-Policy / security headers (§8).                                                                                                                       | `createNonce()`, `buildCsp(nonce)`, `securityHeaders(nonce)`                                                                                                                                                                             |
+| `src/components/studio/Studio.tsx`         | Main workspace coordinator: layout, debounce autosave, drawers, panels, import/export.                                                                                                           | State coordinator; handles keyboard shortcuts and two-way scroll mapping.                                                                                                                                                                |
+| `src/components/studio/MarkdownEditor.tsx` | CodeMirror 6 React wrapper with line numbers, keymaps, and paste handlers.                                                                                                                       | Exposes imperative `EditorHandle` (`run`, `undo`, `redo`, `getSnapshot`, `apply`, `insert`, `goToLine`, `scrollToRatio`, `focus`).                                                                                                       |
 
-***
+---
 
 ### 4.1 Portability Rules (`checkPortability`)
 
 Each issue carries a 1-based `line` that points at the offending text (clicking it jumps the editor there).
 
-| Rule | Flags | Severity |
-| --- | --- | --- |
-| `raw-html` | HTML other than comments | warning (error for dev.to) |
-| `unclosed-html` | Open/close tags paired per parent node; reports the opening line and stray closing tags | warning |
-| `local-image` / `data-image` | Image paths that won't load elsewhere / base64 images | warning / info |
-| `local-link` | Links and reference definitions to local files (`./a.md`, `/docs/x`, `file://`); anchors, web, mail and phone links pass | warning |
-| `alert` | `> [!NOTE]`-style alerts outside the GitHub and Obsidian profiles (they show as a plain quote) | warning |
-| `missing-alt` | Images with empty alt text | warning |
-| `mermaid` | Mermaid blocks outside GitHub/Obsidian profiles | warning |
-| `math` | Inline or block math (found in the AST, so code and currency such as `$5 and $10` are ignored) in profiles that don't render it | warning |
-| `highlight` / `wiki-link` | `==x==` and `[[x]]` outside the Obsidian profile | warning |
-| `container` | `:::` custom containers | warning |
-| `trailing-break` | Two trailing spaces used as a line break | warning |
-| `fence-lang` | Code fence without a language | info |
-| `mixed-bullets` | Mixed `-`/`*`/`+` markers; points at the first line that differs | info |
-| `gfm-table` / `gfm-task` / `gfm-strike` / `gfm-footnote` | GFM extensions under the Strict CommonMark profile | warning |
+| Rule                                                     | Flags                                                                                                                           | Severity                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `raw-html`                                               | HTML other than comments                                                                                                        | warning (error for dev.to) |
+| `unclosed-html`                                          | Open/close tags paired per parent node; reports the opening line and stray closing tags                                         | warning                    |
+| `local-image` / `data-image`                             | Image paths that won't load elsewhere / base64 images                                                                           | warning / info             |
+| `local-link`                                             | Links and reference definitions to local files (`./a.md`, `/docs/x`, `file://`); anchors, web, mail and phone links pass        | warning                    |
+| `alert`                                                  | `> [!NOTE]`-style alerts outside the GitHub and Obsidian profiles (they show as a plain quote)                                  | warning                    |
+| `missing-alt`                                            | Images with empty alt text                                                                                                      | warning                    |
+| `mermaid`                                                | Mermaid blocks outside GitHub/Obsidian profiles                                                                                 | warning                    |
+| `math`                                                   | Inline or block math (found in the AST, so code and currency such as `$5 and $10` are ignored) in profiles that don't render it | warning                    |
+| `highlight` / `wiki-link`                                | `==x==` and `[[x]]` outside the Obsidian profile                                                                                | warning                    |
+| `container`                                              | `:::` custom containers                                                                                                         | warning                    |
+| `trailing-break`                                         | Two trailing spaces used as a line break                                                                                        | warning                    |
+| `fence-lang`                                             | Code fence without a language                                                                                                   | info                       |
+| `mixed-bullets`                                          | Mixed `-`/`*`/`+` markers; points at the first line that differs                                                                | info                       |
+| `gfm-table` / `gfm-task` / `gfm-strike` / `gfm-footnote` | GFM extensions under the Strict CommonMark profile                                                                              | warning                    |
 
 `math`, `mermaid` and `alert` follow `FEATURE_SUPPORT`: rendered by the preview where supported, flagged elsewhere.
 
-***
+---
 
 ## 5. End-to-End Data Flows
 
@@ -240,7 +243,7 @@ Client maintains per-document sync metadata: { id, version, contentHash, isDirty
 - PULL: GET /api/sync/pull?since=<cursor> fetches server updates and deletions (tombstones).
 ```
 
-***
+---
 
 ## 6. Authoritative Database Schema (SQLite / Drizzle)
 
@@ -329,7 +332,7 @@ CREATE TABLE share_links (
 );
 ```
 
-***
+---
 
 ## 7. API Specifications (Milestone 3+)
 
@@ -350,7 +353,7 @@ CREATE TABLE share_links (
 | `GET`  | `/s/:slug`                     | None          | Server-side renders sanitized static HTML of a shared doc. |
 | `POST` | `/api/publish/:target`         | Session       | Dispatches document to GitHub repo, dev.to, or Hashnode.   |
 
-***
+---
 
 ## 8. Security & Privacy Guarantees
 
@@ -373,7 +376,7 @@ CREATE TABLE share_links (
 5. **Private AI Usage:** User API keys are held strictly in browser client memory for the active session, never stored in `localStorage`, and never forwarded to our backend.
 6. **Self-Host Hardening:** The `ALLOW_SIGNUPS=false` configuration variable allows private instance owners to completely disable registration.
 
-***
+---
 
 ## 9. Deployment Architecture
 
@@ -382,6 +385,7 @@ CREATE TABLE share_links (
 - **Edge Application & API:** Cloudflare Workers running the TanStack Start runtime.
 - **Database:** Cloudflare D1 (Serverless SQLite, 5 GB storage, 5 million reads/day free).
 - **Asset Storage:** Cloudflare R2 (10 GB storage, zero egress bandwidth charges).
+- **Worker size:** the server bundle is about 0.7 MiB gzipped (Cloudflare free plan allows 3 MiB). Mermaid and KaTeX are browser-only and excluded from it through `import.meta.env.SSR`; `scripts/bundle-size.ts` enforces a 1.5 MiB budget and a list of forbidden libraries in CI.
 - **Edge Security:** Cloudflare Turnstile bot verification and Workers Rate Limiting.
 - **PR previews:** each pull request into `dev` is deployed as its own Worker (`mdstudio-pr-<number>`, workers.dev, `noindex`) by `.github/workflows/preview.yml` and deleted when the PR closes; see `docs/RELEASING.md`.
 
@@ -392,7 +396,7 @@ CREATE TABLE share_links (
 - **Persistent Data:** Single mounted Docker volume (`/data`) containing `studio.db` and the `/data/assets` folder.
 - **Backups:** Atomic snapshot via `sqlite3 /data/studio.db ".backup /backup/studio.db"`.
 
-***
+---
 
 ## 10. Design System & Typography
 
@@ -408,40 +412,40 @@ CREATE TABLE share_links (
 
 - **Prose Preview:** Styled via the `.md-preview` class to match GitHub's exact typography, blockquote styles, table layouts, and syntax-highlighted code fences.
 
-***
+---
 
 ## 11. Architectural Decision Records (ADRs)
 
-| ADR        | Decision                                        | Architectural Rationale                                                                                              |
-| ---------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **ADR 01** | Markdown text is the single source of truth     | Prevents proprietary CMS schema lock-in; ensures complete portability across developer platforms.                    |
-| **ADR 02** | Unified / Remark / Rehype pipeline              | Industry-standard Abstract Syntax Tree (AST); enables identical parsing for rendering, linting, and AST transforms.  |
-| **ADR 03** | Local-first IndexedDB storage                   | Guarantees instant typing feedback and 100% offline functionality without requiring account registration.            |
-| **ADR 04** | Client-direct BYOK AI integration               | Eliminates backend proxy server costs, eliminates vendor lock-in, and guarantees maximum user privacy.               |
-| **ADR 05** | Base64 image embedding in self-contained export | Enables distributing single, self-sufficient Markdown files without hosting dependencies.                            |
-| **ADR 06** | Cloudflare stack for hosted tier                | Leverages the most generous free-tier edge compute and database, with zero egress fees on R2.                        |
-| **ADR 07** | Universal SQLite via Drizzle ORM                | Unifies Cloudflare D1 and Docker `better-sqlite3` under a single schema, query syntax, and migration pipeline.       |
-| **ADR 08** | Single-container Docker deployment              | Eliminates complex multi-container dependencies (e.g., PostgreSQL + Redis), making self-hosting trivial.             |
-| **ADR 09** | Versioned optimistic concurrency for sync       | Simple, robust, and predictable conflict handling; creates duplicate conflict documents rather than destroying data. |
-| **ADR 10** | Database-backed cookie sessions over JWT        | Enables immediate session revocation and simplifies Edge/Node authentication compatibility.                          |
-| **ADR 11** | Raw IndexedDB instead of `idb-keyval`                                | The wrapper was a thin layer over ~60 lines; owning it removes a dependency and lets writes resolve on transaction completion. |
-| **ADR 12** | WYSIWYG as a CodeMirror live-preview mode, not a rich-text editor     | The Markdown text stays the document, so the round trip is lossless by construction and no serializer can silently rewrite it. |
-| **ADR 13** | Math and Mermaid are profile-gated                                    | Preview must match the target platform: render only where it renders, flag everywhere else. Two packages are the one exception to "build, don't install". |
-| **ADR 14** | Nonce-based CSP instead of `script-src 'unsafe-inline'`               | SSR emits inline scripts; a per-request nonce keeps XSS protection without hashing dynamic payloads. |
+| ADR        | Decision                                                          | Architectural Rationale                                                                                                                                   |
+| ---------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ADR 01** | Markdown text is the single source of truth                       | Prevents proprietary CMS schema lock-in; ensures complete portability across developer platforms.                                                         |
+| **ADR 02** | Unified / Remark / Rehype pipeline                                | Industry-standard Abstract Syntax Tree (AST); enables identical parsing for rendering, linting, and AST transforms.                                       |
+| **ADR 03** | Local-first IndexedDB storage                                     | Guarantees instant typing feedback and 100% offline functionality without requiring account registration.                                                 |
+| **ADR 04** | Client-direct BYOK AI integration                                 | Eliminates backend proxy server costs, eliminates vendor lock-in, and guarantees maximum user privacy.                                                    |
+| **ADR 05** | Base64 image embedding in self-contained export                   | Enables distributing single, self-sufficient Markdown files without hosting dependencies.                                                                 |
+| **ADR 06** | Cloudflare stack for hosted tier                                  | Leverages the most generous free-tier edge compute and database, with zero egress fees on R2.                                                             |
+| **ADR 07** | Universal SQLite via Drizzle ORM                                  | Unifies Cloudflare D1 and Docker `better-sqlite3` under a single schema, query syntax, and migration pipeline.                                            |
+| **ADR 08** | Single-container Docker deployment                                | Eliminates complex multi-container dependencies (e.g., PostgreSQL + Redis), making self-hosting trivial.                                                  |
+| **ADR 09** | Versioned optimistic concurrency for sync                         | Simple, robust, and predictable conflict handling; creates duplicate conflict documents rather than destroying data.                                      |
+| **ADR 10** | Database-backed cookie sessions over JWT                          | Enables immediate session revocation and simplifies Edge/Node authentication compatibility.                                                               |
+| **ADR 11** | Raw IndexedDB instead of `idb-keyval`                             | The wrapper was a thin layer over ~60 lines; owning it removes a dependency and lets writes resolve on transaction completion.                            |
+| **ADR 12** | WYSIWYG as a CodeMirror live-preview mode, not a rich-text editor | The Markdown text stays the document, so the round trip is lossless by construction and no serializer can silently rewrite it.                            |
+| **ADR 13** | Math and Mermaid are profile-gated                                | Preview must match the target platform: render only where it renders, flag everywhere else. Two packages are the one exception to "build, don't install". |
+| **ADR 14** | Nonce-based CSP instead of `script-src 'unsafe-inline'`           | SSR emits inline scripts; a per-request nonce keeps XSS protection without hashing dynamic payloads.                                                      |
 
-***
+---
 
 ## 12. Known Gaps (Tracked)
 
-| Gap | Spec expectation | Current behavior | Plan |
-| --- | --- | --- | --- |
-| Obsidian wiki-links | Render what Obsidian renders | `[[wiki-links]]` are silenced in Checks but shown as plain text in the preview (`==highlight==` now renders as a marker) | Roadmap, Phase 1 |
-| Rename draft, canonical URL, draft toggle | Listed in earlier specs | Not implemented (titles come from content) | Studio polish PR |
-| Math and diagram details | Preview = platform | the preview renders Mermaid in its neutral theme in light mode and its dark theme in dark mode (one cached render per theme, re-rendered when the theme toggles), while exports are always light; a document with math exports as a ~380 KB file because all KaTeX fonts are embedded; the `$…$` currency guard follows GitHub's rule (no space inside the dollars, no digit right after) | Font pruning later |
-| Playwright e2e | Listed in the stack | Not installed | With the CI workflow |
-| Drafts from before the DB rename | n/a | Drafts in the old `keyval-store` database are not read (rename was intentional; app unreleased) | None |
+| Gap                                       | Spec expectation             | Current behavior                                                                                                                                                                                                                                                                                                                                                                          | Plan                 |
+| ----------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| Obsidian wiki-links                       | Render what Obsidian renders | `[[wiki-links]]` are silenced in Checks but shown as plain text in the preview (`==highlight==` now renders as a marker)                                                                                                                                                                                                                                                                  | Roadmap, Phase 1     |
+| Rename draft, canonical URL, draft toggle | Listed in earlier specs      | Not implemented (titles come from content)                                                                                                                                                                                                                                                                                                                                                | Studio polish PR     |
+| Math and diagram details                  | Preview = platform           | the preview renders Mermaid in its neutral theme in light mode and its dark theme in dark mode (one cached render per theme, re-rendered when the theme toggles), while exports are always light; a document with math exports as a ~380 KB file because all KaTeX fonts are embedded; the `$…$` currency guard follows GitHub's rule (no space inside the dollars, no digit right after) | Font pruning later   |
+| Playwright e2e                            | Listed in the stack          | Not installed                                                                                                                                                                                                                                                                                                                                                                             | With the CI workflow |
+| Drafts from before the DB rename          | n/a                          | Drafts in the old `keyval-store` database are not read (rename was intentional; app unreleased)                                                                                                                                                                                                                                                                                           | None                 |
 
-***
+---
 
 ## 12. SEO and Discoverability
 

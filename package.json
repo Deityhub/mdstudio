@@ -30,7 +30,8 @@
     "e2e": "NITRO_PRESET=node-server bun run build && playwright test",
     "db:generate": "drizzle-kit generate",
     "brand": "node scripts/brand-assets.mjs",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "bundle:check": "bun scripts/bundle-size.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"
