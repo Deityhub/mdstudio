@@ -41,7 +41,7 @@
 
 ## Milestone 2: PWA, Local History & Advanced Library (Target: Q1 2027)
 
-- [ ] **PWA Support:** Web app manifest, service worker caching, and complete offline installation capability.
+- [x] **PWA Support:** Web app manifest, service worker caching, and offline installation. (Pages and files are kept as you use them online; the app badge is not done.)
 - [x] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.
 - [x] **Library Organization:** Full-text document search, tags (from front matter) and folder categorization.
 - [x] **Bulk Import & Export:** Export all drafts as a ZIP (folders and images kept); import ZIP archives, several files or a whole folder.

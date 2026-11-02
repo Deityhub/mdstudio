@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -9,13 +10,17 @@ import { isPreview, workerConfig } from "./infra/worker-config";
 
 // Deploy target is chosen at build time: Cloudflare Workers by default,
 // `NITRO_PRESET=node-server` for the self-hosted Docker image.
+const appVersion: string = JSON.parse(readFileSync("package.json", "utf8")).version;
 const preset = process.env["NITRO_PRESET"] ?? "cloudflare-module";
 
 export default defineConfig(({ command }) => ({
   server: { host: "::", port: 8080 },
   css: { transformer: "lightningcss" },
   // Preview deployments tell crawlers to stay away (see src/lib/server/csp.ts).
-  define: { "import.meta.env.VITE_PREVIEW": JSON.stringify(String(isPreview(process.env))) },
+  define: {
+    "import.meta.env.VITE_PREVIEW": JSON.stringify(String(isPreview(process.env))),
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(appVersion),
+  },
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],

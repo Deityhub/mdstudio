@@ -632,3 +632,66 @@ test("library: rename a folder through its menu, and its drafts follow", async (
     nav.getByRole("group", { name: "Folder POSTS" }).getByText("Inside", { exact: true }),
   ).toBeVisible();
 });
+
+/** Resolves once the service worker controls the page and has kept the editor's files. */
+async function offlineReady(page: Page) {
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const paths: string[] = [];
+        for (const name of await caches.keys())
+          for (const r of await (await caches.open(name)).keys())
+            paths.push(new URL(r.url).pathname);
+        return (
+          paths.some((p) => p.startsWith("/assets/MarkdownEditor")) && paths.includes("/editor")
+        );
+      }),
+    )
+    .toBe(true);
+}
+
+test("offline: the editor opens and keeps working with no network", async ({ page, context }) => {
+  await open(page);
+  await replaceText(page, "# Offline draft\n\nwritten online");
+  await stored(page, docContent("# Offline draft\n\nwritten online"));
+  await offlineReady(page);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(editor(page)).toContainText("Offline draft");
+  await expect(page.getByText(/^Offline, your drafts are still saved here/)).toBeVisible();
+  await expect(
+    page.locator(".md-preview").getByRole("heading", { name: "Offline draft" }),
+  ).toBeVisible();
+
+  // writing, saving and a page that was never visited all still work
+  await editor(page).click();
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.insertText("\n\nwritten offline");
+  await stored(page, "written offline");
+  await page.goto("/editor");
+  await expect(editor(page)).toContainText("written offline");
+
+  // coming back online is noticed
+  await context.setOffline(false);
+  await expect(page.getByText(/^Offline, your drafts/)).toBeHidden();
+});
+
+test("offline: a page that was never saved says so, and the manifest is installable", async ({
+  page,
+  context,
+}) => {
+  await open(page);
+  await offlineReady(page);
+  const manifest = await (await page.request.get("/manifest.webmanifest")).json();
+  expect(manifest).toMatchObject({ display: "standalone", start_url: "/editor", id: "/editor" });
+  const sizes = manifest.icons.map((i: { sizes: string }) => i.sizes);
+  expect(sizes).toEqual(expect.arrayContaining(["192x192", "512x512"]));
+  expect(manifest.icons.some((i: { purpose?: string }) => i.purpose === "maskable")).toBe(true);
+
+  await context.setOffline(true);
+  // a guide was never visited: the cached home page stands in rather than a browser error page
+  await page.goto("/guides/markdown-images");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+});
