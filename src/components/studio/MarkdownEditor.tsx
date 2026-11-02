@@ -29,8 +29,8 @@ import {
   type Context,
   type Edit,
   type Snapshot,
-} from "@/lib/editing";
-import { isInTable, tableMove } from "@/lib/tables";
+} from "@/lib/editor/editing";
+import { isInTable, tableMove } from "@/lib/editor/tables";
 
 export type EditorHandle = {
   /** Runs a pure editing command (see `lib/editing.ts`) on the current selection. */

@@ -12,8 +12,8 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
-import { jsonLd, jsonLdScript, pageHead, SITE } from "@/lib/seo";
-import { themeInitScript } from "@/lib/theme";
+import { jsonLd, jsonLdScript, pageHead, SITE } from "@/lib/site/seo";
+import { themeInitScript } from "@/lib/ui/theme";
 
 function NotFoundComponent() {
   return (

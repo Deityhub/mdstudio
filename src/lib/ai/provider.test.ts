@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildProviderRequest, generateWithProvider, type AiConnection } from "./ai-provider";
+import { buildProviderRequest, generateWithProvider, type AiConnection } from "./provider";
 
 const connection: AiConnection = {
   provider: "compatible",

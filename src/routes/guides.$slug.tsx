@@ -3,16 +3,16 @@ import { ArrowRight } from "lucide-react";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Button } from "@/components/ui/button";
-import { GUIDES, guideBySlug, readingMinutes } from "@/lib/guides";
+import { GUIDES, guideBySlug, readingMinutes } from "@/lib/site/guides";
 import {
   formatDate,
   headingIds,
   loadGuideMarkdown,
   relatedGuides,
   withHeadingIds,
-} from "@/lib/guides-content";
-import { getOutline, renderMarkdown } from "@/lib/markdown";
-import { articleJsonLd, breadcrumbJsonLd, jsonLdScript, pageHead } from "@/lib/seo";
+} from "@/lib/site/guides-content";
+import { getOutline, renderMarkdown } from "@/lib/markdown/markdown";
+import { articleJsonLd, breadcrumbJsonLd, jsonLdScript, pageHead } from "@/lib/site/seo";
 
 export const Route = createFileRoute("/guides/$slug")({
   // Rendered with mdstudio's own pipeline (sanitized), so the guides practice what they preach.

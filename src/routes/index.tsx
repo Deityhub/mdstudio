@@ -14,10 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { GUIDES } from "@/lib/guides";
-import { PROFILES } from "@/lib/profiles";
-import { faqJsonLd, jsonLdScript, pageHead, SITE } from "@/lib/seo";
-import { AUDIENCES, BRAND, FAQ, LONG_DESCRIPTION } from "@/lib/seo-content";
+import { GUIDES } from "@/lib/site/guides";
+import { PROFILES } from "@/lib/markdown/profiles";
+import { faqJsonLd, jsonLdScript, pageHead, SITE } from "@/lib/site/seo";
+import { AUDIENCES, BRAND, FAQ, LONG_DESCRIPTION } from "@/lib/site/seo-content";
 
 // The checker pulls in the whole Markdown engine, so it loads after the page is interactive.
 const CheckerDemo = lazy(() => import("@/components/home/CheckerDemo"));

@@ -61,11 +61,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/layout";
+import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/ui/layout";
 import { HistoryPanel } from "@/components/studio/HistoryPanel";
-import { historyStore, type Revision } from "@/lib/history";
-import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/documentStore";
-import { compressImage, kb, safeImageName } from "@/lib/images";
+import { historyStore, type Revision } from "@/lib/storage/history";
+import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/storage/documentStore";
+import { compressImage, kb, safeImageName } from "@/lib/editor/images";
 import {
   PROFILES,
   type Profile,
@@ -83,15 +83,15 @@ import {
   supports,
   splitFrontMatter,
   joinFrontMatter,
-} from "@/lib/markdown";
-import type { Command, Context, Edit, Snapshot } from "@/lib/editing";
-import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editing-insert";
-import { hydrateDiagrams, renderDiagramFor, withCachedDiagrams } from "@/lib/diagrams";
-import { useResolvedTheme } from "@/lib/useResolvedTheme";
-import { renderExportBody, standaloneDocument } from "@/lib/export";
-import { ensureMath, hasMathSyntax, isMathLoaded } from "@/lib/math";
-import { patchHtml } from "@/lib/preview-dom";
-import { insertTable } from "@/lib/tables";
+} from "@/lib/markdown/markdown";
+import type { Command, Context, Edit, Snapshot } from "@/lib/editor/editing";
+import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editor/editing-insert";
+import { hydrateDiagrams, renderDiagramFor, withCachedDiagrams } from "@/lib/markdown/diagrams";
+import { useResolvedTheme } from "@/lib/ui/useResolvedTheme";
+import { renderExportBody, standaloneDocument } from "@/lib/markdown/export";
+import { ensureMath, hasMathSyntax, isMathLoaded } from "@/lib/markdown/math";
+import { patchHtml } from "@/lib/markdown/preview-dom";
+import { insertTable } from "@/lib/editor/tables";
 import { EditorToolbar, type ToolbarHandle } from "./EditorToolbar";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import {

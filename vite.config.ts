@@ -14,7 +14,7 @@ const preset = process.env["NITRO_PRESET"] ?? "cloudflare-module";
 export default defineConfig(({ command }) => ({
   server: { host: "::", port: 8080 },
   css: { transformer: "lightningcss" },
-  // Preview deployments tell crawlers to stay away (see src/lib/csp.ts).
+  // Preview deployments tell crawlers to stay away (see src/lib/server/csp.ts).
   define: { "import.meta.env.VITE_PREVIEW": JSON.stringify(String(isPreview(process.env))) },
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },

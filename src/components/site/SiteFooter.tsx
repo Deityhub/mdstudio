@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { SITE } from "@/lib/seo";
+import { SITE } from "@/lib/site/seo";
 
 export function SiteFooter() {
   return (

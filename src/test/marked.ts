@@ -1,4 +1,4 @@
-import { applyEdit, type Edit, type Snapshot } from "@/lib/editing";
+import { applyEdit, type Edit, type Snapshot } from "@/lib/editor/editing";
 
 /** Test notation: `⟦a⟧` is a selection and `¦` is a caret. */
 export function parse(marked: string): Snapshot {

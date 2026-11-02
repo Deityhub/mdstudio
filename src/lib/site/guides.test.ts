@@ -1,16 +1,16 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkPortability, getOutline } from "./markdown";
+import { checkPortability, getOutline } from "../markdown/markdown";
 import { GUIDES, guideBySlug, guidePath, readingMinutes } from "./guides";
 import { SITE } from "./seo";
 
-const files = import.meta.glob("../../content/guides/*.md", {
+const files = import.meta.glob("../../../content/guides/*.md", {
   query: "?raw",
   import: "default",
   eager: true,
 }) as Record<string, string>;
-const body = (slug: string) => files[`../../content/guides/${slug}.md`] ?? "";
+const body = (slug: string) => files[`../../../content/guides/${slug}.md`] ?? "";
 
 describe("guide catalogue", () => {
   it("has a Markdown file for every guide and no orphan files", () => {

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { documentStore, SAMPLE } from "@/lib/documentStore";
-import { pageHead } from "@/lib/seo";
+import { documentStore, SAMPLE } from "@/lib/storage/documentStore";
+import { pageHead } from "@/lib/site/seo";
 
 export const Route = createFileRoute("/editor/")({
   head: () =>

@@ -2,7 +2,7 @@
 // deploy:  bun scripts/indexnow.ts
 // The key is the name of the public/<32 hex>.txt file; engines fetch it to verify we own the site.
 import { readdirSync } from "node:fs";
-import { indexNowPayload, INDEXABLE_PATHS } from "../src/lib/seo";
+import { indexNowPayload, INDEXABLE_PATHS } from "../src/lib/site/seo";
 
 const file = readdirSync("public").find((f) => /^[0-9a-f]{32}\.txt$/.test(f));
 if (!file) throw new Error("No IndexNow key file in public/");

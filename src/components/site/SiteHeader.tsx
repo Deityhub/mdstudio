@@ -2,7 +2,7 @@ import { ArrowUpRight, Github } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { SITE } from "@/lib/seo";
+import { SITE } from "@/lib/site/seo";
 
 /** Header for the public pages: logo (home), theme toggle and the GitHub link. */
 export function SiteHeader() {

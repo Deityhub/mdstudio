@@ -1,4 +1,4 @@
-import { metadataSchema, type WritingEvent, type WritingRequest } from "./ai-writing";
+import { metadataSchema, type WritingEvent, type WritingRequest } from "./writing";
 
 export type ProviderId = "openai" | "anthropic" | "gemini" | "compatible";
 export type AiConnection = { provider: ProviderId; baseUrl: string; model: string; apiKey: string };

@@ -1,13 +1,13 @@
 // Loading and presenting guide text. The Markdown is imported lazily, one file at a time.
 import type { Guide } from "./guides";
 
-const files = import.meta.glob("../../content/guides/*.md", {
+const files = import.meta.glob("../../../content/guides/*.md", {
   query: "?raw",
   import: "default",
 }) as Record<string, () => Promise<string>>;
 
 export async function loadGuideMarkdown(slug: string): Promise<string | null> {
-  const load = files[`../../content/guides/${slug}.md`];
+  const load = files[`../../../content/guides/${slug}.md`];
   return load ? load() : null;
 }
 

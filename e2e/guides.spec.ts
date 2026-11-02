@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { GUIDES } from "../src/lib/guides";
+import { GUIDES } from "../src/lib/site/guides";
 
 const ORIGIN = "https://mdstudio.deityhub.com";
 

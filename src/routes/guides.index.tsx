@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { formatDate } from "@/lib/guides-content";
-import { GUIDES, guidePath } from "@/lib/guides";
-import { breadcrumbJsonLd, jsonLdScript, pageHead } from "@/lib/seo";
+import { formatDate } from "@/lib/site/guides-content";
+import { GUIDES, guidePath } from "@/lib/site/guides";
+import { breadcrumbJsonLd, jsonLdScript, pageHead } from "@/lib/site/seo";
 
 const TITLE = "Markdown Guides: Portable, Cross-Platform Writing | mdstudio";
 const DESCRIPTION =
