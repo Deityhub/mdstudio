@@ -18,7 +18,6 @@ Editor, strict preview, scroll sync, profiles + portability checker, import/drag
 10. **Complete formatting toolbar**: every Markdown/GFM construct and profile extension (headings 1-6, emphasis, code, links, images, quotes, lists, task lists, tables, rules, footnotes, math, diagrams, alerts). AC: grouped, overflow menu on phones, shortcuts in tooltips, tools flagged when the profile can't render them, edit actions are pure tested functions.
 11. **Obsidian profile rendering**: `==highlight==` renders as a marker (done); render `[[wiki-links]]` in the Obsidian profile so the preview matches the platform.
 12. **Studio polish**: rename draft, canonical URL and draft toggle in front matter.
-13. **WYSIWYG live-preview mode** (optional): CodeMirror decorations hide syntax markers on inactive lines, Markdown remains the document. AC: round-trip is lossless by construction, never the default, works on phone.
 
 ## Phase 2 — Library & organization 🔜
 1. **Full-text search** across drafts (MiniSearch in a worker).
