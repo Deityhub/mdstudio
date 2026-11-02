@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.2 (2026-11-02)
+
+### Fixes
+
+- replace the leftover favicon.ico with the mdstudio mark
+
+### Performance
+
+- keep Mermaid and KaTeX out of the Cloudflare Worker bundle
+
 ## 0.1.1 (2026-11-02)
 
 ### Features
