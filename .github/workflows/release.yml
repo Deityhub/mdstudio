@@ -106,6 +106,15 @@ jobs:
       # Default preset builds the Workers bundle and the wrangler config (name and custom domain
       # come from vite.config.ts).
       - run: bun run build
+        env:
+          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+      - name: Apply database migrations
+        if: vars.D1_DATABASE_ID != ''
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply DB --remote --config .output/server/wrangler.json
       - uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

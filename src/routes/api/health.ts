@@ -1,11 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { sql } from "drizzle-orm";
 
-// Liveness probe for Docker, uptime checks and the CI smoke test.
-// Database connectivity is added when the server blueprint is activated (milestone 3).
+// Liveness probe for Docker, uptime checks and the CI smoke test. Reports whether the database
+// answers, without failing the probe: the editor itself works fully offline of the server.
 export const Route = createFileRoute("/api/health")({
   server: {
     handlers: {
-      GET: () => Response.json({ status: "ok" }, { headers: { "cache-control": "no-store" } }),
+      GET: async ({ request }) => {
+        let database: "ok" | "unavailable" = "ok";
+        try {
+          const { getDb } = await import("@/server/db");
+          await (await getDb(request)).run(sql`select 1`);
+        } catch (error) {
+          console.error(error);
+          database = "unavailable";
+        }
+        return Response.json(
+          { status: "ok", database },
+          { headers: { "cache-control": "no-store" } },
+        );
+      },
     },
   },
 });

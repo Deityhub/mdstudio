@@ -1,7 +1,9 @@
 # Infra blueprints
 
-One Drizzle SQLite schema, two deployments. Nothing here is wired into the app yet: milestone 3
-("Activate Server Blueprint" in `roadmap.md`) moves it into `src/server/`.
+One Drizzle SQLite schema, two deployments. `src/server/db.ts` (`getDb(request)`) opens the D1
+binding `DB` on Cloudflare or the SQLite file in `DATA_DIR` in Docker, and `GET /api/health` reports
+whether it answers. The Workers build aliases the Node driver to a stub, so better-sqlite3 stays out
+of the Worker bundle. Auth, sync and uploads are the next milestone 3 units.
 
 | Path | What it is |
 | --- | --- |

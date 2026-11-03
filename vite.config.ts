@@ -22,7 +22,20 @@ export default defineConfig(({ command }) => ({
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(appVersion),
   },
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: [
+      // The Workers bundle must not contain better-sqlite3 (see src/server/node-driver.ts).
+      ...(preset === "cloudflare-module"
+        ? [
+            {
+              find: "@/server/node-driver",
+              replacement: fileURLToPath(
+                new URL("./src/server/node-driver.stub.ts", import.meta.url),
+              ),
+            },
+          ]
+        : []),
+      { find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
+    ],
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   plugins: [
