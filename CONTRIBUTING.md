@@ -11,6 +11,17 @@ bun install
 bun run dev        # http://localhost:8080
 ```
 
+### Trying accounts against the shared preview database
+
+`bun run dev` has no database. To test sign-in or sync against real remote data, run
+`wrangler login` once, then `bun run dev:remote`: it builds the app and serves it on
+`http://localhost:8080` with its D1 binding pointed at the shared **preview** database (never
+production). Add `--migrate` to apply pending migrations to that database first. There is no hot
+reload; stop it, change code and run it again. The preview database id comes from the
+`D1_PREVIEW_DATABASE_ID` repository variable (`gh` must be logged in) or the environment variable
+of the same name. In CI or any non-interactive shell, set `CLOUDFLARE_API_TOKEN` instead of logging
+in.
+
 ## Branches and pull requests
 
 - `main` is production, `dev` is development. Branch from `dev` and open the PR into `dev`.
