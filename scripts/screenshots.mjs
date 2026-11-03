@@ -1,5 +1,6 @@
 // Regenerates docs/ui-screenshots/*.png (used by the README and docs/UI_SPEC.md) from the
-// production self-hosted build, so they always show the current UI.
+// production self-hosted build, so they always show the current UI. Run it whenever the UI
+// changes, look at every image, and commit them with the docs that describe them.
 //   bun run screenshots
 import { spawn, execSync } from "node:child_process";
 import { chromium } from "@playwright/test";
@@ -100,8 +101,10 @@ try {
 
   // 02 split view with the checks panel, 03 checks, outline, front matter
   let page = await open(desktop);
-  await shot(page, "02_editor_split_view");
-  await shot(page, "03_editor_checks_panel"); // the Checks panel is open by default
+  await shot(page, "02_editor_split_view"); // the side panel starts closed below 1536px
+  await page.getByRole("button", { name: "Checks" }).click();
+  await page.waitForTimeout(300);
+  await shot(page, "03_editor_checks_panel");
   await page.getByRole("button", { name: "Outline" }).first().click();
   await page.waitForTimeout(300);
   await shot(page, "04_editor_outline_panel");
@@ -111,6 +114,72 @@ try {
   await page.getByRole("button", { name: "AI writer" }).click();
   await page.waitForTimeout(400);
   await shot(page, "05_ai_writer_dialog");
+  await page.keyboard.press("Escape");
+
+  // 10 the checker rules dialog, with a standard turned on
+  await page.getByRole("button", { name: "Checks" }).click();
+  await page.getByRole("button", { name: "Rules" }).click();
+  const rules = page.getByRole("dialog", { name: "Checker rules" });
+  await rules.getByRole("tab", { name: "Standards" }).click();
+  await rules.getByRole("switch", { name: "Check title length" }).click();
+  await rules.getByRole("switch", { name: "Check required front matter fields" }).click();
+  await page.waitForTimeout(300);
+  await shot(page, "10_checker_rules");
+  await page.keyboard.press("Escape");
+
+  // 11 export menu, which now includes all drafts as a ZIP
+  await page.getByRole("button", { name: "Export" }).click();
+  await page.waitForTimeout(300);
+  await shot(page, "11_export_menu");
+  await page.keyboard.press("Escape");
+
+  // 12 history: save a version, change the text, compare it with the current draft
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  // the first autosave already kept the sample as it is, so change it before saving a version
+  await page.locator(".cm-line", { hasText: "## Highlights" }).click();
+  await page.keyboard.press("End");
+  await page.keyboard.insertText(" of this release");
+  await page.getByRole("button", { name: "Save a version now" }).click();
+  await page.locator(".cm-line", { hasText: "## Highlights" }).click();
+  await page.keyboard.press("Home");
+  await page.keyboard.insertText("A new paragraph added after the first version was saved.\n\n");
+  await page.getByRole("button", { name: /Saved by you/ }).click();
+  await page.waitForTimeout(4500); // let the "Version saved" toast go
+  await shot(page, "12_history_compare");
+  await page.keyboard.press("Escape");
+  await page.close();
+
+  // 13 library: folders, tags and search across several drafts
+  page = await browser.newPage(desktop);
+  await page.goto(`${BASE}/editor`);
+  await page.locator(".cm-content").waitFor();
+  const drafts = [
+    ["Launch checklist", "tags: [launch, docs]", "A short checklist before publishing."],
+    ["Weekly notes", "tags: [notes]", "Things that happened this week."],
+    ["API guide", "tags: [docs, api]", "How the API works, step by step."],
+    ["Release notes", "tags: [changelog, docs]", "What shipped in this release."],
+  ];
+  for (const [i, [title, tags, body]] of drafts.entries()) {
+    if (i > 0) await page.getByRole("button", { name: "New draft" }).click();
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.insertText(`---\n${tags}\n---\n\n# ${title}\n\n${body}\n`);
+    await page.waitForTimeout(500);
+  }
+  for (const name of ["Writing", "Archive"]) {
+    await page.getByRole("button", { name: "New folder" }).click();
+    await page.getByLabel("New folder name").fill(name);
+    await page.getByRole("button", { name: "Create folder" }).click();
+  }
+  const nav = page.getByRole("navigation", { name: "Drafts" });
+  for (const title of ["API guide", "Release notes"]) {
+    await nav
+      .getByText(title, { exact: true })
+      .dragTo(nav.getByRole("group", { name: "Folder Writing" }));
+    await page.waitForTimeout(300);
+  }
+  await page.waitForTimeout(500);
+  await shot(page, "13_library");
   await page.close();
 
   // 06 phone

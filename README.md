@@ -27,17 +27,25 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 
 ## Features
 
-- **Faithful live preview.** Strict CommonMark and GitHub Flavored Markdown, sanitized, with syntax-highlighted code.
+- **Faithful live preview.** Strict CommonMark and GitHub Flavored Markdown, sanitized, with syntax-highlighted code. Scrolling stays aligned line by line, and clicking a block in the preview puts the editor cursor on its source line.
 - **Portability checker.** Raw HTML, local images and links, base64 images, wiki-links, `==highlights==`, math, Mermaid, trailing-space line breaks, missing alt text, unclosed tags and more. Every issue is clickable. Turn rules on or off, add publication standards (title and description length, required front matter, heading structure) and your own text or regex rules, and share them as a JSON file.
 - **Target profiles.** Strict CommonMark, GitHub, dev.to / Hashnode and Obsidian. The preview, the checks and the toolbar warnings follow your choice.
 - **Complete formatting toolbar.** Marks, headings, lists, task lists, links, images, footnotes, rules, code blocks, tables with cell navigation, GitHub alerts, math, diagrams and HTML helpers. Fully keyboard accessible.
 - **Math and diagrams.** KaTeX and Mermaid, rendered on demand, themed for light and dark.
 - **Local-first and private.** Drafts autosave to your browser's IndexedDB. No account, no uploads.
-- **Import and export.** Open `.md` files or paste from Google Docs, Notion and the web. Export clean UTF-8 Markdown (LF endings), self-contained Markdown with embedded images, or standalone HTML.
+- **A library that scales.** Search every draft, filter by tag, organise drafts in folders (drag and drop), and rename them without touching the text.
+- **Version history.** Versions are kept automatically as you write; compare any of them side by side with the current draft and restore it.
+- **Works offline.** The studio keeps working with no connection and can be installed as an app.
+- **Import and export.** Open `.md` files, a ZIP or a whole folder, or paste from Google Docs, Notion and the web. Export clean UTF-8 Markdown (LF endings), self-contained Markdown with embedded images, standalone HTML, or every draft at once as a ZIP.
 - **Optional AI writer, bring your own key.** OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint (Ollama, OpenRouter, Groq). Keys stay in session memory and requests go straight from your browser to the provider.
 - **Responsive and themed.** Split view on desktop, single pane with drawers on phones, light and dark mode.
 - **Self-hostable.** One Docker container with SQLite, or Cloudflare Workers.
 - **Guides.** Seven practical [guides to portable Markdown](https://mdstudio.deityhub.com/guides), written in Markdown and rendered by mdstudio itself.
+
+<p align="center">
+  <img src="docs/ui-screenshots/13_library.png" alt="The drafts library with search, tags and folders" width="440">
+  <img src="docs/ui-screenshots/12_history_compare.png" alt="Comparing a saved version with the current draft" width="440">
+</p>
 
 <p align="center">
   <img src="docs/ui-screenshots/09_editor_dark.png" alt="mdstudio in dark mode" width="440">

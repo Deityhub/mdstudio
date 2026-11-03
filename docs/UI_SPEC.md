@@ -14,7 +14,7 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 ## 1b. Guides `/guides` and `/guides/$slug`
 Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.
 
-## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`
+## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`, `13_library.png`, `11_export_menu.png`
 - **Top bar, row 1:** drafts toggle · wordmark link and current title · Import dropdown (files or a ZIP, or a folder) · Install (only when the browser offers to install the app) · AI writer · Export dropdown (including Download all drafts as a ZIP) · Focus mode.
 - **Top bar, row 2:** target-platform Select (GitHub, Strict CommonMark, dev.to / Hashnode, Obsidian; remembered per device) · view toggle (Editor / Split / Preview) · panel buttons on mid-size screens.
 - **Export dropdown:** Download .md, Copy Markdown, Download self-contained .md and Copy self-contained Markdown (both enabled only when the draft has local images), Copy rendered HTML, Download standalone .html, and the "Normalize on export" switch.
@@ -38,10 +38,12 @@ Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and
 - **Side panel buttons:** Checks (badge with the count of warnings and errors), Outline, Front matter, History (saved versions of the draft; opening one shows a side-by-side comparison with the current text and a Restore button).
 - **Status bar:** words · reading time · image count · an "Offline" note when there is no connection · save status (Saving… / Saved in this browser / Not saved) · target platform.
 
-## 3. Checks panel — `03_editor_checks_panel.png`
+## 3. Checks panel and rules — `03_editor_checks_panel.png`, `10_checker_rules.png`
 A **Rules** button at the top opens the Checker rules dialog (tabs Portability, Standards, Your rules; switches, severities and limits; Export, Import and Reset to defaults; a note on changing rules per draft from its front matter). Below it, one card per issue, sorted by line: severity icon, `L<line>` and a one-sentence message; issues from a standard or from the writer's own rules carry a small `standard · rule-id` or `yours · rule-id` tag. Clicking a card switches to the editor and jumps to that line. Rules are listed in `SYSTEM_SPEC.md` §4.1 and §4.2.
 
 ## 4. Outline — `04_editor_outline_panel.png`
+The **History** panel (the clock button beside Checks, Outline and Front matter) is shown in `12_history_compare.png`: a list of saved versions and, once one is opened, a side-by-side comparison with the current draft.
+
 Indented heading list; clicking jumps to the heading's line.
 
 ## 5. Front matter — `04_editor_frontmatter_panel.png`

@@ -30,6 +30,8 @@ bun run e2e         # builds the self-hosted output and runs Playwright
 bun run licenses   # only needed after changing dependencies
 ```
 
+If you changed how the UI looks, also run `bun run screenshots` (it rebuilds the app and rewrites `docs/ui-screenshots/`), look at the images it changes, and update `README.md` and `docs/UI_SPEC.md` where they describe that part of the UI.
+
 ## Dependencies
 
 Prefer a few lines in this project over a new package. A new dependency must pass `bun run licenses`;
