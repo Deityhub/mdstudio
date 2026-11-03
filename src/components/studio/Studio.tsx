@@ -17,6 +17,7 @@ import {
   Image as ImageIcon,
   Upload,
   Archive,
+  SlidersHorizontal,
   FolderUp,
   FileUp,
   MonitorDown,
@@ -70,6 +71,10 @@ import { HistoryPanel } from "@/components/studio/HistoryPanel";
 import { Library } from "@/components/studio/Library";
 import { historyStore, type Revision } from "@/lib/storage/history";
 import { normalizeFolder, resolveFolder } from "@/lib/storage/library";
+import { runChecks } from "@/lib/checker/run";
+import { loadConfig, saveConfig } from "@/lib/checker/storage";
+import { DEFAULT_CONFIG, type CheckConfig } from "@/lib/checker/config";
+import { RulesDialog } from "@/components/studio/RulesDialog";
 import { buildArchive, parseArchive, type ImportedDoc } from "@/lib/storage/archive";
 import { useInstallPrompt, useOnline } from "@/lib/pwa/hooks";
 import { createZip, readZip, ZIP_LIMITS, type ZipEntry } from "@/lib/storage/zip";
@@ -79,7 +84,7 @@ import {
   PROFILES,
   type Profile,
   renderMarkdown,
-  checkPortability,
+  type Issue,
   getOutline,
   getStats,
   deriveTitle,
@@ -202,6 +207,8 @@ export function Studio({ docId }: { docId: string }) {
     };
   }, []);
   const [normalize, setNormalize] = useState(false);
+  const [checkConfig, setCheckConfig] = useState<CheckConfig>(DEFAULT_CONFIG);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const editor = useRef<EditorHandle>(null);
   const preview = useRef<HTMLDivElement>(null);
   const install = useInstallPrompt();
@@ -231,6 +238,7 @@ export function Studio({ docId }: { docId: string }) {
     const p = localStorage.getItem("md:profile") as Profile | null;
     if (p && PROFILES.some((x) => x.id === p)) setProfile(p);
     setNormalize(localStorage.getItem("md:normalize") === "1");
+    setCheckConfig(loadConfig());
     // Checks start open only on wide screens; below that the editor keeps the room until asked.
     if (window.matchMedia(`(min-width: ${CHECKS_OPEN_MIN_WIDTH}px)`).matches) setPanel("checks");
     const w = localStorage.getItem("md:library-width");
@@ -247,6 +255,10 @@ export function Studio({ docId }: { docId: string }) {
     setLibraryWidth(w);
     if (save) localStorage.setItem("md:library-width", String(w));
     return w;
+  };
+  const chooseCheckConfig = (config: CheckConfig) => {
+    setCheckConfig(config);
+    saveConfig(config);
   };
   const chooseNormalize = (on: boolean) => {
     setNormalize(on);
@@ -424,7 +436,10 @@ export function Studio({ docId }: { docId: string }) {
     [profile, theme],
   );
   useLayoutEffect(() => syncPreview(previewBody.current), [html, syncPreview]);
-  const issues = useMemo(() => checkPortability(deferred, profile), [deferred, profile]);
+  const issues = useMemo(
+    () => runChecks(deferred, profile, checkConfig).issues,
+    [deferred, profile, checkConfig],
+  );
   const outline = useMemo(() => getOutline(deferred), [deferred]);
   const stats = useMemo(() => getStats(deferred), [deferred]);
   const fm = useMemo(() => splitFrontMatter(content), [content]);
@@ -850,7 +865,13 @@ export function Studio({ docId }: { docId: string }) {
   );
   const panelContent = (
     <div className="flex-1 overflow-y-auto p-3">
-      {activePanel === "checks" && <ChecksPanel issues={issues} onGo={(l) => goToLine(l)} />}
+      {activePanel === "checks" && (
+        <ChecksPanel
+          issues={issues}
+          onGo={(l) => goToLine(l)}
+          onOpenRules={() => setRulesOpen(true)}
+        />
+      )}
       {activePanel === "outline" &&
         (outline.length ? (
           <ul className="space-y-0.5">
@@ -1314,6 +1335,12 @@ export function Studio({ docId }: { docId: string }) {
           onSubmit={submitImage}
           returnFocus={() => editor.current?.focus()}
         />
+        <RulesDialog
+          open={rulesOpen}
+          onOpenChange={setRulesOpen}
+          config={checkConfig}
+          onChange={chooseCheckConfig}
+        />
         <ShortcutsDialog
           open={shortcuts}
           onOpenChange={setShortcuts}
@@ -1367,50 +1394,68 @@ function EditorFallback() {
 function ChecksPanel({
   issues,
   onGo,
+  onOpenRules,
 }: {
-  issues: ReturnType<typeof checkPortability>;
+  issues: Issue[];
   onGo: (l: number) => void;
+  onOpenRules: () => void;
 }) {
+  const rules = (
+    <Button variant="outline" size="sm" className="w-full" onClick={onOpenRules}>
+      <SlidersHorizontal className="h-4 w-4" /> Rules
+    </Button>
+  );
   if (!issues.length)
     return (
-      <div className="flex flex-col items-center gap-2 py-8 text-center">
-        <CheckCircle2 className="h-8 w-8 text-primary" />
-        <p className="text-sm font-medium">Portable</p>
-        <p className="text-xs text-muted-foreground">
-          Nothing here should render differently on your target platform.
-        </p>
+      <div className="space-y-3">
+        {rules}
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <CheckCircle2 className="h-8 w-8 text-primary" />
+          <p className="text-sm font-medium">Portable</p>
+          <p className="text-xs text-muted-foreground">
+            Nothing here should render differently on your target platform.
+          </p>
+        </div>
       </div>
     );
   return (
-    <ul className="space-y-2">
-      {issues.map((i, k) => {
-        const Icon =
-          i.severity === "error" ? CircleAlert : i.severity === "warning" ? AlertTriangle : Info;
-        return (
-          <li key={k}>
-            <button
-              onClick={() => onGo(i.line)}
-              className="flex w-full gap-2 rounded-md border border-border bg-card p-2.5 text-left hover:bg-accent"
-            >
-              <Icon
-                className={cn(
-                  "mt-0.5 h-4 w-4 shrink-0",
-                  i.severity === "error"
-                    ? "text-destructive"
-                    : i.severity === "warning"
-                      ? "text-warning"
-                      : "text-info",
-                )}
-              />
-              <span className="text-sm leading-snug">
-                <span className="mr-1 font-mono text-xs text-muted-foreground">L{i.line}</span>
-                {i.message}
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-3">
+      {rules}
+      <ul className="space-y-2">
+        {issues.map((i, k) => {
+          const Icon =
+            i.severity === "error" ? CircleAlert : i.severity === "warning" ? AlertTriangle : Info;
+          return (
+            <li key={k}>
+              <button
+                onClick={() => onGo(i.line)}
+                className="flex w-full gap-2 rounded-md border border-border bg-card p-2.5 text-left hover:bg-accent"
+              >
+                <Icon
+                  className={cn(
+                    "mt-0.5 h-4 w-4 shrink-0",
+                    i.severity === "error"
+                      ? "text-destructive"
+                      : i.severity === "warning"
+                        ? "text-warning"
+                        : "text-info",
+                  )}
+                />
+                <span className="text-sm leading-snug">
+                  <span className="mr-1 font-mono text-xs text-muted-foreground">L{i.line}</span>
+                  {i.message}
+                  {i.group && (
+                    <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                      {i.group === "custom" ? "yours" : "standard"} · {i.rule}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

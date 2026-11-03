@@ -319,9 +319,16 @@ function parse(md: string, profile: Profile): MdRoot {
 /* ---------------- portability checker ---------------- */
 
 export type Severity = "error" | "warning" | "info";
-export type Issue = { line: number; rule: string; message: string; severity: Severity };
+export type Issue = {
+  line: number;
+  rule: string;
+  message: string;
+  severity: Severity;
+  /** Where the rule comes from, when it is not a built-in portability rule. */
+  group?: "standard" | "custom";
+};
 
-function fencedLines(lines: string[]): Set<number> {
+export function fencedLines(lines: string[]): Set<number> {
   const set = new Set<number>();
   let fence: string | null = null;
   lines.forEach((l, i) => {

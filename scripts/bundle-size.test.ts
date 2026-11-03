@@ -44,6 +44,32 @@ describe("checkBundle", () => {
     expect(checkBundle(measureBundle(dir), limits).join("\n")).toMatch(/over the budget/);
   });
 
+  it("is not fooled by a content hash that happens to contain a library name", () => {
+    const small = { maxGzipBytes: 1000, forbidden: ["d3", "katex"] };
+    // real chunk names: the 8 character hash is random, and "d3" turns up in it now and then
+    for (const name of [
+      "_ssr/editor._docId-CFD3mtev.mjs",
+      "_ssr/index-ab_d3_xy.mjs",
+      "_ssr/x-D3aaaaaa.mjs",
+    ]) {
+      write(name, "x");
+    }
+    expect(checkBundle(measureBundle(dir), small)).toEqual([]);
+  });
+
+  it("still catches a library named in the file name, hashed or not", () => {
+    const small = { maxGzipBytes: 1000, forbidden: ["d3", "katex", "mermaid"] };
+    write("_libs/d3.mjs", "x");
+    write("_libs/d3-array.mjs", "x");
+    write("_ssr/katex-AbCdEfGh.mjs", "x");
+    write("_libs/@mermaid-js/parser.mjs", "x");
+    const problems = checkBundle(measureBundle(dir), small).join("\n");
+    expect(problems).toContain('"d3"');
+    expect(problems).toContain("_libs/d3-array.mjs");
+    expect(problems).toContain('"katex"');
+    expect(problems).toContain('"mermaid"');
+  });
+
   it("fails when a client-only library leaks into the Worker", () => {
     write("_libs/mermaid+[...].mjs", "x");
     write("_libs/katex.mjs", "x");

@@ -28,7 +28,7 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 ## Features
 
 - **Faithful live preview.** Strict CommonMark and GitHub Flavored Markdown, sanitized, with syntax-highlighted code.
-- **Portability checker.** Raw HTML, local images and links, base64 images, wiki-links, `==highlights==`, math, Mermaid, trailing-space line breaks, missing alt text, unclosed tags and more. Every issue is clickable.
+- **Portability checker.** Raw HTML, local images and links, base64 images, wiki-links, `==highlights==`, math, Mermaid, trailing-space line breaks, missing alt text, unclosed tags and more. Every issue is clickable. Turn rules on or off, add publication standards (title and description length, required front matter, heading structure) and your own text or regex rules, and share them as a JSON file.
 - **Target profiles.** Strict CommonMark, GitHub, dev.to / Hashnode and Obsidian. The preview, the checks and the toolbar warnings follow your choice.
 - **Complete formatting toolbar.** Marks, headings, lists, task lists, links, images, footnotes, rules, code blocks, tables with cell navigation, GitHub alerts, math, diagrams and HTML helpers. Fully keyboard accessible.
 - **Math and diagrams.** KaTeX and Mermaid, rendered on demand, themed for light and dark.

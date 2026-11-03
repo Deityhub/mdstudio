@@ -48,7 +48,7 @@
 - [x] **Obsidian Rendering:** `==highlight==` and `[[wiki-links]]` (with `|alias` and `#heading`) render in the Obsidian profile. `![[embeds]]` are not rendered.
 - [x] **Click-through Sync:** Click a block in the preview to put the editor cursor on its source line; the cursor's block gets a faint highlight in the preview.
 - [x] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
-- [ ] **Custom Checker Rules:** User-configurable linting rules and warnings for publication standards.
+- [x] **Custom Checker Rules:** Turn built-in rules on or off and change their severity; publication standards (title and description length, required front matter, heading structure, word count, tags); your own text or regex rules; settings kept in the browser, shareable as JSON, and overridable per draft from front matter.
 
 ---
 
