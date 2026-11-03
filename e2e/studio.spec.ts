@@ -872,3 +872,157 @@ test("scroll sync: both panes stay on the same lines, in either direction", asyn
   });
   expect(atEnd).toBeLessThan(3);
 });
+
+async function openRules(page: Page) {
+  const rules = page.getByRole("button", { name: "Rules" });
+  // the Checks panel is closed on narrower screens, and its button also closes it
+  await rules.waitFor({ state: "visible", timeout: 1000 }).catch(async () => {
+    await page.getByRole("button", { name: "Checks" }).click();
+  });
+  await rules.click();
+  return page.getByRole("dialog", { name: "Checker rules" });
+}
+const issueButtons = (page: Page) => page.locator("button", { hasText: /^L\d+/ });
+
+test("checker rules: switch a built-in rule off and change another's severity", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "see [[Page]] and <b>bold</b>");
+  await page.getByRole("button", { name: "Checks" }).click();
+  await expect(page.getByText("[[Wiki links]] only work")).toBeVisible();
+
+  const dialog = await openRules(page);
+  await dialog.getByRole("switch", { name: "Report [[Wiki link]]", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("[[Wiki links]] only work")).toBeHidden();
+  await expect(page.getByText("Raw HTML is stripped").first()).toBeVisible();
+
+  // the choice is kept across a reload
+  await page.reload();
+  const again = await openRules(page);
+  await expect(
+    again.getByRole("switch", { name: "Report [[Wiki link]]", exact: true }),
+  ).not.toBeChecked();
+  await expect(again.getByText("1 setting changed from the defaults")).toBeVisible();
+  await again.getByRole("button", { name: "Reset to defaults" }).click();
+  await again.getByRole("button", { name: "Click again to reset" }).click();
+  await expect(again.getByText("Using the defaults")).toBeVisible();
+  await expect(
+    again.getByRole("switch", { name: "Report [[Wiki link]]", exact: true }),
+  ).toBeChecked();
+});
+
+test("checker rules: a publication standard with limits you set", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "---\ntitle: A rather long title for a post\n---\n\nbody text");
+  await stored(page, "A rather long title");
+  const dialog = await openRules(page);
+  await dialog.getByRole("tab", { name: "Standards" }).click();
+  await dialog.getByRole("switch", { name: "Check title length" }).click();
+  await dialog.getByLabel("At most").fill("10");
+  await page.keyboard.press("Escape");
+
+  const issue = page.getByRole("button", { name: /The title is 30 characters; the limit is 10/ });
+  await expect(issue).toBeVisible();
+  await expect(issue).toContainText("standard · title-length");
+  await issue.click();
+  await expect(page.locator(".cm-activeLine")).toHaveText("title: A rather long title for a post");
+});
+
+test("checker rules: your own rules, with a message and the matched text", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "ship it\n\nwrite the TODO here\n\n```\nTODO in code is ignored\n```");
+  const dialog = await openRules(page);
+  await dialog.getByRole("tab", { name: "Your rules" }).click();
+  await dialog.getByRole("button", { name: "Add a rule" }).click();
+
+  // a pattern that isn't valid is explained, not saved
+  await dialog.getByLabel("Name").fill("TODO markers");
+  await dialog.getByRole("switch", { name: "Regular expression" }).click();
+  await dialog.getByLabel("Pattern (regular expression)").fill("(");
+  await dialog.getByLabel("Message").fill("Finish {match} before publishing");
+  await dialog.getByRole("button", { name: "Add rule" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("isn't a valid pattern");
+  await dialog.getByLabel("Pattern (regular expression)").fill("\\bTODO\\b");
+  await dialog.getByRole("button", { name: "Add rule" }).click();
+  await expect(dialog.getByText("/\\bTODO\\b/ · todo-markers")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  const issue = page.getByRole("button", { name: /Finish TODO before publishing/ });
+  await expect(issue).toBeVisible();
+  await expect(issue).toContainText("yours · todo-markers");
+  await expect(issueButtons(page).filter({ hasText: "Finish" })).toHaveCount(1); // the one in code is skipped
+  await issue.click();
+  await expect(page.locator(".cm-activeLine")).toHaveText("write the TODO here");
+
+  // edit, switch off, delete
+  const again = await openRules(page);
+  await again.getByRole("tab", { name: "Your rules" }).click();
+  await again.getByRole("switch", { name: "Use TODO markers" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /Finish TODO/ })).toBeHidden();
+  const third = await openRules(page);
+  await third.getByRole("tab", { name: "Your rules" }).click();
+  await third.getByRole("button", { name: "Delete TODO markers" }).click();
+  await expect(third.getByText("No rules yet.")).toBeVisible();
+});
+
+test("checker rules: a draft changes them from its front matter", async ({ page }) => {
+  await open(page);
+  await replaceText(page, "write the TODO here and [[a link]]");
+  const dialog = await openRules(page);
+  await dialog.getByRole("tab", { name: "Your rules" }).click();
+  await dialog.getByRole("button", { name: "Add a rule" }).click();
+  await dialog.getByLabel("Name").fill("todo");
+  await dialog.getByLabel("Text to find").fill("TODO");
+  await dialog.getByLabel("Message").fill("Finish it");
+  await dialog.getByRole("button", { name: "Add rule" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /Finish it/ })).toBeVisible();
+
+  await replaceText(
+    page,
+    "---\ntitle: T\nchecks:\n  todo: false\n  wiki-link: error\n  mystery: false\n---\n\nwrite the TODO here and [[a link]]",
+  );
+  await expect(page.getByRole("button", { name: /Finish it/ })).toBeHidden();
+  await expect(page.getByRole("button", { name: /Wiki links/ })).toBeVisible();
+  await expect(page.getByText('Unknown check "mystery".')).toBeVisible();
+});
+
+test("checker rules: export, reset and import a rules file", async ({ page }) => {
+  await open(page);
+  const dialog = await openRules(page);
+  await dialog.getByRole("switch", { name: "Report [[Wiki link]]", exact: true }).click();
+  await dialog.getByRole("tab", { name: "Standards" }).click();
+  await dialog.getByRole("switch", { name: "Check number of tags" }).click();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    dialog.getByRole("button", { name: "Export" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("mdstudio-check-rules.json");
+  const text = readFileSync((await download.path())!, "utf8");
+  const parsed = JSON.parse(text);
+  expect(parsed.builtin["wiki-link"]).toEqual({ enabled: false });
+  expect(parsed.standards["tag-count"].enabled).toBe(true);
+
+  await dialog.getByRole("button", { name: "Reset to defaults" }).click();
+  await dialog.getByRole("button", { name: "Click again to reset" }).click();
+  await expect(dialog.getByText("Using the defaults")).toBeVisible();
+
+  await dialog.getByLabel("Import rules file").setInputFiles({
+    name: "rules.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(text),
+  });
+  await expect(page.getByText("Rules imported")).toBeVisible();
+  await expect(dialog.getByText("2 settings changed from the defaults")).toBeVisible();
+
+  await dialog.getByLabel("Import rules file").setInputFiles({
+    name: "bad.json",
+    mimeType: "application/json",
+    buffer: Buffer.from("not json"),
+  });
+  await expect(page.getByText("That isn't valid JSON.")).toBeVisible();
+});

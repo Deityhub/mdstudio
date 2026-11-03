@@ -39,7 +39,7 @@ Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and
 - **Status bar:** words · reading time · image count · an "Offline" note when there is no connection · save status (Saving… / Saved in this browser / Not saved) · target platform.
 
 ## 3. Checks panel — `03_editor_checks_panel.png`
-One card per issue, sorted by line: severity icon, `L<line>` and a one-sentence message. Clicking a card switches to the editor and jumps to that line. Rules are listed in `SYSTEM_SPEC.md` §4.1.
+A **Rules** button at the top opens the Checker rules dialog (tabs Portability, Standards, Your rules; switches, severities and limits; Export, Import and Reset to defaults; a note on changing rules per draft from its front matter). Below it, one card per issue, sorted by line: severity icon, `L<line>` and a one-sentence message; issues from a standard or from the writer's own rules carry a small `standard · rule-id` or `yours · rule-id` tag. Clicking a card switches to the editor and jumps to that line. Rules are listed in `SYSTEM_SPEC.md` §4.1 and §4.2.
 
 ## 4. Outline — `04_editor_outline_panel.png`
 Indented heading list; clicking jumps to the heading's line.

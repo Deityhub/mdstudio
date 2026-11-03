@@ -150,6 +150,8 @@
 | `src/lib/storage/documentStore.ts`                 | Client persistence layer on raw IndexedDB (database `mdstudio-db`).                                                                                                                              | `list()`, `get(id)`, `save(doc)`, `create(partial)`, `remove(id)`, `folders.list/add/remove`, `renameFolder(from, to)`; `createDocumentStore(kv)` for tests; `MdDocument` model                                                                                                               |
 | `src/lib/storage/history.ts` | Local version history on the same key-value backend (`rev:<docId>:<time>:<id>` keys). | `createHistoryStore(kv)`, `historyStore`, `maybeSnapshot`, `save`, `list`, `remove`, `clear` |
 | `src/lib/storage/library.ts` | Pure library logic: front matter tags, search with snippets, tag filtering, folder grouping (empty folders included). | `docTags`, `allTags`, `filterDocs`, `groupByFolder`, `normalizeFolder`, `resolveFolder`, `searchSnippet` |
+| `src/lib/checker/config.ts` | Checker rule settings: the zod schema, defaults, the list of built-in rule ids, JSON export and import, and `applyOverrides` for a draft's `checks:` front matter. | `CheckConfig`, `DEFAULT_CONFIG`, `parseConfig`, `exportConfig`, `importConfig`, `applyOverrides` |
+| `src/lib/checker/{standards,custom,run,storage}.ts` | The publication standards, the writer's own pattern rules (with limits and a guard against runaway patterns), the runner that merges all issues for the Checks panel, and the localStorage load and save. | `runStandards`, `runCustomRules`, `validateCustomRule`, `runChecks`, `loadConfig`, `saveConfig` |
 | `src/lib/storage/zip.ts` | Dependency-free ZIP reader and writer (deflate through `CompressionStream`; no encryption or ZIP64). Limits: 5,000 files, 256 MB unpacked. | `createZip(entries)`, `readZip(bytes, limits?)`, `ZIP_LIMITS` |
 | `src/lib/storage/archive.ts` | Drafts to and from archive files: `Folder/title.md`, images under `images/`, library folders as directories. | `buildArchive(docs)`, `parseArchive(files)`, `mapImageSrc`, `dataUriToBytes` |
 | `src/lib/editor/diff.ts` | Dependency-free line diff (longest common subsequence, large inputs shown whole) producing side-by-side rows. | `diffLines(a, b)`, `diffStats(rows)` |
@@ -194,6 +196,16 @@ Each issue carries a 1-based `line` that points at the offending text (clicking 
 | `gfm-table` / `gfm-task` / `gfm-strike` / `gfm-footnote` | GFM extensions under the Strict CommonMark profile                                                                              | warning                    |
 
 `math`, `mermaid` and `alert` follow `FEATURE_SUPPORT`: rendered by the preview where supported, flagged elsewhere.
+
+### 4.2 Checker rules (`src/lib/checker/`)
+
+The Checks panel shows three kinds of issue, all produced by `runChecks(md, profile, config)` and merged by line:
+
+- **Portability rules** (section 4.1), with the writer's on/off and severity choices applied afterwards. The rule ids are listed in `BUILTIN_RULES`; a rule that a profile renders stays quiet on its own.
+- **Publication standards**, off until turned on, each with a severity and limits: `title-length` (front matter title, else the first heading), `description-length`, `required-fields`, `heading-structure` (one `#` heading, no skipped levels), `word-count` (as the status bar counts) and `tag-count`. They use `splitFrontMatter`, `getOutline` and `getStats` from `markdown.ts`, so there is still one Markdown parser.
+- **The writer's own rules**: plain text (optionally whole-word) or a regular expression, a message in which `{match}` is the text found, and a severity. They run over the text outside fenced code and front matter, report the first match on each line, at most 50 lines per rule, and look at only the first 2,000 characters of a line. A pattern that repeats a repeat (like `(a+)+`) is refused, because a regular expression cannot be interrupted; this is a heuristic guard, noted in `custom.ts`. Up to 50 rules, patterns up to 200 characters.
+
+**Where settings live.** One set per browser, in `localStorage` (`md:check-rules`, validated with zod and replaced by the defaults when invalid), edited in the Rules dialog and exportable and importable as JSON (200 KB limit) so a team can share standards. **A draft can override them** with a `checks:` map in its front matter: `rule: false` or `true` switches a rule off or on, `rule: error|warning|info` sets its severity, and `title-length: { max: 80 }` sets and enables a standard's limits. The ids are those in the Rules dialog. A setting that is not understood becomes an info note (`checks-config`) on the `checks:` line instead of being ignored silently. Overrides never change the browser's settings.
 
 ---
 
