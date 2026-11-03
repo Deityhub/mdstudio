@@ -16,6 +16,24 @@ const MESSAGES: Record<string, string> = {
 
 export const authMessage = (code: string) => MESSAGES[code] ?? "Something went wrong. Try again.";
 
+// The last user the server confirmed, so an offline reload keeps showing that account's drafts.
+const REMEMBERED = "md:account";
+export function rememberUser(user: AccountUser | null) {
+  try {
+    if (user) localStorage.setItem(REMEMBERED, JSON.stringify(user));
+    else localStorage.removeItem(REMEMBERED);
+  } catch {
+    // storage unavailable: the account just isn't remembered offline
+  }
+}
+function rememberedUser(): AccountUser | null {
+  try {
+    return JSON.parse(localStorage.getItem(REMEMBERED) ?? "null") as AccountUser | null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchAccount(): Promise<Account> {
   try {
     const res = await fetch("/api/auth/me");
@@ -23,9 +41,11 @@ export async function fetchAccount(): Promise<Account> {
       user?: AccountUser | null;
       providers?: { github?: boolean };
     };
+    rememberUser(body.user ?? null);
     return { user: body.user ?? null, github: body.providers?.github === true };
   } catch {
-    return { user: null, github: false };
+    // Can't reach the server: assume nothing changed rather than hiding the account's drafts.
+    return { user: rememberedUser(), github: false };
   }
 }
 
@@ -41,6 +61,7 @@ export async function signIn(
       body: JSON.stringify({ email, password }),
     });
     const body = (await res.json()) as { user?: AccountUser; error?: string };
+    if (body.user) rememberUser(body.user);
     return body.user ? { user: body.user } : { error: authMessage(body.error ?? "") };
   } catch {
     return { error: "Can't reach the server. Check your connection and try again." };
@@ -48,5 +69,6 @@ export async function signIn(
 }
 
 export async function signOut() {
+  rememberUser(null);
   await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
 }

@@ -12,6 +12,9 @@ import {
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountMenu } from "@/components/studio/AccountMenu";
+import { useAccount } from "@/lib/account/store";
+import { addToCloud, removeFromCloud, syncLabel, useCloud, useSync } from "@/lib/sync/hooks";
+import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -79,7 +82,13 @@ import { RulesDialog } from "@/components/studio/RulesDialog";
 import { buildArchive, parseArchive, type ImportedDoc } from "@/lib/storage/archive";
 import { useInstallPrompt, useOnline } from "@/lib/pwa/hooks";
 import { createZip, readZip, ZIP_LIMITS, type ZipEntry } from "@/lib/storage/zip";
-import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/storage/documentStore";
+import {
+  documentStore,
+  docTitle,
+  indexedDbStore,
+  SAMPLE,
+  type MdDocument,
+} from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
 import {
   PROFILES,
@@ -267,19 +276,35 @@ export function Studio({ docId }: { docId: string }) {
   };
 
   const [folderNames, setFolderNames] = useState<string[]>([]);
+  // A draft kept in the cloud belongs to its account: it is hidden while anyone else, or nobody,
+  // is signed in. Until the server has answered, nothing that belongs to an account is shown.
+  const { user: account, loaded: accountLoaded } = useAccount();
+  const visibleTo = useRef<string | undefined>(undefined);
+  visibleTo.current = account?.id;
   const refreshList = useCallback(
     () =>
-      Promise.all([documentStore.list(), documentStore.folders.list()]).then(([d, f]) => {
-        setDocs(d);
+      Promise.all([
+        documentStore.list(),
+        documentStore.folders.list(),
+        cloudOwners(indexedDbStore),
+      ]).then(([d, f, owners]) => {
+        setDocs(d.filter((x) => isVisible(owners, x.id, visibleTo.current)));
         setFolderNames(f);
       }),
     [],
   );
   useEffect(() => {
+    if (!accountLoaded) return;
     setMissing(false);
-    documentStore.get(docId).then((d) => (d ? setDoc(d) : setMissing(true)));
+    Promise.all([documentStore.get(docId), cloudOwners(indexedDbStore)]).then(([d, owners]) => {
+      if (d && isVisible(owners, d.id, account?.id)) setDoc(d);
+      else {
+        setDoc(null);
+        setMissing(true);
+      }
+    });
     refreshList();
-  }, [docId, refreshList]);
+  }, [docId, refreshList, accountLoaded, account?.id]);
 
   // autosave: debounced, but any unsaved draft is flushed before it can be lost
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -334,6 +359,43 @@ export function Studio({ docId }: { docId: string }) {
       flush();
     };
   }, [docId, flush]);
+
+  // Optional account sync of the drafts chosen for the cloud: a no-op while signed out. Cloud
+  // changes to the open draft wait while it has unsaved edits, then load into the editor.
+  const syncStatus = useSync(account?.id, {
+    isBusy: (id) => pending.current?.id === id,
+    onReport: (report) => {
+      if (report.applied.length || report.removed.length || report.detached.length)
+        void refreshList();
+      if (report.applied.includes(docId)) void documentStore.get(docId).then((d) => d && setDoc(d));
+      if (report.removed.includes(docId)) setMissing(true);
+      if (report.replaced.length)
+        toast.info(
+          `A newer edit from another device replaced ${report.replaced.length === 1 ? "a draft" : `${report.replaced.length} drafts`}`,
+          {
+            id: "sync-replaced",
+            description: "The text it replaced is in the draft's History.",
+          },
+        );
+      if (report.detached.length)
+        toast.info("A draft is no longer in your cloud", {
+          id: "sync-detached",
+          description:
+            "It was deleted on another device after you edited it here, so it stays on this device only.",
+        });
+      if (report.overLimit.length)
+        toast.error("Your cloud is full", {
+          id: "sync-full",
+          description: `${report.overLimit.length === 1 ? "A draft" : `${report.overLimit.length} drafts`} stayed on this device only. Remove a draft from the cloud to make room.`,
+        });
+      if (report.tooLarge.length)
+        toast.error("A draft is too large for the cloud", {
+          id: "sync-large",
+          description: "Drafts over 1 MB of text stay on this device.",
+        });
+    },
+  });
+  const cloudDrafts = useCloud();
 
   const historyOpen = (compact ? mobilePanel : panel) === "history";
   useEffect(() => {
@@ -862,6 +924,14 @@ export function Studio({ docId }: { docId: string }) {
       onDuplicate={duplicate}
       onDelete={setToDelete}
       onMove={move}
+      {...(account && {
+        cloud: {
+          ids: cloudDrafts.linked,
+          limit: cloudDrafts.limit,
+          onAdd: (d: MdDocument) => void addToCloud(account.id, [d.id]),
+          onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
+        },
+      })}
     />
   );
   const panelContent = (
@@ -1266,9 +1336,20 @@ export function Studio({ docId }: { docId: string }) {
               <span>{stats.minutes} min read</span>
               <span>{Object.keys(images).length} images</span>
               {!online && <span>Offline, your drafts are still saved here</span>}
+              {account && syncStatus.state !== "idle" && (
+                <span
+                  data-testid="sync-status"
+                  className={cn("ml-auto", syncStatus.state === "error" && "text-destructive")}
+                >
+                  {syncLabel(syncStatus)}
+                </span>
+              )}
               <span
                 role="status"
-                className={cn("ml-auto", saveState === "error" && "text-destructive")}
+                className={cn(
+                  account && syncStatus.state !== "idle" ? "" : "ml-auto",
+                  saveState === "error" && "text-destructive",
+                )}
               >
                 {saveState === "saving"
                   ? "Saving…"

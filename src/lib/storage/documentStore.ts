@@ -96,7 +96,16 @@ const FOLDERS_KEY = "meta:folders";
 const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" });
 
 export function createDocumentStore(kv: KeyValueStore) {
+  const listeners = new Set<() => void>();
+  const notify = (quiet?: boolean) => {
+    if (!quiet) for (const l of listeners) l();
+  };
   const store = {
+    /** Called after every draft is saved or removed, so sync can follow. Returns an unsubscribe. */
+    onChange(listener: () => void) {
+      listeners.add(listener);
+      return () => void listeners.delete(listener);
+    },
     /** Library folder names, kept so a folder can exist before it holds a draft. */
     folders: {
       async list(): Promise<string[]> {
@@ -127,11 +136,16 @@ export function createDocumentStore(kv: KeyValueStore) {
       return docs.sort((a, b) => b.updatedAt - a.updatedAt);
     },
     get: (id: string) => kv.get<MdDocument>(PREFIX + id),
-    async save(doc: MdDocument) {
+    /** `quiet` is for sync's own writes, which must not trigger another sync. */
+    async save(doc: MdDocument, opts: { quiet?: boolean } = {}) {
       await kv.set(PREFIX + doc.id, doc);
+      notify(opts.quiet);
       return doc;
     },
-    remove: (id: string) => kv.del(PREFIX + id),
+    async remove(id: string, opts: { quiet?: boolean } = {}) {
+      await kv.del(PREFIX + id);
+      notify(opts.quiet);
+    },
     async create(partial: Partial<MdDocument> = {}): Promise<MdDocument> {
       const now = Date.now();
       return store.save({

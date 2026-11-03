@@ -15,6 +15,8 @@ services:
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
+      # Drafts one account may keep in the cloud.
+      MAX_CLOUD_DOCS: ${MAX_CLOUD_DOCS:-5}
     volumes:
       - mdstudio-data:/data
     restart: unless-stopped

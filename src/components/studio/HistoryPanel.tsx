@@ -20,6 +20,7 @@ const KIND_LABEL: Record<Revision["kind"], string | null> = {
   auto: null,
   manual: "Saved by you",
   restore: "Before a restore",
+  replaced: "Replaced by a newer edit elsewhere",
 };
 
 const when = (at: number) =>

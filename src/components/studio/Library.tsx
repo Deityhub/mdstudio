@@ -4,6 +4,8 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Cloud,
+  CloudOff,
   CopyPlus,
   FilePlus,
   Folder,
@@ -150,6 +152,7 @@ export function Library({
   onDuplicate,
   onDelete,
   onMove,
+  cloud,
 }: {
   /** Every draft, with the open one as it is on screen right now. */
   docs: MdDocument[];
@@ -167,6 +170,13 @@ export function Library({
   onDuplicate: (d: MdDocument) => void;
   onDelete: (d: MdDocument) => void;
   onMove: (d: MdDocument, folder: string | undefined) => void;
+  /** Present while signed in: which drafts are stored in the account, and the account's limit. */
+  cloud?: {
+    ids: ReadonlySet<string>;
+    limit: number;
+    onAdd: (d: MdDocument) => void;
+    onRemove: (d: MdDocument) => void;
+  };
 }) {
   const [query, setQuery] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -289,7 +299,15 @@ export function Library({
             draggable={false}
             className="min-w-0 flex-1 px-2 py-2"
           >
-            <div className="truncate text-sm font-medium">{d.title}</div>
+            <div className="flex items-center gap-1 text-sm font-medium">
+              <span className="truncate">{d.title}</span>
+              {cloud?.ids.has(d.id) && (
+                <Cloud
+                  className="h-3 w-3 shrink-0 text-muted-foreground"
+                  aria-label="Stored in your cloud"
+                />
+              )}
+            </div>
             <div className="truncate text-xs text-muted-foreground">
               {snippets.get(d.id) || new Date(d.updatedAt).toLocaleDateString()}
             </div>
@@ -331,6 +349,20 @@ export function Library({
               >
                 <FolderInput className="h-3.5 w-3.5" /> Move to folder…
               </DropdownMenuItem>
+              {cloud &&
+                (cloud.ids.has(d.id) ? (
+                  <DropdownMenuItem onSelect={() => cloud.onRemove(d)}>
+                    <CloudOff className="h-3.5 w-3.5" /> Remove from cloud
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    disabled={cloud.ids.size >= cloud.limit}
+                    onSelect={() => cloud.onAdd(d)}
+                  >
+                    <Cloud className="h-3.5 w-3.5" />{" "}
+                    {cloud.ids.size >= cloud.limit ? "Cloud is full" : "Save to cloud"}
+                  </DropdownMenuItem>
+                ))}
               <DropdownMenuItem onSelect={() => onDuplicate(d)}>
                 <CopyPlus className="h-3.5 w-3.5" /> Duplicate
               </DropdownMenuItem>
@@ -392,6 +424,11 @@ export function Library({
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        {cloud && (
+          <p className="text-xs text-muted-foreground" data-testid="cloud-usage">
+            Cloud: {cloud.ids.size} of {cloud.limit} drafts
+          </p>
+        )}
         {known.length > 0 && (
           <div className="flex max-h-20 flex-wrap gap-1 overflow-y-auto" aria-label="Filter by tag">
             {known.map(({ tag }) => (
