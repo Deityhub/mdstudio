@@ -16,10 +16,12 @@ import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
+import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
+import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -56,6 +58,11 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
   path: '/guides/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthGithubRoute = ApiAuthGithubRouteImport.update({
+  id: '/api/auth/github',
+  path: '/api/auth/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   id: '/api/auth/login',
   path: '/api/auth/login',
@@ -76,6 +83,11 @@ const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
   path: '/api/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthGithubRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -85,10 +97,12 @@ export interface FileRoutesByFullPath {
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -98,10 +112,12 @@ export interface FileRoutesByTo {
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor': typeof EditorIndexRoute
   '/guides': typeof GuidesIndexRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -112,10 +128,12 @@ export interface FileRoutesById {
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,10 +145,12 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -140,10 +160,12 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/editor'
     | '/guides'
+    | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/auth/github/callback'
   id:
     | '__root__'
     | '/'
@@ -153,10 +175,12 @@ export interface FileRouteTypes {
     | '/guides/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/auth/github/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -167,6 +191,7 @@ export interface RootRouteChildren {
   GuidesSlugRoute: typeof GuidesSlugRoute
   EditorIndexRoute: typeof EditorIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
+  ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
@@ -224,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/github': {
+      id: '/api/auth/github'
+      path: '/api/auth/github'
+      fullPath: '/api/auth/github'
+      preLoaderRoute: typeof ApiAuthGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/login': {
       id: '/api/auth/login'
       path: '/api/auth/login'
@@ -252,8 +284,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/github/callback': {
+      id: '/api/auth/github/callback'
+      path: '/callback'
+      fullPath: '/api/auth/github/callback'
+      preLoaderRoute: typeof ApiAuthGithubCallbackRouteImport
+      parentRoute: typeof ApiAuthGithubRoute
+    }
   }
 }
+
+interface ApiAuthGithubRouteChildren {
+  ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
+}
+
+const ApiAuthGithubRouteChildren: ApiAuthGithubRouteChildren = {
+  ApiAuthGithubCallbackRoute: ApiAuthGithubCallbackRoute,
+}
+
+const ApiAuthGithubRouteWithChildren = ApiAuthGithubRoute._addFileChildren(
+  ApiAuthGithubRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -263,6 +314,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesSlugRoute: GuidesSlugRoute,
   EditorIndexRoute: EditorIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,
+  ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,

@@ -11,6 +11,10 @@ services:
       - "${PORT:-3000}:3000"
     environment:
       DATA_DIR: /data
+      # Optional GitHub sign-in (see infra/README.md). Both are needed to switch it on.
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}
     volumes:
       - mdstudio-data:/data
     restart: unless-stopped

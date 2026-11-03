@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clearCookie, readToken, sameOrigin, sessionCookie } from "./http";
+import { clearCookie, oauthCookie, readCookie, readToken, sameOrigin, sessionCookie } from "./http";
 
 const req = (
   headers: Record<string, string>,
@@ -30,4 +30,21 @@ describe("sameOrigin", () => {
     expect(sameOrigin(req({ origin: "https://evil.example" }))).toBe(false);
     expect(sameOrigin(req({ origin: "null" }))).toBe(false);
   });
+});
+
+describe("oauth state cookie", () => {
+  it("is HttpOnly, Lax, scoped to the OAuth routes and short-lived", () => {
+    const cookie = oauthCookie("st.ver", "https:", 600_000);
+    for (const part of [
+      "mdstudio_oauth=st.ver",
+      "HttpOnly",
+      "SameSite=Lax",
+      "Path=/api/auth/github",
+      "Max-Age=600",
+      "Secure",
+    ])
+      expect(cookie).toContain(part);
+  });
+  it("reads a named cookie", () =>
+    expect(readCookie(req({ cookie: "mdstudio_oauth=a.b; x=1" }), "mdstudio_oauth")).toBe("a.b"));
 });
