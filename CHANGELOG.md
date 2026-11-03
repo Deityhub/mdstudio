@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.0 (2026-11-03)
+
+### Features
+
+- configurable checker rules, publication standards and your own rules
+- click-through sync and line-based scroll sync between editor and preview
+- offline support and installable PWA
+- bulk import and export of drafts, and rename folder
+- library search, tag filters and folders
+- local document history with compare and restore
+- studio polish with draft rename, front matter fields and a resizable library
+- render Obsidian wiki-links in the Obsidian profile
+
+### Fixes
+
+- stop the bundle guard from matching library names inside content hashes
+
 ## 0.1.3 (2026-11-02)
 
 ### Fixes
