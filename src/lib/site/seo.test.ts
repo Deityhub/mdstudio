@@ -61,7 +61,8 @@ describe("brand copy", () => {
   });
   it("makes no claims the product cannot back up yet", () => {
     const text = [BRAND.description, ...FEATURE_LIST, ...FAQ.map((f) => f.answer)].join(" ");
-    expect(text).not.toMatch(/offline|sync|collaborat|real-time/i);
+    // offline use is real (service worker, tested), cloud sync and collaboration are not built yet
+    expect(text).not.toMatch(/cloud sync|sync across|collaborat|real-time/i);
   });
 });
 

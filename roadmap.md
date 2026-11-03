@@ -19,7 +19,7 @@
 - [x] Mermaid dark theme
 - [x] README
 - [x] Content pages: seven guides rendered with the app's own pipeline
-- [ ] Cut v0.1.0
+- [x] Cut v0.1.0 (v0.1.0 to v0.1.3 are released)
 
 ## Milestone 1: Core Writing Studio & Portability (Completed)
 
@@ -39,7 +39,7 @@
 
 ---
 
-## Milestone 2: PWA, Local History & Advanced Library (Target: Q1 2027)
+## Milestone 2: PWA, Local History & Advanced Library (complete)
 
 - [x] **PWA Support:** Web app manifest, service worker caching, and offline installation. (Pages and files are kept as you use them online; the app badge is not done.)
 - [x] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.

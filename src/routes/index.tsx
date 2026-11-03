@@ -10,6 +10,9 @@ import {
   ShieldCheck,
   Upload,
   Eye,
+  FolderTree,
+  History,
+  WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteFooter } from "@/components/site/SiteFooter";
@@ -70,6 +73,21 @@ const features = [
     icon: FileDown,
     title: "Clean export",
     body: "Download or copy .md with UTF-8 and LF endings, optional normalizing, and self-contained images.",
+  },
+  {
+    icon: FolderTree,
+    title: "A library that scales",
+    body: "Search every draft, filter by tag, organise folders by drag and drop, and move everything as a ZIP.",
+  },
+  {
+    icon: History,
+    title: "Version history",
+    body: "Versions are kept as you write. Compare any of them side by side with the draft and restore it.",
+  },
+  {
+    icon: WifiOff,
+    title: "Works offline",
+    body: "Open it with no connection and keep writing. Install it as an app if you like.",
   },
   {
     icon: Lock,

@@ -30,7 +30,7 @@ Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: Rea
 | U5 | Self-contained `.md` with images embedded as base64 | Done |
 | U6 | Check portability for a target platform | Done |
 | U7 | Edit blog front matter (title, description, tags, date, slug, cover…) | Done |
-| U8 | Manage many drafts locally (new, duplicate, delete, autosave; rename planned) | Done (rename planned) |
+| U8 | Manage many drafts locally (new, duplicate, rename, delete, autosave) | Done |
 | U9 | AI: suggest title/description/tags; write a draft from a topic | Done |
 | U10 | Use on phone | Done |
 | U11 | Publish directly to GitHub repo / dev.to / Hashnode / Ghost / WordPress | Planned |
@@ -41,8 +41,8 @@ Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: Rea
 | U16 | Image hosting / upload to absolute URLs | Planned |
 | U17 | Offline PWA install | Done |
 | U18 | Bulk import/export (zip of .md + images) | Done |
-| U19 | Math (KaTeX) and Mermaid diagrams, shown only where the target platform renders them | Planned (next) |
-| U20 | Complete formatting toolbar covering every supported Markdown construct | Planned (next) |
+| U19 | Math (KaTeX) and Mermaid diagrams, shown only where the target platform renders them | Done |
+| U20 | Complete formatting toolbar covering every supported Markdown construct | Done |
 
 See `FEATURES_ROADMAP.md` for specs and acceptance criteria.
 
