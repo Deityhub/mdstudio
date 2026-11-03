@@ -45,6 +45,16 @@ export function measureBundle(dir: string): BundleReport {
   };
 }
 
+/**
+ * The library a file belongs to is named in its path (`_libs/d3-array.mjs`). Bundler chunks also end
+ * in a random 8 character hash (`editor-CFD3mtev.mjs`), which can contain a library name by chance,
+ * so the hash is dropped first and the name has to stand on its own, not inside another word.
+ */
+function mentions(path: string, name: string): boolean {
+  const withoutHash = path.toLowerCase().replace(/-[\w-]{8}(\.m?js)$/, "$1");
+  return new RegExp(`(?<![a-z0-9])${name}(?![a-z0-9])`).test(withoutHash);
+}
+
 export function checkBundle(report: BundleReport, limits: Limits): string[] {
   const problems: string[] = [];
   if (report.gzipBytes > limits.maxGzipBytes)
@@ -52,7 +62,7 @@ export function checkBundle(report: BundleReport, limits: Limits): string[] {
       `Worker is ${(report.gzipBytes / MiB).toFixed(2)} MiB gzipped, over the budget of ${(limits.maxGzipBytes / MiB).toFixed(2)} MiB.`,
     );
   for (const name of limits.forbidden) {
-    const leaked = report.files.filter((f) => f.path.toLowerCase().includes(name));
+    const leaked = report.files.filter((f) => mentions(f.path, name));
     if (leaked.length)
       problems.push(
         `Browser-only library "${name}" is bundled into the Worker (${leaked.map((f) => f.path).join(", ")}). Load it behind import.meta.env.SSR so the server build drops it.`,
