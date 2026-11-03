@@ -258,7 +258,12 @@ Client maintains per-document sync metadata: { id, version, contentHash, isDirty
   Server: If document.version == baseVersion, update row, increment version, record revision snapshot → 200 OK.
   Conflict: If document.version != baseVersion, reject with 409 Conflict returning current server state.
 - Conflict Resolution: Keep both. Apply server version to the active document; fork the local un-synced edits into a new document named "Title (Conflict Copy - Device - Timestamp)".
-- PULL: GET /api/sync/pull?since=<cursor> fetches server updates and deletions (tombstones).
+- PULL: GET /api/sync/pull?since=<cursor> fetches server updates and deletions (tombstones). The cursor is the server's
+  `updated_at` in milliseconds and is inclusive, so a write in the same millisecond is never missed; applying an
+  already-seen version is a no-op.
+- Scope: title, library name, folder and text. Local images and empty folders stay on the device until hosted images ship.
+- Limits: 50 documents and 5 MB per push, 1 MB of text per document. Deleting stores a tombstone and drops the text.
+- Isolation: a document id owned by another account is answered as "rejected", the same as an unknown one.
 ```
 
 ---
@@ -303,9 +308,11 @@ CREATE TABLE documents (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title TEXT NOT NULL DEFAULT 'Untitled',
+  name TEXT,                                 -- Library label set by renaming
+  folder TEXT,                               -- Library folder (one level)
   content TEXT NOT NULL DEFAULT '',
   version INTEGER NOT NULL DEFAULT 1,        -- Monotonically increasing version counter
-  content_hash TEXT NOT NULL,                -- SHA-256 hash of content
+  content_hash TEXT NOT NULL,                -- SHA-256 of title, name, folder and content
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   deleted_at INTEGER                         -- Soft delete tombstone for sync propagation

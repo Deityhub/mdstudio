@@ -21,6 +21,8 @@ import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
+import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
+import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -83,6 +85,16 @@ const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
   path: '/api/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSyncPullRoute = ApiSyncPullRouteImport.update({
+  id: '/api/sync/pull',
+  path: '/api/sync/pull',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSyncPushRoute = ApiSyncPushRouteImport.update({
+  id: '/api/sync/push',
+  path: '/api/sync/push',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
@@ -102,6 +114,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/sync/pull': typeof ApiSyncPullRoute
+  '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +131,8 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/sync/pull': typeof ApiSyncPullRoute
+  '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
 }
 export interface FileRoutesById {
@@ -133,6 +149,8 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/sync/pull': typeof ApiSyncPullRoute
+  '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +168,8 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/sync/pull'
+    | '/api/sync/push'
     | '/api/auth/github/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +185,8 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/sync/pull'
+    | '/api/sync/push'
     | '/api/auth/github/callback'
   id:
     | '__root__'
@@ -180,6 +202,8 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/sync/pull'
+    | '/api/sync/push'
     | '/api/auth/github/callback'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +220,8 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
+  ApiSyncPullRoute: typeof ApiSyncPullRoute
+  ApiSyncPushRoute: typeof ApiSyncPushRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -284,6 +310,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sync/pull': {
+      id: '/api/sync/pull'
+      path: '/api/sync/pull'
+      fullPath: '/api/sync/pull'
+      preLoaderRoute: typeof ApiSyncPullRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sync/push': {
+      id: '/api/sync/push'
+      path: '/api/sync/push'
+      fullPath: '/api/sync/push'
+      preLoaderRoute: typeof ApiSyncPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/github/callback': {
       id: '/api/auth/github/callback'
       path: '/callback'
@@ -319,6 +359,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthSignupRoute: ApiAuthSignupRoute,
+  ApiSyncPullRoute: ApiSyncPullRoute,
+  ApiSyncPushRoute: ApiSyncPushRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
