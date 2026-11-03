@@ -56,7 +56,7 @@
 
 - [ ] **Activate Server Blueprint:** Transition `infra/` backend blueprints into `src/server/`.
 - [x] **Authentication System:** Secure cookie-based session management, password authentication (PBKDF2-SHA256 through WebCrypto, because Workers has no Argon2id/Scrypt; done), and GitHub OAuth (done; sign-in dialog in the studio).
-- [ ] **Optimistic Cloud Sync:** Incremental sync engine with monotonic version counters and automatic conflict branch resolution.
+- [ ] **Optimistic Cloud Sync:** Incremental sync engine with monotonic version counters and automatic conflict branch resolution. (Server push/pull API done; the browser sync engine and its status UI are next.)
 - [ ] **Hosted Image Pipeline:** Drag-and-drop image upload to Cloudflare R2 (hosted) or local disk volume (Docker); auto-rewrites relative paths to CDN URLs.
 - [ ] **Cloud Revision Log:** Immutable server-side document revision history.
 - [ ] **Dual Deployment CI/CD:** GitHub Actions workflows for automated Cloudflare Workers deployment and multi-arch Docker image publication (`ghcr.io`).

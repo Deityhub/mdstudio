@@ -44,6 +44,9 @@ export const documents = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull().default("Untitled"),
+    // Library label and folder, as in the browser's draft (src/lib/storage/documentStore.ts).
+    name: text("name"),
+    folder: text("folder"),
     content: text("content").notNull().default(""),
     version: integer("version").notNull().default(1),
     contentHash: text("content_hash").notNull(),
