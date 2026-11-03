@@ -23,6 +23,14 @@ docker compose -f infra/docker-compose.yml up -d    # http://localhost:3000
 
 Data lives in the `mdstudio-data` volume mounted at `/data`. `GET /api/health` is the liveness probe.
 
+## GitHub sign-in (optional)
+
+Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) with the callback URL
+`<your address>/api/auth/github/callback`, then set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+(and `PUBLIC_URL`, e.g. `https://notes.example.com`, when a proxy hides the real address). Without
+both, the button is not shown. An existing password account is never linked automatically to a
+GitHub account with the same email.
+
 ## Changing the schema
 
 Edit `db/schema.ts`, run `bun run db:generate`, commit the new migration. Never write

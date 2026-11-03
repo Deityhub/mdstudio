@@ -77,3 +77,15 @@ makes it. Without the variables the Worker still deploys, and `/api/health` repo
 `"database":"unavailable"`.
 
 R2 is not used yet; the image unit creates the bucket (`wrangler r2 bucket create mdstudio-assets`).
+
+## GitHub sign-in
+
+Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) with the homepage
+`https://mdstudio.deityhub.com` and the callback URL
+`https://mdstudio.deityhub.com/api/auth/github/callback`, then store its credentials as repository
+secrets: `gh secret set GH_OAUTH_CLIENT_ID` and `gh secret set GH_OAUTH_CLIENT_SECRET` (GitHub
+reserves the `GITHUB_` prefix for secret names, so the workflow maps them). The release workflow
+sets them on the Worker as `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. An OAuth app has one
+callback URL, so previews do not offer GitHub sign-in; password sign-in works everywhere. For local
+development use a second OAuth app with `http://localhost:8080/api/auth/github/callback` and export the
+two values in your shell before `bun run dev`.

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AccountMenu } from "@/components/studio/AccountMenu";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -1075,6 +1076,7 @@ export function Studio({ docId }: { docId: string }) {
               </DropdownMenuContent>
             </DropdownMenu>
             <ThemeToggle className="hidden sm:inline-flex" />
+            <AccountMenu />
             <Button
               variant="ghost"
               size="icon"

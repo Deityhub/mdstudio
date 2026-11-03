@@ -35,7 +35,7 @@ const publicUser = (u: { id: string; email: string; displayName: string | null }
   displayName: u.displayName,
 });
 
-async function startSession(db: Db, user: PublicUser, now: number): Promise<Signed> {
+export async function startSession(db: Db, user: PublicUser, now: number): Promise<Signed> {
   const token = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
   const tokenHash = await sha256Hex(token);
   await db.insert(sessions).values({
