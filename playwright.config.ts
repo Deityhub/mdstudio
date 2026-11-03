@@ -1,4 +1,7 @@
 import { defineConfig } from "@playwright/test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { env } from "node:process";
 
 // Runs against the production node-server build, so the real CSP and SSR output are exercised.
@@ -16,7 +19,12 @@ export default defineConfig({
   webServer: {
     command: "node .output/server/index.mjs",
     url: `http://localhost:${PORT}`,
-    env: { PORT: String(PORT), NODE_ENV: "production" },
+    // A throwaway database per run, so accounts made by the specs never pile up in ./data.
+    env: {
+      PORT: String(PORT),
+      NODE_ENV: "production",
+      DATA_DIR: mkdtempSync(join(tmpdir(), "mdstudio-e2e-")),
+    },
     reuseExistingServer: !env["CI"],
   },
 });
