@@ -272,7 +272,7 @@ The database schema is defined in `infra/db/schema.ts` and runs identically on C
 CREATE TABLE users (
   id TEXT PRIMARY KEY,                       -- UUID v7
   email TEXT NOT NULL UNIQUE,
-  password_hash TEXT,                        -- Argon2id or Scrypt hash; NULL for OAuth-only users
+  password_hash TEXT,                        -- PBKDF2-SHA256 (WebCrypto, 100k iterations, the Workers cap); NULL for OAuth-only users
   display_name TEXT,
   avatar_url TEXT,
   created_at INTEGER NOT NULL,               -- Unix milliseconds
@@ -360,6 +360,7 @@ CREATE TABLE share_links (
 | `POST` | `/api/auth/signup`             | None          | Account creation with email and password.                  |
 | `POST` | `/api/auth/login`              | None          | Session issuance; returns HTTP-only `SameSite=Lax` cookie. |
 | `POST` | `/api/auth/logout`             | Session       | Revokes session row and clears the browser cookie.         |
+| `GET`  | `/api/auth/me`                 | None          | Returns the signed-in user, or `null`.                     |
 | `GET`  | `/api/auth/github`             | None          | Initiates GitHub OAuth flow with PKCE state challenge.     |
 | `GET`  | `/api/auth/github/callback`    | None          | Validates OAuth code, links user account, creates session. |
 | `POST` | `/api/sync/push`               | Session       | Pushes dirty documents; enforces optimistic concurrency.   |
@@ -389,7 +390,7 @@ CREATE TABLE share_links (
    form-action 'self';
    frame-ancestors 'none';
    ```
-3. **Session Management:** Cryptographically random 32-byte session tokens stored as SHA-256 digests in SQLite. Delivered via `HttpOnly`, `Secure`, `SameSite=Lax` cookies.
+3. **Session Management:** Cryptographically random 32-byte session tokens stored as SHA-256 digests in SQLite. Delivered via `HttpOnly`, `Secure`, `SameSite=Lax` cookies. A session lasts 24 hours and slides: use in the second half of its life extends it by another 24 hours, so only someone idle for a full day is signed out. An absolute cap of 5 days from sign-in ends it regardless of activity.
 4. **Data Isolation:** All database queries require a verified `user_id` extracted from the server session context. Client-provided user IDs are strictly ignored.
 5. **Private AI Usage:** User API keys are held strictly in browser client memory for the active session, never stored in `localStorage`, and never forwarded to our backend.
 6. **Self-Host Hardening:** The `ALLOW_SIGNUPS=false` configuration variable allows private instance owners to completely disable registration.
