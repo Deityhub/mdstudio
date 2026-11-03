@@ -17,12 +17,24 @@ describe("account client", () => {
     });
   });
 
-  it("treats a failed request (offline, server down) as signed out", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => Promise.reject(new TypeError("offline"))),
-    );
+  it("treats a failed request as signed out, unless an account was remembered", async () => {
+    const offline = () =>
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => Promise.reject(new TypeError("offline"))),
+      );
+    localStorage.clear();
+    offline();
     expect(await fetchAccount()).toEqual({ user: null, github: false });
+    reply({ user: { id: "1", email: "a@b.co", displayName: null }, providers: {} });
+    await fetchAccount();
+    offline();
+    expect((await fetchAccount()).user).toMatchObject({ id: "1" });
+    // The server saying nobody is signed in clears it.
+    reply({ user: null, providers: {} });
+    await fetchAccount();
+    offline();
+    expect((await fetchAccount()).user).toBeNull();
   });
 
   it("signs in and maps server errors to messages", async () => {

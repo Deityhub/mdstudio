@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { documentStore, SAMPLE } from "@/lib/storage/documentStore";
+import { fetchAccount } from "@/lib/account/client";
+import { documentStore, indexedDbStore, SAMPLE } from "@/lib/storage/documentStore";
+import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { pageHead } from "@/lib/site/seo";
 
 export const Route = createFileRoute("/editor/")({
@@ -18,8 +20,15 @@ function EditorIndex() {
   const navigate = useNavigate();
   useEffect(() => {
     (async () => {
-      const docs = await documentStore.list();
-      const d = docs[0] ?? (await documentStore.create({ content: SAMPLE }));
+      // Drafts kept in someone's cloud belong to that account and are not opened for anyone else.
+      const [docs, owners, { user }] = await Promise.all([
+        documentStore.list(),
+        cloudOwners(indexedDbStore),
+        fetchAccount(),
+      ]);
+      const d =
+        docs.find((x) => isVisible(owners, x.id, user?.id)) ??
+        (await documentStore.create({ content: SAMPLE }));
       navigate({ to: "/editor/$docId", params: { docId: d.id }, replace: true });
     })();
   }, [navigate]);

@@ -250,21 +250,40 @@ Raw Content → [Optional normalizeMarkdown] → joinFrontMatter → finalizeTex
 4. Guardrails: AbortController cancels active streams; HTTP 401/402/403 errors halt immediately without wasteful retries.
 ```
 
-### 5.5 Multi-Device Synchronization (Milestone 3)
+### 5.5 Cloud Drafts and Synchronization (Milestone 3)
+
+Accounts are optional and the cloud is opt-in. A draft is stored in the cloud only when the writer chooses it, an account may keep a limited number (5 by default, `MAX_CLOUD_DOCS` on the server), and everything else stays in the browser's IndexedDB.
 
 ```text
-Client maintains per-document sync metadata: { id, version, contentHash, isDirty }
-- PUSH: POST /api/sync/push with local documents where isDirty = true.
-  Server: If document.version == baseVersion, update row, increment version, record revision snapshot → 200 OK.
-  Conflict: If document.version != baseVersion, reject with 409 Conflict returning current server state.
-- Conflict Resolution: Keep both. Apply server version to the active document; fork the local un-synced edits into a new document named "Title (Conflict Copy - Device - Timestamp)".
-- PULL: GET /api/sync/pull?since=<cursor> fetches server updates and deletions (tombstones). The cursor is the server's
-  `updated_at` in milliseconds and is inclusive, so a write in the same millisecond is never missed; applying an
-  already-seen version is a no-op.
-- Scope: title, library name, folder and text. Local images and empty folders stay on the device until hosted images ship.
-- Limits: 50 documents and 5 MB per push, 1 MB of text per document. Deleting stores a tombstone and drops the text.
-- Isolation: a document id owned by another account is answered as "rejected", the same as an unknown one.
+Choosing:    after signing in, a dialog lists this device's drafts (none pre-selected); a draft's menu has
+             "Save to cloud" / "Remove from cloud". Removing deletes the cloud copy and keeps the local draft.
+Ownership:   a draft in an account's cloud belongs to that account. It is hidden while anyone else, or nobody,
+             is signed in (this includes an expired session) and is never offered to another account.
+             Drafts not in the cloud are visible to everyone who uses the browser.
+Signing out: sync once, then remove the account's cloud drafts (and their local history) from the browser, so
+             the next sign-in downloads them again. Drafts with images are listed first (images are not in
+             the cloud yet) and can be kept. Without a connection and with unsynced changes the writer must
+             choose between staying signed in and keeping those drafts on the device.
+Syncing:     only when a draft changed (its hash differs from what the cloud has) and only drafts in the cloud.
+             A round pulls first, then pushes; it runs about 3 seconds after a local save, when the tab
+             regains focus or comes back online, and every minute, never while signed out. A cloud change to
+             a draft with unsaved edits waits for the next round.
+Conflicts:   the later edit wins. Each push carries the time of the edit on its device (`editedAt`); when the
+             draft moved on since the device last synced, the later edit replaces the server's text, and
+             the loser is answered with the server copy. A device whose text is replaced first keeps it as a
+             version in the draft's local History ("Replaced by a newer edit elsewhere"). A device clock
+             cannot claim more than 5 minutes ahead of the server. An identical text is never a conflict,
+             an edit beats a delete, and an edit cannot revive a delete it has not seen.
+Limit:       the server refuses a new cloud draft beyond the limit (`limit_reached`) and the draft is local
+             again; bringing back a deleted draft needs a free slot too. Deleting frees one.
 ```
+
+- PULL: `GET /api/sync/pull?since=<cursor>` returns changes and tombstones plus the account's `limit`. The cursor is the server's `updated_at` in milliseconds and is inclusive, so a write in the same millisecond is never missed; applying an already-seen version is a no-op.
+- PUSH: `POST /api/sync/push` (up to 50 documents, 5 MB, 1 MB of text each) returns per document `ok`, `conflict` (with the server copy), `limit_reached` or `rejected`. Deleting stores a tombstone and drops the text.
+- Scope: title, library name, folder and text. Local images and empty folders stay on the device until hosted images ship.
+- Ids: drafts keep their short local ids, sent as `<userId>:<id>` so two accounts can never clash; the server refuses ids outside the caller's prefix, and answers another account's id as "rejected", the same as an unknown one.
+- Browser engine (`src/lib/sync/`): per account and per cloud draft, IndexedDB keeps `{ version, hash }` under `sync:<userId>:doc:<id>` plus the pull cursor. The wire contract is `protocol.ts`, shared with `src/server/sync`. The account is remembered in `localStorage` so an offline reload still shows its drafts.
+- Honest limit: IndexedDB is not encrypted. Removing cloud drafts at sign-out and hiding them afterwards reduces what a shared computer shows; it is not protection against someone who can open the browser's developer tools while a session is active.
 
 ---
 
@@ -315,6 +334,7 @@ CREATE TABLE documents (
   content_hash TEXT NOT NULL,                -- SHA-256 of title, name, folder and content
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
+  edited_at INTEGER NOT NULL DEFAULT 0,      -- When the text was last edited on a device (later edit wins)
   deleted_at INTEGER                         -- Soft delete tombstone for sync propagation
 );
 CREATE INDEX idx_documents_user_updated ON documents(user_id, updated_at);

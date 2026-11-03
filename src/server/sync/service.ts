@@ -1,50 +1,41 @@
-// Document sync, independent of HTTP. The server never merges text: a push either applies cleanly
-// on top of the version the client last saw, or is refused with the server's copy so the client
-// can keep both (see docs/SYSTEM_SPEC.md, "Multi-Device Synchronization").
-import { and, asc, eq, gte } from "drizzle-orm";
+// Document sync, independent of HTTP. The server never merges text. A push applies on top of the
+// version the client last saw; if the document moved on since, the later edit wins (by the edit
+// time the devices report), and the loser is answered with the server's copy. See
+// docs/SYSTEM_SPEC.md, "Multi-Device Synchronization".
+import { and, asc, count, eq, gte, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { documents } from "../../../infra/db/schema";
+import {
+  DEFAULT_CLOUD_LIMIT,
+  MAX_PUSH_DOCS,
+  type PushItem,
+  PushItemSchema,
+  type PushResult,
+  type ServerDoc,
+  fieldsHash,
+  remoteId,
+} from "@/lib/sync/protocol";
 import type { Db } from "../db";
 
-export const MAX_PUSH_DOCS = 50;
-export const MAX_CONTENT = 1_000_000;
-
-const PushItem = z.object({
-  id: z.string().min(1).max(100),
-  /** The server version this edit was made on; 0 for a draft the server has never seen. */
-  baseVersion: z.number().int().min(0),
-  title: z.string().max(500),
-  name: z.string().max(500).nullish(),
-  folder: z.string().max(500).nullish(),
-  content: z.string().max(MAX_CONTENT),
-  createdAt: z.number().int().min(0),
-  deleted: z.boolean().optional(),
-});
-export type PushItem = z.infer<typeof PushItem>;
+export type { PushItem, PushResult, ServerDoc } from "@/lib/sync/protocol";
 
 export function parsePush(body: unknown): PushItem[] | null {
-  const parsed = z.object({ docs: z.array(PushItem).max(MAX_PUSH_DOCS) }).safeParse(body);
+  const parsed = z.object({ docs: z.array(PushItemSchema).max(MAX_PUSH_DOCS) }).safeParse(body);
   return parsed.success ? parsed.data.docs : null;
 }
 
-export type ServerDoc = {
-  id: string;
-  version: number;
-  title: string;
-  name: string | null;
-  folder: string | null;
-  content: string;
-  createdAt: number;
-  updatedAt: number;
-  deleted: boolean;
-};
-
-export type PushResult =
-  | { id: string; status: "ok"; version: number; updatedAt: number }
-  | { id: string; status: "conflict"; server: ServerDoc }
-  | { id: string; status: "rejected" };
-
 type Row = typeof documents.$inferSelect;
+
+/** A device clock ahead of ours can claim at most this much, or it would win every conflict. */
+const FUTURE_SKEW_MS = 5 * 60_000;
+
+const liveCount = async (db: Db, userId: string) =>
+  (
+    await db
+      .select({ n: count() })
+      .from(documents)
+      .where(and(eq(documents.userId, userId), isNull(documents.deletedAt)))
+  )[0]?.n ?? 0;
 
 const toServerDoc = (r: Row): ServerDoc => ({
   id: r.id,
@@ -55,27 +46,27 @@ const toServerDoc = (r: Row): ServerDoc => ({
   content: r.content,
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
+  editedAt: r.editedAt,
   deleted: r.deletedAt !== null,
 });
-
-async function hashOf(title: string, name: string | null, folder: string | null, content: string) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(JSON.stringify([title, name, folder, content])),
-  );
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 const find = async (db: Db, id: string) =>
   (await db.select().from(documents).where(eq(documents.id, id)))[0];
 
-async function pushOne(db: Db, userId: string, it: PushItem, now: number): Promise<PushResult> {
+async function pushOne(
+  db: Db,
+  userId: string,
+  it: PushItem,
+  now: number,
+  limit: number,
+): Promise<PushResult> {
   const name = it.name ?? null;
   const folder = it.folder ?? null;
   const deleted = it.deleted === true;
   const content = deleted ? "" : it.content;
-  const contentHash = await hashOf(it.title, name, folder, content);
-  const fields = { title: it.title, name, folder, content, contentHash };
+  const contentHash = await fieldsHash({ title: it.title, name, folder, content });
+  const editedAt = Math.min(it.editedAt, now + FUTURE_SKEW_MS);
+  const fields = { title: it.title, name, folder, content, contentHash, editedAt };
 
   const conflictOrRejected = async (): Promise<PushResult> => {
     const row = await find(db, it.id);
@@ -84,9 +75,14 @@ async function pushOne(db: Db, userId: string, it: PushItem, now: number): Promi
       ? { id: it.id, status: "rejected" }
       : { id: it.id, status: "conflict", server: toServerDoc(row) };
   };
+  const full = { id: it.id, status: "limit_reached", limit } as const;
+
+  // Ids are namespaced per user (see remoteId), so a short id picked by chance elsewhere cannot clash.
+  if (!it.id.startsWith(remoteId(userId, ""))) return { id: it.id, status: "rejected" };
 
   const existing = await find(db, it.id);
   if (!existing) {
+    if (!deleted && (await liveCount(db, userId)) >= limit) return full;
     try {
       await db.insert(documents).values({
         id: it.id,
@@ -104,11 +100,18 @@ async function pushOne(db: Db, userId: string, it: PushItem, now: number): Promi
   }
 
   if (existing.userId !== userId) return { id: it.id, status: "rejected" };
-  if (existing.version !== it.baseVersion) return conflictOrRejected();
   const wasDeleted = existing.deletedAt !== null;
-  if (wasDeleted && !deleted) return conflictOrRejected();
+  // The same text on both sides is never a conflict, however far apart the versions are.
   if (existing.contentHash === contentHash && wasDeleted === deleted)
     return { id: it.id, status: "ok", version: existing.version, updatedAt: existing.updatedAt };
+
+  if (existing.version !== it.baseVersion) {
+    // The document moved on since this device last synced: the later edit wins. A delete never
+    // overrides an edit, and an edit never revives a delete it has not seen.
+    if (deleted || wasDeleted || editedAt <= existing.editedAt) return conflictOrRejected();
+  } else if (wasDeleted && !deleted && (await liveCount(db, userId)) >= limit) {
+    return full; // bringing a deleted draft back needs a free slot
+  }
 
   const updatedAt = Math.max(now, existing.updatedAt);
   // Only applies if nobody pushed since the read; otherwise nothing is returned.
@@ -121,9 +124,15 @@ async function pushOne(db: Db, userId: string, it: PushItem, now: number): Promi
   return { id: it.id, status: "ok", version: existing.version + 1, updatedAt };
 }
 
-export async function pushDocs(db: Db, userId: string, items: PushItem[], now = Date.now()) {
+export async function pushDocs(
+  db: Db,
+  userId: string,
+  items: PushItem[],
+  now = Date.now(),
+  limit = DEFAULT_CLOUD_LIMIT,
+) {
   const results: PushResult[] = [];
-  for (const it of items) results.push(await pushOne(db, userId, it, now));
+  for (const it of items) results.push(await pushOne(db, userId, it, now, limit));
   return results;
 }
 

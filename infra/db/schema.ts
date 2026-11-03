@@ -52,6 +52,8 @@ export const documents = sqliteTable(
     contentHash: text("content_hash").notNull(),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
+    // When the text was last edited on a device; the later edit wins a sync conflict.
+    editedAt: integer("edited_at").notNull().default(0),
     deletedAt: integer("deleted_at"),
   },
   (t) => [index("idx_documents_user_updated").on(t.userId, t.updatedAt)],

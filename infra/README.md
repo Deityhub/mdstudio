@@ -31,6 +31,11 @@ Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) 
 both, the button is not shown. An existing password account is never linked automatically to a
 GitHub account with the same email.
 
+## Cloud limit
+
+Each account may keep `MAX_CLOUD_DOCS` drafts in the cloud (default 5; `0` switches cloud storage off).
+Set it in the environment of the server or container.
+
 ## Changing the schema
 
 Edit `db/schema.ts`, run `bun run db:generate`, commit the new migration. Never write

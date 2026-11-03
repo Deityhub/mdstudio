@@ -6,8 +6,9 @@ export type Revision = {
   at: number;
   title: string;
   content: string;
-  /** `auto` from the periodic snapshot, `manual` when the writer saved it, `restore` before a restore. */
-  kind: "auto" | "manual" | "restore";
+  /** `auto` from the periodic snapshot, `manual` when the writer saved it, `restore` before a
+   * restore, `replaced` when a newer edit made on another device took this text's place. */
+  kind: "auto" | "manual" | "restore" | "replaced";
 };
 
 /** Minimum time between automatic snapshots of one draft. */
@@ -76,7 +77,11 @@ export function createHistoryStore(kv: KeyValueStore) {
       return add(doc, now, "auto");
     },
     /** A version on demand; null when it would repeat the newest one. */
-    async save(doc: Source, now: number, kind: "manual" | "restore"): Promise<Revision | null> {
+    async save(
+      doc: Source,
+      now: number,
+      kind: "manual" | "restore" | "replaced",
+    ): Promise<Revision | null> {
       const last = await latest(doc.id);
       if (last?.content === doc.content) return null;
       return add(doc, now, kind);

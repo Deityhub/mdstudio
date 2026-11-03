@@ -69,8 +69,12 @@ test("the account dialog creates an account, signs out and signs back in", async
   await page.getByRole("button", { name: "Hide password" }).click();
   await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "password");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
+  // Signing in offers to pick drafts for the cloud; nothing is uploaded unless chosen.
+  await page.getByRole("button", { name: "Not now" }).click();
   await page.getByRole("button", { name: `Account: ${address}` }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
+  // Signing out saves first and takes cloud drafts off the device, so it is not instant.
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
@@ -81,6 +85,7 @@ test("the account dialog creates an account, signs out and signs back in", async
   await expect(page.getByRole("alert")).toContainText("don't match");
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Not now" }).click();
   await expect(page.getByRole("button", { name: `Account: ${address}` })).toBeVisible();
 
   // Still signed in after a reload: the session cookie did its job.
