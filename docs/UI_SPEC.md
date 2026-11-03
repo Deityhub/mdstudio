@@ -14,11 +14,11 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 ## 1b. Guides `/guides` and `/guides/$slug`
 Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.
 
-## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`
-- **Top bar, row 1:** drafts toggle · wordmark link and current title · Import · AI writer · Export dropdown · Focus mode.
+## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`, `13_library.png`, `11_export_menu.png`
+- **Top bar, row 1:** drafts toggle · wordmark link and current title · Import dropdown (files or a ZIP, or a folder) · Install (only when the browser offers to install the app) · AI writer · Export dropdown (including Download all drafts as a ZIP) · Focus mode.
 - **Top bar, row 2:** target-platform Select (GitHub, Strict CommonMark, dev.to / Hashnode, Obsidian; remembered per device) · view toggle (Editor / Split / Preview) · panel buttons on mid-size screens.
 - **Export dropdown:** Download .md, Copy Markdown, Download self-contained .md and Copy self-contained Markdown (both enabled only when the draft has local images), Copy rendered HTML, Download standalone .html, and the "Normalize on export" switch.
-- **Drafts sidebar:** New draft, list of drafts (title, updated date), per-item Duplicate and Delete. Delete opens a confirmation Dialog. Renaming is **(planned)**: titles currently come from front matter or the first heading.
+- **Drafts sidebar:** New folder and New draft buttons, a search box, tag chips, and a folder tree. Search matches every word in a draft's title or text (a matching line is shown under the title); tag chips come from each draft's front matter `tags` and narrow the list when selected. Folders are labels kept in the library, not in the text: they list first (A to Z, collapsible, drafts indented beneath them with a guide line) and unfiled drafts follow. A draft moves by dragging it onto a folder, or onto the empty part of the list to take it out, and also from its three-dot menu (Rename, Move to folder, Duplicate, Delete), which is the route on touch screens. A folder's menu has Rename folder (an inline field with save and cancel; the drafts follow, and a name another folder already has is refused) and Delete folder: an empty one goes at once, one with drafts asks first because the drafts inside are deleted too. Delete opens a confirmation Dialog.
 - **Formatting toolbar** (`role="toolbar"`, one tab stop, arrow keys / Home / End to move, Alt+F10 from the editor to enter it and Esc to leave; 16 buttons that wrap onto an extra row when the space runs out, never scroll: one row from 768px up (36px buttons), two rows on phones (40px touch targets)):
   undo, redo · heading style menu (Paragraph, H1-H6), bold, italic, strikethrough, inline code · link, image · quote, bulleted, numbered and task lists · code block menu, table menu, **Insert** menu.
   - Toggle tools show their state at the cursor (`aria-pressed`), and pressing one twice undoes it.
@@ -29,19 +29,21 @@ Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and
   - Every Insert-menu entry has an icon, and nested menus (Alert, Diagram, HTML) use icons too.
   - **Profile warnings:** a tool the selected platform won't render keeps working but carries a warning dot (buttons) or icon (menu items) and a hint such as "Renders on GitHub and Obsidian only". In menus the hint appears instantly on hover or keyboard focus, and the warning icon sits next to the submenu arrow. Raw HTML reads "may be removed or shown differently on other platforms": HTML is only partly supported (GitHub keeps `<details>`, `<kbd>`, `<sub>` and `<sup>`, for example) and each platform filters it differently. The same table drives the Checks panel, so the two never disagree.
   - Math and Mermaid tools insert the syntax, and the preview renders it for the GitHub and Obsidian profiles (see Preview below).
-- **Editor** (CodeMirror, line numbers) and **Preview** (`.md-preview`) with two-way scroll sync. The studio is a fixed shell: only the editor, preview and side panels scroll, never the page.
+- **Editor** (CodeMirror, line numbers) and **Preview** (`.md-preview`) with two-way scroll sync (by source line, so both panes show the same text) and click-through sync: the block that holds the editor cursor gets a faint highlight in the preview, and clicking a block in the preview puts the editor cursor on its first source line (links, controls and text selections are left alone; from the preview-only view the click brings the editor back). The studio is a fixed shell: only the editor, preview and side panels scroll, never the page.
   - **Highlights:** `==text==` renders as a marker highlight for the Obsidian profile; other profiles show the text unchanged.
   - **Smooth updates:** the preview replaces only the blocks that changed, so images, math and diagrams don't flash while you type; a diagram being edited keeps its previous version on screen until the new one is ready.
   - **Math:** `$x$`, `$$…$$` and ```` ```math ```` render with KaTeX for GitHub and Obsidian; `$5 and $10` stays text. KaTeX loads the first time a document needs it.
   - **Diagrams:** ```` ```mermaid ```` blocks render as SVG for GitHub and Obsidian; an invalid diagram keeps its code and shows the error beneath it. Other profiles show the source, as their platforms do.
   - **Export:** "Copy rendered HTML" and "Download standalone .html" include the rendered math (the standalone file embeds the KaTeX stylesheet and fonts) and inline SVG diagrams.
-- **Side panel buttons:** Checks (badge with the count of warnings and errors), Outline, Front matter.
-- **Status bar:** words · reading time · image count · save status (Saving… / Saved in this browser / Not saved) · target platform.
+- **Side panel buttons:** Checks (badge with the count of warnings and errors), Outline, Front matter, History (saved versions of the draft; opening one shows a side-by-side comparison with the current text and a Restore button).
+- **Status bar:** words · reading time · image count · an "Offline" note when there is no connection · save status (Saving… / Saved in this browser / Not saved) · target platform.
 
-## 3. Checks panel — `03_editor_checks_panel.png`
-One card per issue, sorted by line: severity icon, `L<line>` and a one-sentence message. Clicking a card switches to the editor and jumps to that line. Rules are listed in `SYSTEM_SPEC.md` §4.1.
+## 3. Checks panel and rules — `03_editor_checks_panel.png`, `10_checker_rules.png`
+A **Rules** button at the top opens the Checker rules dialog (tabs Portability, Standards, Your rules; switches, severities and limits; Export, Import and Reset to defaults; a note on changing rules per draft from its front matter). Below it, one card per issue, sorted by line: severity icon, `L<line>` and a one-sentence message; issues from a standard or from the writer's own rules carry a small `standard · rule-id` or `yours · rule-id` tag. Clicking a card switches to the editor and jumps to that line. Rules are listed in `SYSTEM_SPEC.md` §4.1 and §4.2.
 
 ## 4. Outline — `04_editor_outline_panel.png`
+The **History** panel (the clock button beside Checks, Outline and Front matter) is shown in `12_history_compare.png`: a list of saved versions and, once one is opened, a side-by-side comparison with the current draft.
+
 Indented heading list; clicking jumps to the heading's line.
 
 ## 5. Front matter — `04_editor_frontmatter_panel.png`
@@ -56,7 +58,7 @@ Fields: title, slug, date, cover image URL, description, tags (comma separated).
 ## 7. Small screens — `06_mobile_editor_view.png`, `07_mobile_preview_view.png`
 - **Below 768px** the studio is a single pane: the view toggle offers Editor and Preview only, and the panel buttons move to a bottom navigation bar.
 - **Below 1280px** the drafts list opens as a left sheet and Checks, Outline and Front matter open as a right sheet, sharing the same panel components as the desktop sidebars.
-- **At 1280px and above** the drafts sidebar and the panel column are docked.
+- **At 1280px and above** the drafts sidebar and the panel column are docked. The drafts sidebar defaults to 288px and can be dragged (or resized with the arrow keys, Home and End; double-click resets) between 240px and 480px; the width is remembered. The Checks panel starts open only from 1536px; below that it stays closed until its button is clicked.
 
 ## Interactions
 - Autosave 400ms after typing. Unsaved edits are flushed immediately when switching drafts, leaving the studio, hiding the tab or closing the page. A failed save shows "Not saved" and one toast.

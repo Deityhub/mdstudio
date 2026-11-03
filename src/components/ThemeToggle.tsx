@@ -1,6 +1,6 @@
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toggleTheme } from "@/lib/theme";
+import { toggleTheme } from "@/lib/ui/theme";
 
 /** Both icons render and CSS shows the right one, so server and client markup always match. */
 export function ThemeToggle({ className }: { className?: string }) {

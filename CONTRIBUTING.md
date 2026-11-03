@@ -20,7 +20,7 @@ bun run dev        # http://localhost:8080
 
 ## Before you push
 
-Write the test first (`src/lib/*.test.ts`, plus a Playwright spec in `e2e/` where behavior needs a real browser; run `bunx playwright install chromium` once), then:
+Write the test first (`src/lib/**/*.test.ts`, plus a Playwright spec in `e2e/` where behavior needs a real browser; run `bunx playwright install chromium` once), then:
 
 ```bash
 bun run lint
@@ -29,6 +29,8 @@ bun run test
 bun run e2e         # builds the self-hosted output and runs Playwright
 bun run licenses   # only needed after changing dependencies
 ```
+
+If you changed how the UI looks, also run `bun run screenshots` (it rebuilds the app and rewrites `docs/ui-screenshots/`), look at the images it changes, and update `README.md` and `docs/UI_SPEC.md` where they describe that part of the UI.
 
 ## Dependencies
 

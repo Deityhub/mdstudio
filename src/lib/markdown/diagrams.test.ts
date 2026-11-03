@@ -198,3 +198,26 @@ describe("hydrateDiagrams with stale diagrams", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("source lines survive diagram replacement", () => {
+  beforeEach(() => resetDiagramState());
+  const withLines = `<pre data-sl="4" data-el="7"><code class="hljs language-mermaid">graph TD\nA-->B</code></pre>`;
+
+  it("hydrateDiagrams keeps the block's line numbers on the diagram", async () => {
+    const root = document.createElement("div");
+    root.innerHTML = withLines;
+    document.body.append(root);
+    await hydrateDiagrams(root, ok);
+    root.remove();
+    const fig = root.querySelector(".md-mermaid");
+    expect(fig?.getAttribute("data-sl")).toBe("4");
+    expect(fig?.getAttribute("data-el")).toBe("7");
+  });
+
+  it("withCachedDiagrams keeps them on a cached diagram", () => {
+    rememberDiagram("graph TD\nA-->B", { svg: "<svg></svg>" });
+    const out = withCachedDiagrams(withLines);
+    expect(out).toContain('data-sl="4"');
+    expect(out).toContain('data-el="7"');
+  });
+});

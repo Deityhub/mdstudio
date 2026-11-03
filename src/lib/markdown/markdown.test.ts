@@ -7,6 +7,7 @@ import {
   embedImages,
   splitFrontMatter,
   joinFrontMatter,
+  isHttpUrl,
   htmlToMarkdown,
   normalizeMarkdown,
 } from "./markdown";
@@ -258,10 +259,101 @@ describe("highlights", () => {
     expect(html("<mark>x</mark> and ==y==")).toBe("<p>x and <mark>y</mark></p>"));
 });
 
+describe("wiki-links", () => {
+  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "obsidian") =>
+    renderMarkdown(md, p);
+  const link = (text: string, target: string) =>
+    `<span class="wikilink" title="Link to ${target}">${text}</span>`;
+
+  it("renders [[Note]] and [[Note|alias]] for Obsidian", () => {
+    expect(html("see [[Note]]")).toBe(`<p>see ${link("Note", "Note")}</p>`);
+    expect(html("[[Note|the note]]")).toBe(`<p>${link("the note", "Note")}</p>`);
+  });
+  it("shows headings and block references the way Obsidian does", () => {
+    expect(html("[[Note#Part]]")).toContain(link("Note > Part", "Note#Part"));
+    expect(html("[[#Part]]")).toContain(link("Part", "#Part"));
+  });
+  it("works inside headings and lists, and escapes the target", () => {
+    expect(html("# [[A]]")).toContain(link("A", "A"));
+    expect(html("- [[A]] and [[B]]")).toContain(link("B", "B"));
+    expect(html('[[a"b]]')).not.toContain('title="Link to a"b');
+  });
+  it("leaves the text alone elsewhere, and ignores code, embeds and empty links", () => {
+    for (const p of ["github", "commonmark", "devto"] as const)
+      expect(html("[[Note]]", p)).not.toContain("wikilink");
+    expect(html("`[[Note]]`")).not.toContain("wikilink");
+    expect(html("![[image.png]]")).not.toContain("wikilink");
+    expect(html("[[]] and [[ ]]")).not.toContain("wikilink");
+  });
+});
+
 describe("paste conversion", () => {
   it("converts HTML to Markdown", () => {
     expect(
       htmlToMarkdown("<h2>Hi</h2><p><strong>bold</strong> <a href='https://a.b'>x</a></p>"),
     ).toBe("## Hi\n\n*bold* [x](https://a.b)".replace("*bold*", "**bold**"));
+  });
+});
+
+describe("front matter flags", () => {
+  it("keeps draft: true and a canonical URL, and drops cleared fields", () => {
+    const md = joinFrontMatter(
+      { title: "T", draft: true, canonical_url: "https://a.dev/x", cover: undefined },
+      "body",
+    );
+    expect(md).toBe("---\ntitle: T\ndraft: true\ncanonical_url: https://a.dev/x\n---\n\nbody");
+    expect(splitFrontMatter(md).data).toMatchObject({ draft: true });
+    expect(joinFrontMatter({ draft: undefined }, "body")).toBe("body");
+  });
+});
+
+describe("isHttpUrl", () => {
+  it("accepts web addresses only", () => {
+    expect(isHttpUrl("https://a.dev/x")).toBe(true);
+    expect(isHttpUrl("http://a.dev")).toBe(true);
+    for (const bad of ["a.dev/x", "javascript:alert(1)", "ftp://a.dev", ""])
+      expect(isHttpUrl(bad)).toBe(false);
+  });
+});
+
+describe("source lines for click-through sync", () => {
+  const md =
+    "---\ntitle: x\n---\n\n# Head\n\npara one\nline two\n\n- a\n- b\n  - c\n\n> q\n\n```js\ncode\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---\n";
+  const lines = (html: string) =>
+    [...new DOMParser().parseFromString(html, "text/html").querySelectorAll("[data-sl]")].map(
+      (e) => `${e.tagName.toLowerCase()} ${e.getAttribute("data-sl")}-${e.getAttribute("data-el")}`,
+    );
+
+  it("adds nothing unless asked, so exports stay clean", () => {
+    expect(renderMarkdown(md)).not.toContain("data-sl");
+    expect(renderMarkdown(md, "github", {}, {})).not.toContain("data-el");
+  });
+
+  it("tags each block with its first and last line in the full text, front matter included", () => {
+    expect(lines(renderMarkdown(md, "github", {}, { sourceLines: true }))).toEqual([
+      "h1 5-5",
+      "p 7-8",
+      "li 10-10",
+      "li 11-12",
+      "li 12-12",
+      "blockquote 14-14",
+      "p 14-14",
+      "pre 16-18",
+      "table 20-22",
+      "tr 20-20",
+      "tr 22-22",
+      "hr 24-24",
+    ]);
+  });
+
+  it("only writes numbers, so nothing from the document reaches an attribute", () => {
+    const html = renderMarkdown(
+      '# <img src=x onerror=alert(1)> "quoted"',
+      "github",
+      {},
+      { sourceLines: true },
+    );
+    expect(html).not.toContain("onerror");
+    expect(html).toMatch(/^<h1 data-sl="1" data-el="1">[^<]*<\/h1>$/);
   });
 });

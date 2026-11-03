@@ -31,7 +31,12 @@ export const FEATURE_LIST = [
   "KaTeX math and Mermaid diagrams",
   "Local-first drafts stored in the browser (IndexedDB), no account needed",
   "Import .md files and paste from Google Docs, Notion and the web",
-  "Export clean UTF-8 Markdown or standalone HTML",
+  "Export clean UTF-8 Markdown or standalone HTML, or every draft at once as a ZIP",
+  "Import ZIP archives and whole folders of Markdown files",
+  "Search, tag filters and folders for your drafts, all kept in the browser",
+  "Version history with a side-by-side compare and one-click restore",
+  "Custom checker rules and publication standards, shareable as a file",
+  "Works offline and installs as an app",
   "Bring-your-own-key AI writing helpers",
   "Open source under the MIT license, self-hostable with Docker",
 ];
@@ -65,6 +70,16 @@ export const FAQ: Faq[] = [
     question: "Are my documents private?",
     answer:
       "Yes. Drafts are saved in your browser's IndexedDB and are not uploaded anywhere. There is no account to create. If you use the optional AI helpers, your API key stays in memory for the session and requests go directly from your browser to the provider you choose.",
+  },
+  {
+    question: "Does mdstudio work offline?",
+    answer:
+      "Yes. After your first visit the studio opens and keeps working without a connection, saves your drafts in the browser, and can be installed as an app. Only the optional AI helpers need a network connection.",
+  },
+  {
+    question: "Can I organise many drafts and go back to an earlier version?",
+    answer:
+      "Yes. Search your drafts, filter them by tag and keep them in folders. mdstudio saves versions as you write, shows a side-by-side comparison with the current draft, and restores any version in one click. You can also export every draft as a ZIP.",
   },
   {
     question: "Which Markdown flavors and platforms does it check?",

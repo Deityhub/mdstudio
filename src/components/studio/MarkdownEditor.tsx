@@ -29,8 +29,8 @@ import {
   type Context,
   type Edit,
   type Snapshot,
-} from "@/lib/editing";
-import { isInTable, tableMove } from "@/lib/tables";
+} from "@/lib/editor/editing";
+import { isInTable, tableMove } from "@/lib/editor/tables";
 
 export type EditorHandle = {
   /** Runs a pure editing command (see `lib/editing.ts`) on the current selection. */
@@ -42,14 +42,20 @@ export type EditorHandle = {
   apply: (edit: Edit) => void;
   insert: (text: string) => void;
   goToLine: (line: number) => void;
-  scrollToRatio: (r: number) => void;
+  /** Puts the cursor at the start of a line (1-based) and scrolls only if it is out of view. */
+  placeCursor: (line: number) => void;
+  /** Scrolls to a fraction of the document; returns the resulting scroll position. */
+  scrollToRatio: (r: number) => number;
+  /** Scrolls so that this source line (1-based, may have a fraction) is at the top. */
+  scrollToLine: (line: number) => number;
   focus: () => void;
 };
 
 type Props = {
   value: string;
   onChange: (v: string) => void;
-  onScrollRatio?: (r: number) => void;
+  /** The editor scrolled: the line at the top (with a fraction), how far down, and whether it is at the end. */
+  onScroll?: (position: { line: number; ratio: number; atEnd: boolean; top: number }) => void;
   onPaste?: (e: ClipboardEvent) => string | null;
   onFiles?: (files: File[]) => void;
   /** Called when the formatting state at the cursor changes (drives toolbar toggle state). */
@@ -60,6 +66,8 @@ type Props = {
   onFocusToolbar?: () => void;
   /** Mod-/: show the shortcuts list. */
   onShowShortcuts?: () => void;
+  /** The line (1-based) the cursor is on, whenever it changes (the preview highlights its block). */
+  onCursorLine?: (line: number) => void;
 };
 
 const snapshot = (state: EditorState): Snapshot => ({
@@ -75,6 +83,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   cb.current = props;
   const silent = useRef(false);
   const lastContext = useRef("");
+  const lastLine = useRef(0);
 
   useEffect(() => {
     const tabInStructure = (v: EditorView, dir: 1 | -1) => {
@@ -135,13 +144,30 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !silent.current) cb.current.onChange(u.state.doc.toString());
-          if (u.docChanged || u.selectionSet) emitContext(u.state);
+          if (u.docChanged || u.selectionSet) {
+            emitContext(u.state);
+            const line = u.state.doc.lineAt(u.state.selection.main.head).number;
+            if (line !== lastLine.current) {
+              lastLine.current = line;
+              cb.current.onCursorLine?.(line);
+            }
+          }
         }),
         EditorView.domEventHandlers({
           scroll: (_e, v) => {
             const s = v.scrollDOM;
             const max = s.scrollHeight - s.clientHeight;
-            cb.current.onScrollRatio?.(max > 0 ? s.scrollTop / max : 0);
+            const block = v.lineBlockAtHeight(s.scrollTop - v.documentPadding.top);
+            const fraction =
+              block.height > 0
+                ? Math.max(0, (s.scrollTop - v.documentPadding.top - block.top) / block.height)
+                : 0;
+            cb.current.onScroll?.({
+              line: v.state.doc.lineAt(block.from).number + Math.min(fraction, 0.999),
+              ratio: max > 0 ? s.scrollTop / max : 0,
+              atEnd: max > 0 && s.scrollTop >= max - 1,
+              top: s.scrollTop,
+            });
           },
           paste: (e, v) => {
             const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
@@ -226,9 +252,28 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
       });
       v.focus();
     },
+    placeCursor(line) {
+      const v = view.current!;
+      const l = v.state.doc.line(Math.min(Math.max(1, line), v.state.doc.lines));
+      v.dispatch({
+        selection: { anchor: l.from },
+        effects: EditorView.scrollIntoView(l.from, { y: "nearest", yMargin: 48 }),
+      });
+      v.focus();
+    },
+    scrollToLine(line) {
+      const v = view.current!;
+      const n = Math.min(Math.max(1, Math.floor(line)), v.state.doc.lines);
+      const block = v.lineBlockAt(v.state.doc.line(n).from);
+      const target = block.top + (line - n) * block.height + v.documentPadding.top;
+      v.scrollDOM.scrollTop = target;
+      return v.scrollDOM.scrollTop;
+    },
     scrollToRatio(r) {
       const s = view.current?.scrollDOM;
-      if (s) s.scrollTop = r * (s.scrollHeight - s.clientHeight);
+      if (!s) return 0;
+      s.scrollTop = r * (s.scrollHeight - s.clientHeight);
+      return s.scrollTop;
     },
     focus: () => view.current?.focus(),
   };

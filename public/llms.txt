@@ -9,7 +9,10 @@ Write Markdown in a full-featured editor with a complete formatting toolbar and 
 - Target profiles: Strict CommonMark, GitHub Flavored Markdown, dev.to, Obsidian. The preview, the checks and the toolbar warnings follow the chosen profile.
 - Portability checker: flags raw HTML, local image paths, base64 images, wiki-links, math, Mermaid and trailing-space line breaks, with clickable issues that jump to the line.
 - Rich Markdown: tables with cell navigation, task lists, footnotes, GitHub alerts, KaTeX math, Mermaid diagrams, syntax-highlighted code blocks.
-- Import and export: open .md files, paste from Google Docs, Notion and the web; export clean UTF-8 Markdown (LF endings) or standalone HTML.
+- Import and export: open .md files, ZIP archives or whole folders, paste from Google Docs, Notion and the web; export clean UTF-8 Markdown (LF endings), standalone HTML, or every draft as a ZIP.
+- Library: search drafts, filter by tag, organise them in folders, rename them, and go back to any earlier version with a side-by-side compare.
+- Custom checker rules: turn rules on or off, add publication standards (title and description length, required front matter, heading structure) and your own text or regex rules, and share them as a JSON file.
+- Works offline after the first visit and can be installed as an app.
 - Optional AI writing helpers with the writer's own API key (OpenAI, Anthropic, Google Gemini or any OpenAI-compatible endpoint). Keys stay in session memory and requests go directly from the browser to the provider.
 - Free and MIT licensed. Self-host with Docker (`ghcr.io/deityhub/mdstudio` or `deityhub/mdstudio` on Docker Hub).
 

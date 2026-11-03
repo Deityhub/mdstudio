@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { readWritingStream, writingRequestSchema } from "./ai-writing";
-import { joinFrontMatter, splitFrontMatter } from "./markdown";
+import { readWritingStream, writingRequestSchema } from "./writing";
+import { joinFrontMatter, splitFrontMatter } from "../markdown/markdown";
 
 describe("AI writing", () => {
   it("applies title, description and tags without changing the Markdown body or other metadata", () => {

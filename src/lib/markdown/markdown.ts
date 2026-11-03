@@ -25,7 +25,16 @@ const usesGfm = (p: Profile) => p !== "commonmark";
 /* ---------------- feature support (shared by the checker and the toolbar) ---------------- */
 
 export type Feature =
-  "table" | "task" | "strike" | "footnote" | "alert" | "math" | "mermaid" | "highlight" | "html";
+  | "table"
+  | "task"
+  | "strike"
+  | "footnote"
+  | "alert"
+  | "math"
+  | "mermaid"
+  | "highlight"
+  | "wikilink"
+  | "html";
 
 const GFM_ONLY = { commonmark: false, github: true, devto: true, obsidian: true };
 const GITHUB_AND_OBSIDIAN = { commonmark: false, github: true, devto: false, obsidian: true };
@@ -45,6 +54,7 @@ export const FEATURE_SUPPORT: Record<Feature, Record<Profile, boolean>> = {
   math: GITHUB_AND_OBSIDIAN,
   mermaid: GITHUB_AND_OBSIDIAN,
   highlight: { ...NOWHERE, obsidian: true },
+  wikilink: { ...NOWHERE, obsidian: true },
   html: NOWHERE,
 };
 
@@ -173,29 +183,56 @@ function rehypeAlerts(profile: Profile) {
 }
 
 const HIGHLIGHT = /==([^=\s](?:[^=\n]*[^=\s])?)==/g;
+// [[Note]], [[Note|alias]], [[Note#Heading]]; not the ![[embed]] form
+const WIKILINK =
+  /(?<!!)\[\[([^\]|\s](?:[^\]|\n]*[^\]|\s])?)(?:\|([^\]\s](?:[^\]\n]*[^\]\s])?))?\]\]/g;
+
+type Inline = { re: RegExp; node: (m: RegExpMatchArray) => ElementContent; needs: string };
+
+const INLINES: Record<"highlight" | "wikilink", Inline> = {
+  highlight: {
+    re: HIGHLIGHT,
+    needs: "==",
+    node: (m) => el("mark", {}, m[1] ?? ""),
+  },
+  wikilink: {
+    re: WIKILINK,
+    needs: "[[",
+    // The preview has no vault to open, so a link is a labelled span rather than a dead anchor.
+    node: (m) => {
+      const target = (m[1] ?? "").trim();
+      const label = m[2]?.trim() ?? target.replace(/^#/, "").replace("#", " > ");
+      return el("span", { className: ["wikilink"], title: `Link to ${target}` }, label);
+    },
+  },
+};
+
+const el = (tagName: string, properties: Element["properties"], text: string): Element => ({
+  type: "element",
+  tagName,
+  properties,
+  children: [{ type: "text", value: text }],
+});
 
 /**
- * `==text==` as <mark>, for the profile whose platform renders it (Obsidian). Runs after
- * sanitizing and only splits text nodes, so no HTML from the document can reach the output.
- * Code is skipped. A highlight must sit inside one run of text: `==**bold**==` is not matched.
+ * Obsidian-only inline syntax (`==highlight==`, `[[wiki-links]]`), for the profile whose platform
+ * renders it. Runs after sanitizing and only splits text nodes, so no HTML from the document can
+ * reach the output. Code is skipped. A match must sit inside one run of text: `==**bold**==` is
+ * not matched.
  */
-function rehypeHighlights(profile: Profile) {
+function rehypeInline(profile: Profile, feature: keyof typeof INLINES) {
+  const { re, node: make, needs } = INLINES[feature];
   return () => (tree: HastRoot) => {
-    if (!supports("highlight", profile)) return;
+    if (!supports(feature, profile)) return;
     visit(tree, "text", (node, index, parent) => {
-      if (!parent || index === undefined || !node.value.includes("==")) return;
+      if (!parent || index === undefined || !node.value.includes(needs)) return;
       if (parent.type === "element" && (parent.tagName === "code" || parent.tagName === "pre"))
         return;
       const parts: ElementContent[] = [];
       let last = 0;
-      for (const m of node.value.matchAll(HIGHLIGHT)) {
+      for (const m of node.value.matchAll(re)) {
         if (m.index > last) parts.push({ type: "text", value: node.value.slice(last, m.index) });
-        parts.push({
-          type: "element",
-          tagName: "mark",
-          properties: {},
-          children: [{ type: "text", value: m[1] ?? "" }],
-        });
+        parts.push(make(m));
         last = m.index + m[0].length;
       }
       if (!parts.length) return;
@@ -206,10 +243,49 @@ function rehypeHighlights(profile: Profile) {
   };
 }
 
+const LINE_TAGS = new Set([
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "p",
+  "li",
+  "blockquote",
+  "pre",
+  "table",
+  "tr",
+  "hr",
+]);
+
+/**
+ * Tags each block with the source lines it came from (`data-sl` first, `data-el` last, both
+ * 1-based), so the studio can jump between a block in the preview and its text in the editor.
+ * Runs after sanitizing and only writes numbers, so nothing from the document reaches an
+ * attribute. Off for exports: the lines are a studio detail, not part of the document's HTML.
+ */
+function rehypeSourceLines() {
+  return (tree: HastRoot) => {
+    visit(tree, "element", (node: Element) => {
+      const at = node.position;
+      if (!at || !LINE_TAGS.has(node.tagName)) return;
+      node.properties["dataSl"] = at.start.line;
+      node.properties["dataEl"] = at.end.line;
+    });
+  };
+}
+
+export type RenderOptions = {
+  /** Add `data-sl` and `data-el` source-line attributes to blocks (the studio preview does). */
+  sourceLines?: boolean;
+};
+
 export function renderMarkdown(
   md: string,
   profile: Profile = "github",
   images: Record<string, string> = {},
+  options: RenderOptions = {},
 ): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
@@ -218,11 +294,11 @@ export function renderMarkdown(
   // KaTeX runs after sanitizing (so raw HTML can't smuggle anything past it) with trust off, and
   // only once ensureMath() has loaded it; until then math shows as a code block.
   const katex = mathProfile ? getKatexPlugin() : null;
-  const q = p
-    .use(remarkRehype)
-    .use(rehypeSanitize, schema)
-    .use(rehypeAlerts(profile))
-    .use(rehypeHighlights(profile));
+  const q = p.use(remarkRehype).use(rehypeSanitize, schema);
+  if (options.sourceLines) q.use(rehypeSourceLines);
+  q.use(rehypeAlerts(profile))
+    .use(rehypeInline(profile, "highlight"))
+    .use(rehypeInline(profile, "wikilink"));
   if (katex) q.use(katex, KATEX_OPTIONS);
   const file = q
     .use(rehypeResolveImages(images))
@@ -243,9 +319,16 @@ function parse(md: string, profile: Profile): MdRoot {
 /* ---------------- portability checker ---------------- */
 
 export type Severity = "error" | "warning" | "info";
-export type Issue = { line: number; rule: string; message: string; severity: Severity };
+export type Issue = {
+  line: number;
+  rule: string;
+  message: string;
+  severity: Severity;
+  /** Where the rule comes from, when it is not a built-in portability rule. */
+  group?: "standard" | "custom";
+};
 
-function fencedLines(lines: string[]): Set<number> {
+export function fencedLines(lines: string[]): Set<number> {
   const set = new Set<number>();
   let fence: string | null = null;
   lines.forEach((l, i) => {
@@ -422,7 +505,7 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
     }
     if (!supports("highlight", profile) && /==[^=\s][^=]*==/.test(l))
       add(n, "highlight", "==highlight== isn't standard Markdown.");
-    if (profile !== "obsidian" && /\[\[[^\]]+\]\]/.test(l))
+    if (!supports("wikilink", profile) && /\[\[[^\]]+\]\]/.test(l))
       add(n, "wiki-link", "[[Wiki links]] only work in Obsidian-style tools.");
     if (/^\s*:::/.test(l)) add(n, "container", "Custom ::: containers are not standard Markdown.");
     if (/\S {2,}$/.test(l) && lines[i + 1]?.trim())
@@ -490,6 +573,14 @@ export function deriveTitle(md: string): string {
   const h = body.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/m);
   return h?.[1] ? h[1].replace(/[*_`~[\]]/g, "").trim() : "Untitled";
 }
+
+export const isHttpUrl = (s: string) => {
+  try {
+    return ["http:", "https:"].includes(new URL(s).protocol);
+  } catch {
+    return false;
+  }
+};
 
 export function slugify(s: string) {
   return (
