@@ -58,11 +58,22 @@ One-time setup, in addition to the secrets above:
   `https://mdstudio-pr-<number>.<your-subdomain>.workers.dev`.
 - Pull requests from forks are skipped (they cannot read the secrets). If a preview fails, the PR
   comment links to the workflow run.
-- A preview is a separate Worker, so it never touches production data. When milestone 3 adds D1 and
-  R2, give previews their own bindings.
+- A preview is a separate Worker bound to a separate preview database, so it never touches production data.
 
 ## Hosted database and storage
 
-The hosted tier does not use D1 or R2 yet. When milestone 3 activates them, create the database and
-bucket (`wrangler d1 create mdstudio`, `wrangler r2 bucket create mdstudio-assets`), then add the
-bindings from `infra/wrangler.toml` to the `cloudflare.wrangler` block in `vite.config.ts`.
+Create the databases once, then add their ids as repository **variables** (Settings → Secrets and
+variables → Actions → Variables; the ids are not secret):
+
+```bash
+wrangler d1 create mdstudio           # variable D1_DATABASE_ID
+wrangler d1 create mdstudio-preview   # variable D1_PREVIEW_DATABASE_ID, shared by every preview
+```
+
+The API token needs **D1: Edit**. The build binds the database as `DB` when the variable is set
+(`infra/worker-config.ts`), and the preview and release workflows run
+`wrangler d1 migrations apply` before deploying, so a schema change ships with the pull request that
+makes it. Without the variables the Worker still deploys, and `/api/health` reports
+`"database":"unavailable"`.
+
+R2 is not used yet; the image unit creates the bucket (`wrangler r2 bucket create mdstudio-assets`).
