@@ -21,6 +21,7 @@ services:
       MAIL_FROM: ${MAIL_FROM:-}
       SMTP_URL: ${SMTP_URL:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAILTRAP_API_TOKEN: ${MAILTRAP_API_TOKEN:-}
       TRUST_PROXY: ${TRUST_PROXY:-}
       # Hosted images per account: how many, and how many bytes in all.
       MAX_ASSETS: ${MAX_ASSETS:-10}

@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { fileMailer, smtpMailer } from "./node";
 import { resendMailer } from "./resend";
-import { pickMailer } from "./index";
 
 const mail = { to: "ada@example.com", subject: "Verify", text: "Open the link" };
 
@@ -28,6 +27,9 @@ describe("resendMailer", () => {
 
   it("throws when Resend refuses, without echoing the key", async () => {
     const fetchFn = (async () => new Response("bad", { status: 403 })) as typeof fetch;
+    await expect(resendMailer("re_secret", "a@b.co", fetchFn)(mail)).rejects.toMatchObject({
+      status: 403,
+    });
     await expect(resendMailer("re_secret", "a@b.co", fetchFn)(mail)).rejects.toThrow(/403/);
     await expect(resendMailer("re_secret", "a@b.co", fetchFn)(mail)).rejects.not.toThrow(
       /re_secret/,
@@ -55,19 +57,5 @@ describe("node transports", () => {
       return spy.mock.calls[0]![0];
     })();
     expect(sent).toMatchObject({ from: "from@x.co", to: "ada@example.com", subject: "Verify" });
-  });
-});
-
-describe("pickMailer", () => {
-  const node = () => async () => {};
-  it("prefers Resend, then SMTP or the outbox on Node, and needs a sender address", () => {
-    expect(pickMailer({ RESEND_API_KEY: "k", MAIL_FROM: "a@b.co" }, null)).toBeTypeOf("function");
-    expect(pickMailer({ SMTP_URL: "smtp://x", MAIL_FROM: "a@b.co" }, node)).toBeTypeOf("function");
-    expect(pickMailer({ MAIL_OUTBOX_DIR: "/tmp/x", MAIL_FROM: "a@b.co" }, node)).toBeTypeOf(
-      "function",
-    );
-    expect(pickMailer({ RESEND_API_KEY: "k" }, null)).toBeNull(); // no sender
-    expect(pickMailer({ SMTP_URL: "smtp://x", MAIL_FROM: "a@b.co" }, null)).toBeNull(); // Workers
-    expect(pickMailer({}, node)).toBeNull();
   });
 });

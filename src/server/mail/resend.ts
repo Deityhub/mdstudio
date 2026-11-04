@@ -1,4 +1,4 @@
-import type { Mailer } from "./types";
+import { type Mailer, ProviderError } from "./types";
 
 /** Sends through Resend's HTTP API: one request, so it runs on Workers and on Node alike. */
 export const resendMailer =
@@ -10,5 +10,5 @@ export const resendMailer =
       body: JSON.stringify({ from, to: [to], subject, text }),
     });
     // Never include the response text or the key: either could end up in logs.
-    if (!res.ok) throw new Error(`Resend refused the message (${res.status})`);
+    if (!res.ok) throw new ProviderError(`Resend refused the message (${res.status})`, res.status);
   };
