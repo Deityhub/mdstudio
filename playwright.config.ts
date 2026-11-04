@@ -7,6 +7,15 @@ import { env } from "node:process";
 // Runs against the production node-server build, so the real CSP and SSR output are exercised.
 // Build first: `bun run e2e` does both.
 const PORT = 4173;
+// A second server that confirms email addresses, for the specs about sign-up protection. Mail goes
+// to a folder of JSON files that those specs read (E2E_MAIL_DIR), and X-Forwarded-For is believed
+// so a spec can pretend to be several visitors.
+const MAIL_PORT = 4381;
+env["E2E_MAIL_DIR"] ??= mkdtempSync(join(tmpdir(), "mdstudio-e2e-mail-"));
+env["E2E_MAIL_URL"] ??= `http://localhost:${MAIL_PORT}`;
+
+// A throwaway database per run, so accounts made by the specs never pile up in ./data.
+const data = () => mkdtempSync(join(tmpdir(), "mdstudio-e2e-"));
 
 export default defineConfig({
   testDir: "e2e",
@@ -16,15 +25,26 @@ export default defineConfig({
   reporter: env["CI"] ? [["github"], ["html", { open: "never" }]] : "list",
   use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
-  webServer: {
-    command: "node .output/server/index.mjs",
-    url: `http://localhost:${PORT}`,
-    // A throwaway database per run, so accounts made by the specs never pile up in ./data.
-    env: {
-      PORT: String(PORT),
-      NODE_ENV: "production",
-      DATA_DIR: mkdtempSync(join(tmpdir(), "mdstudio-e2e-")),
+  webServer: [
+    {
+      command: "node .output/server/index.mjs",
+      url: `http://localhost:${PORT}`,
+      env: { PORT: String(PORT), NODE_ENV: "production", DATA_DIR: data() },
+      reuseExistingServer: !env["CI"],
     },
-    reuseExistingServer: !env["CI"],
-  },
+    {
+      command: "node .output/server/index.mjs",
+      url: `http://localhost:${MAIL_PORT}`,
+      env: {
+        PORT: String(MAIL_PORT),
+        NODE_ENV: "production",
+        DATA_DIR: data(),
+        MAIL_FROM: "mdstudio <noreply@example.com>",
+        MAIL_OUTBOX_DIR: env["E2E_MAIL_DIR"],
+        TRUST_PROXY: "1",
+      },
+      // never reuse: a stray server on this port would answer without mail or the proxy setting
+      reuseExistingServer: false,
+    },
+  ],
 });

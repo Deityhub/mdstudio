@@ -112,3 +112,32 @@ sets them on the Worker as `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. An OAu
 callback URL, so previews do not offer GitHub sign-in; password sign-in works everywhere. For local
 development use a second OAuth app with `http://localhost:8080/api/auth/github/callback` and export the
 two values in your shell before `bun run dev`.
+
+## Sign-up protection
+
+mdstudio.deityhub.com protects the cloud from throwaway accounts with four things. The limits need nothing
+from you; the email and the CAPTCHA each switch on when their secrets exist, and the release workflow sends
+only the ones that are set.
+
+- **Email confirmation (Resend).** Create a Resend account (free: 3,000 emails a month, 100 a day), add your
+  domain and the DNS records it shows (SPF and DKIM), and create an API key. Then:
+  ```bash
+  gh secret set RESEND_API_KEY
+  gh secret set MAIL_FROM        # e.g.  mdstudio <noreply@deityhub.com>
+  ```
+  Until both are set the server sends no mail, every address counts as confirmed, and nothing is blocked.
+  Once they are, an account must click an emailed link before it can store drafts in the cloud (GitHub
+  sign-in counts as confirmed). The link is sent the first time the account tries the cloud, not at
+  sign-up, so people who only write locally never use up the free sending allowance. Writing, previewing
+  and exporting never need it.
+- **Sign-up CAPTCHA (Cloudflare Turnstile).** Create a Turnstile widget (Cloudflare dashboard → Turnstile; free)
+  for `mdstudio.deityhub.com`, then `gh secret set TURNSTILE_SITE_KEY` and `gh secret set TURNSTILE_SECRET`.
+  Without them sign-up has no CAPTCHA.
+- **Limits** (always on; each changeable with an environment variable): 5 sign-ups an hour per address
+  (`SIGNUP_LIMIT`), 10 failed sign-ins per 15 minutes per email and per address (`LOGIN_FAIL_LIMIT`), 3
+  confirmation emails an hour per account (`VERIFY_EMAIL_LIMIT`). The address is Cloudflare's
+  `cf-connecting-ip`.
+- **One inbox, one account.** `test+shop@gmail.com` and `t.e.s.t@gmail.com` are the same account as
+  `test@gmail.com` (a `+tag` is dropped everywhere, dots are ignored for Gmail, `googlemail.com` is `gmail.com`).
+
+Pull request previews send no mail, so confirmation is off there, like GitHub sign-in.

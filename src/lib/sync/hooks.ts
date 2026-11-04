@@ -3,7 +3,7 @@ import { accountStore } from "@/lib/account/store";
 import { signOut } from "@/lib/account/client";
 import { documentStore, indexedDbStore } from "@/lib/storage/documentStore";
 import { historyStore } from "@/lib/storage/history";
-import { AuthExpiredError, httpApi } from "./api";
+import { AuthExpiredError, UnverifiedError, httpApi } from "./api";
 import { type SignOutCheck, checkSignOut, leaveAccount, linkDrafts, unlinkDraft } from "./cloud";
 import { type SyncReport, syncOnce } from "./engine";
 import { createSyncMeta } from "./meta";
@@ -124,7 +124,7 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
       },
       isOffline: () => !navigator.onLine,
       onError: (error) => {
-        if (error instanceof AuthExpiredError) {
+        if (error instanceof AuthExpiredError || error instanceof UnverifiedError) {
           r.stop();
           void accountStore.refresh();
         } else console.error(error);

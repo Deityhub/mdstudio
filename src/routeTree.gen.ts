@@ -24,9 +24,11 @@ import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
+import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
 import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
 import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
+import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -103,6 +105,11 @@ const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
   path: '/api/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
+  id: '/api/auth/verify',
+  path: '/api/auth/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSyncPullRoute = ApiSyncPullRouteImport.update({
   id: '/api/sync/pull',
   path: '/api/sync/pull',
@@ -117,6 +124,11 @@ const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
   getParentRoute: () => ApiAuthGithubRoute,
+} as any)
+const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
+  id: '/resend',
+  path: '/resend',
+  getParentRoute: () => ApiAuthVerifyRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -135,9 +147,11 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -155,9 +169,11 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -176,9 +192,11 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,9 +216,11 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/auth/verify'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
+    | '/api/auth/verify/resend'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -218,9 +238,11 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/auth/verify'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
+    | '/api/auth/verify/resend'
   id:
     | '__root__'
     | '/'
@@ -238,9 +260,11 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/signup'
+    | '/api/auth/verify'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
+    | '/api/auth/verify/resend'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,6 +282,7 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
+  ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
   ApiSyncPullRoute: typeof ApiSyncPullRoute
   ApiSyncPushRoute: typeof ApiSyncPushRoute
 }
@@ -369,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/verify': {
+      id: '/api/auth/verify'
+      path: '/api/auth/verify'
+      fullPath: '/api/auth/verify'
+      preLoaderRoute: typeof ApiAuthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sync/pull': {
       id: '/api/sync/pull'
       path: '/api/sync/pull'
@@ -389,6 +421,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/github/callback'
       preLoaderRoute: typeof ApiAuthGithubCallbackRouteImport
       parentRoute: typeof ApiAuthGithubRoute
+    }
+    '/api/auth/verify/resend': {
+      id: '/api/auth/verify/resend'
+      path: '/resend'
+      fullPath: '/api/auth/verify/resend'
+      preLoaderRoute: typeof ApiAuthVerifyResendRouteImport
+      parentRoute: typeof ApiAuthVerifyRoute
     }
   }
 }
@@ -417,6 +456,18 @@ const ApiAuthGithubRouteWithChildren = ApiAuthGithubRoute._addFileChildren(
   ApiAuthGithubRouteChildren,
 )
 
+interface ApiAuthVerifyRouteChildren {
+  ApiAuthVerifyResendRoute: typeof ApiAuthVerifyResendRoute
+}
+
+const ApiAuthVerifyRouteChildren: ApiAuthVerifyRouteChildren = {
+  ApiAuthVerifyResendRoute: ApiAuthVerifyResendRoute,
+}
+
+const ApiAuthVerifyRouteWithChildren = ApiAuthVerifyRoute._addFileChildren(
+  ApiAuthVerifyRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -432,6 +483,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthSignupRoute: ApiAuthSignupRoute,
+  ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
   ApiSyncPullRoute: ApiSyncPullRoute,
   ApiSyncPushRoute: ApiSyncPushRoute,
 }

@@ -20,7 +20,8 @@ describe("csp", () => {
   it("ties the nonce to script-src and never allows unsafe-inline scripts", () => {
     const csp = buildCsp("abc123");
     const scriptSrc = csp.split("; ").find((d) => d.startsWith("script-src"))!;
-    expect(scriptSrc).toBe("script-src 'self' 'nonce-abc123'");
+    expect(scriptSrc).toBe("script-src 'self' 'nonce-abc123' https://challenges.cloudflare.com");
+    expect(scriptSrc).not.toContain("unsafe-inline");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
   });
@@ -47,6 +48,15 @@ describe("csp", () => {
   it("keeps preview deployments out of search results, and only those", () => {
     expect(previewHeaders(true)).toEqual({ "X-Robots-Tag": "noindex, nofollow" });
     expect(previewHeaders(false)).toEqual({});
+  });
+});
+
+describe("turnstile", () => {
+  it("lets Cloudflare's challenge script and frame load, and nothing else new", () => {
+    const csp = buildCsp("n");
+    expect(csp).toContain("script-src 'self' 'nonce-n' https://challenges.cloudflare.com");
+    expect(csp).toContain("frame-src https://challenges.cloudflare.com");
+    expect(csp).not.toContain("'unsafe-eval'");
   });
 });
 

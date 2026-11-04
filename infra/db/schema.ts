@@ -5,11 +5,34 @@ import { index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-co
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
+  // The same inbox under every spelling (plus tags, Gmail dots), so one inbox is one account.
+  emailKey: text("email_key").unique(),
+  // When the address was confirmed by a link in an email (or by GitHub, which verifies its own).
+  emailVerifiedAt: integer("email_verified_at"),
   passwordHash: text("password_hash"),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
+});
+
+/** One-time links that confirm an email address. Only a hash of the token is stored. */
+export const emailTokens = sqliteTable("email_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  email: text("email").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
+/** Fixed-window counters behind the sign-up, sign-in and email limits. */
+export const rateLimits = sqliteTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  resetsAt: integer("resets_at").notNull(),
 });
 
 export const sessions = sqliteTable("sessions", {

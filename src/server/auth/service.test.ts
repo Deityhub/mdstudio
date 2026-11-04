@@ -38,6 +38,47 @@ describe("signup", () => {
   });
 });
 
+describe("one inbox, one account", () => {
+  it("refuses the same inbox under another spelling", async () => {
+    await signup(db, { email: "test@gmail.com", password: creds.password }, now);
+    for (const alias of ["test+test1@gmail.com", "t.e.s.t@gmail.com", "TEST+x@googlemail.com"])
+      expect(await signup(db, { email: alias, password: creds.password }, now), alias).toEqual({
+        error: "email_taken",
+      });
+    // a different inbox is fine
+    expect(
+      "token" in (await signup(db, { email: "other@gmail.com", password: creds.password }, now)),
+    ).toBe(true);
+  });
+
+  it("signs in with any spelling of the address the account has", async () => {
+    await signup(db, { email: "test@gmail.com", password: creds.password }, now);
+    expect(
+      "token" in
+        (await login(db, { email: "te.st+shop@gmail.com", password: creds.password }, now)),
+    ).toBe(true);
+  });
+
+  it("finds an older account that has no key yet", async () => {
+    const { users } = await import("../../../infra/db/schema");
+    const { hashPassword } = await import("./password");
+    await db.insert(users).values({
+      id: "old",
+      email: "legacy@example.com",
+      passwordHash: await hashPassword(creds.password),
+      createdAt: now,
+      updatedAt: now,
+    });
+    expect(
+      "token" in (await login(db, { email: "legacy@example.com", password: creds.password }, now)),
+    ).toBe(true);
+    // and it is now protected from an alias being registered
+    expect(
+      await signup(db, { email: "legacy+2@example.com", password: creds.password }, now),
+    ).toEqual({ error: "email_taken" });
+  });
+});
+
 describe("login", () => {
   beforeEach(async () => void (await signup(db, creds, now)));
 

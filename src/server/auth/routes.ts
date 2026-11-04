@@ -1,6 +1,8 @@
 // Shared by the /api/auth/* route files so each stays a one-liner.
 import { getDb } from "../db";
 import { getEnv } from "../env";
+import { getMailer } from "../mail";
+import { canonicalEmail } from "./email";
 import { authorizeUrl, githubSignIn, pkcePair, randomState } from "./github";
 import {
   OAUTH_COOKIE,
@@ -11,7 +13,16 @@ import {
   sameOrigin,
   sessionCookie,
 } from "./http";
+import { clearLimit, clientIp, hit, lockedOut } from "./limits";
 import { SESSION_MS, login, logout, signup, userForToken } from "./service";
+import { verifyTurnstile } from "./turnstile";
+import {
+  confirmVerification,
+  hasLiveVerification,
+  issueVerification,
+  verificationMail,
+} from "./verify";
+import { withUser } from "./guard";
 
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   Response.json(body, { status, headers: { "cache-control": "no-store", ...headers } });
@@ -28,17 +39,118 @@ async function body(request: Request) {
 
 const STATUS = { invalid: 400, email_taken: 409, invalid_credentials: 401 } as const;
 
-async function authenticate(request: Request, action: typeof signup | typeof login) {
+// ---- Limits -------------------------------------------------------------------------------
+// Defaults are the ones in docs/SYSTEM_SPEC.md; the environment can raise or lower them.
+
+const HOUR = 60 * 60 * 1000;
+const FAIL_WINDOW = 15 * 60 * 1000;
+const limit = (request: Request, name: string, fallback: number) => {
+  const n = Number(getEnv(request, name));
+  return getEnv(request, name) !== undefined && Number.isInteger(n) && n >= 0 ? n : fallback;
+};
+const ipOf = (request: Request) =>
+  clientIp(request, ["1", "true"].includes(getEnv(request, "TRUST_PROXY") ?? ""));
+const tooMany = (retryAfter: number) =>
+  Response.json(
+    { error: "rate_limited", retryAfter },
+    { status: 429, headers: { "retry-after": String(retryAfter), "cache-control": "no-store" } },
+  );
+
+/** Public address for links in emails: PUBLIC_URL when a proxy hides it. */
+const siteOrigin = (request: Request) =>
+  getEnv(request, "PUBLIC_URL")?.replace(/\/$/, "") ?? new URL(request.url).origin;
+
+export async function signupHandler(request: Request) {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
-  const result = await action(await getDb(request), await body(request));
+  const db = await getDb(request);
+  const ip = ipOf(request);
+  if (ip !== "unknown") {
+    const t = await hit(db, `signup:${ip}`, limit(request, "SIGNUP_LIMIT", 5), HOUR);
+    if (!t.allowed) return tooMany(t.retryAfter);
+  }
+  const input = await body(request);
+  const secret = getEnv(request, "TURNSTILE_SECRET");
+  if (
+    secret &&
+    !(await verifyTurnstile(secret, (input as { turnstileToken?: unknown })?.turnstileToken, ip))
+  )
+    return json({ error: "captcha_failed" }, 400);
+
+  // No email yet: one is sent the first time this account tries to use the cloud (see resendHandler),
+  // so people who only write locally never cost a message.
+  const mailer = await getMailer(request);
+  const result = await signup(db, input, Date.now(), { verifyByEmail: mailer !== null });
   if ("error" in result) return json({ error: result.error }, STATUS[result.error]);
   return json({ user: result.user }, 200, {
     "set-cookie": sessionCookie(result.token, protocol(request), SESSION_MS),
   });
 }
 
-export const signupHandler = (request: Request) => authenticate(request, signup);
-export const loginHandler = (request: Request) => authenticate(request, login);
+export async function loginHandler(request: Request) {
+  if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+  const db = await getDb(request);
+  const input = await body(request);
+  const typed = (input as { email?: unknown })?.email;
+  const who =
+    typeof typed === "string" ? (canonicalEmail(typed) ?? typed.trim().toLowerCase()) : "";
+  const emailKey = `login:email:${who}`;
+  const ipKey = `login:ip:${ipOf(request)}`;
+  const max = limit(request, "LOGIN_FAIL_LIMIT", 10);
+  // Looked at before any password work, so a locked-out guesser costs us nothing.
+  const wait =
+    (await lockedOut(db, emailKey, max)) ??
+    (ipOf(request) === "unknown" ? null : await lockedOut(db, ipKey, max));
+  if (wait !== null) return tooMany(wait);
+
+  const result = await login(db, input);
+  if ("error" in result) {
+    await hit(db, emailKey, max, FAIL_WINDOW);
+    if (ipOf(request) !== "unknown") await hit(db, ipKey, max, FAIL_WINDOW);
+    return json({ error: result.error }, STATUS[result.error]);
+  }
+  await clearLimit(db, emailKey);
+  return json({ user: result.user }, 200, {
+    "set-cookie": sessionCookie(result.token, protocol(request), SESSION_MS),
+  });
+}
+
+/** The link in the email: confirms the address, then goes back to the editor. */
+export async function verifyHandler(request: Request) {
+  const token = new URL(request.url).searchParams.get("token") ?? "";
+  const done = await confirmVerification(await getDb(request), token);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location: done.ok ? "/editor?verified=1" : "/editor?auth_error=verify_failed",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+/**
+ * Sends the confirmation email. The first request (the person's first try at the cloud) sends one;
+ * later requests do nothing while that link is still good, unless `force` is set ("send it
+ * again"). Actual sends are limited to three an hour per account.
+ */
+export const resendHandler = (request: Request) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    if (user.emailVerified) return json({ ok: true, alreadyVerified: true });
+    const mailer = await getMailer(request);
+    if (!mailer) return json({ error: "email_unavailable" }, 503);
+    const force = ((await body(request)) as { force?: unknown } | null)?.force === true;
+    if (!force && (await hasLiveVerification(db, user.id))) return json({ ok: true, sent: false });
+    const t = await hit(db, `verify:${user.id}`, limit(request, "VERIFY_EMAIL_LIMIT", 3), HOUR);
+    if (!t.allowed) return tooMany(t.retryAfter);
+    try {
+      const token = await issueVerification(db, user);
+      await mailer(verificationMail(siteOrigin(request), token, user.email));
+    } catch (error) {
+      console.error("Couldn't send the verification email", error);
+      return json({ error: "email_failed" }, 502);
+    }
+    return json({ ok: true, sent: true });
+  });
 
 export async function logoutHandler(request: Request) {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
@@ -53,6 +165,12 @@ export async function meHandler(request: Request) {
   const providers = {
     github: githubConfig(request) !== null,
     images: await (await import("../assets/routes")).imagesAvailable(request),
+    // whether this server confirms addresses by email, and the public key of the sign-up CAPTCHA
+    email: (await getMailer(request)) !== null,
+    turnstile:
+      getEnv(request, "TURNSTILE_SECRET") && getEnv(request, "TURNSTILE_SITE_KEY")
+        ? getEnv(request, "TURNSTILE_SITE_KEY")
+        : null,
   };
   if (!session || !token) return json({ user: null, providers });
   // Re-issue the cookie so the browser keeps it exactly as long as the (sliding) session lives.

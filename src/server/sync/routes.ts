@@ -1,4 +1,4 @@
-import { withUser } from "../auth/guard";
+import { withVerifiedUser } from "../auth/guard";
 import { sameOrigin } from "../auth/http";
 import { getEnv } from "../env";
 import { DEFAULT_CLOUD_LIMIT } from "@/lib/sync/protocol";
@@ -17,7 +17,7 @@ const cloudLimit = (request: Request) => {
 export const MAX_BODY = 5_000_000;
 
 export const pushHandler = (request: Request) =>
-  withUser(request, async (user, db) => {
+  withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
     const text = await request.text();
     if (text.length > MAX_BODY) return json({ error: "too_large" }, 413);
@@ -33,7 +33,7 @@ export const pushHandler = (request: Request) =>
   });
 
 export const pullHandler = (request: Request) =>
-  withUser(request, async (user, db) => {
+  withVerifiedUser(request, async (user, db) => {
     const since = Number(new URL(request.url).searchParams.get("since") ?? 0);
     if (!Number.isInteger(since) || since < 0) return json({ error: "invalid" }, 400);
     return json({ ...(await pullDocs(db, user.id, since)), limit: cloudLimit(request) });

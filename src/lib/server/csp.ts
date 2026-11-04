@@ -13,7 +13,9 @@ export function createNonce(): string {
 export function buildCsp(nonce: string): string {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'`,
+    // Turnstile (the optional sign-up CAPTCHA) loads its script and a frame from Cloudflare.
+    `script-src 'self' 'nonce-${nonce}' https://challenges.cloudflare.com`,
+    "frame-src https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self'",

@@ -10,11 +10,16 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("account client", () => {
   it("reads the signed-in user and the available providers", async () => {
-    reply({ user: { id: "1", email: "a@b.co", displayName: null }, providers: { github: true } });
+    reply({
+      user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
+      providers: { github: true },
+    });
     expect(await fetchAccount()).toEqual({
-      user: { id: "1", email: "a@b.co", displayName: null },
+      user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
       github: true,
       images: false,
+      email: false,
+      turnstile: null,
     });
   });
 
@@ -26,8 +31,17 @@ describe("account client", () => {
       );
     localStorage.clear();
     offline();
-    expect(await fetchAccount()).toEqual({ user: null, github: false, images: false });
-    reply({ user: { id: "1", email: "a@b.co", displayName: null }, providers: {} });
+    expect(await fetchAccount()).toEqual({
+      user: null,
+      github: false,
+      images: false,
+      email: false,
+      turnstile: null,
+    });
+    reply({
+      user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
+      providers: {},
+    });
     await fetchAccount();
     offline();
     expect((await fetchAccount()).user).toMatchObject({ id: "1" });
@@ -39,7 +53,7 @@ describe("account client", () => {
   });
 
   it("signs in and maps server errors to messages", async () => {
-    reply({ user: { id: "1", email: "a@b.co", displayName: null } });
+    reply({ user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true } });
     expect(await signIn("login", "a@b.co", "pw")).toMatchObject({ user: { email: "a@b.co" } });
     reply({ error: "invalid_credentials" }, 401);
     expect(await signIn("login", "a@b.co", "pw")).toEqual({

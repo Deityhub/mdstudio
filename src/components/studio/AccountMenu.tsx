@@ -23,11 +23,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authMessage, signIn } from "@/lib/account/client";
-import { accountStore, useAccount } from "@/lib/account/store";
+import { accountStore, cloudReady, useAccount } from "@/lib/account/store";
+import { useConfirmEmailAsked } from "@/lib/account/verify-prompt";
 import { documentStore } from "@/lib/storage/documentStore";
 import { completeSignOut, prepareSignOut } from "@/lib/sync/hooks";
-import { ChooseCloudDrafts, SignOutDialog, type SignOutPrompt } from "./CloudDialogs";
+import { ChooseCloudDrafts, SignOutDialog, type SignOutPrompt, VerifyEmail } from "./CloudDialogs";
 import { ManageImages } from "./ManageImages";
+import { Turnstile } from "./Turnstile";
 
 /** Optional account: signed out is the default and the editor never needs it. */
 export function AccountMenu() {
@@ -41,30 +43,39 @@ export function AccountMenu() {
   const [picker, setPicker] = useState(false);
   const [manageImages, setManageImages] = useState(false);
   const [prompt, setPrompt] = useState<SignOutPrompt | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [captcha, setCaptcha] = useState("");
+  const [captchaRun, setCaptchaRun] = useState(0);
+  const asked = useConfirmEmailAsked();
+  useEffect(() => {
+    if (asked > 0) setVerifying(true);
+  }, [asked]);
 
   useEffect(() => {
     void accountStore.refresh();
-    // The GitHub callback sends failures back as /editor?auth_error=<code>.
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get("auth_error");
-    if (code) {
-      toast.error(authMessage(code));
-      url.searchParams.delete("auth_error");
-      window.history.replaceState(null, "", url);
-    }
   }, []);
 
   async function submit(form: HTMLFormElement) {
     const data = new FormData(form);
     setBusy(true);
     setError("");
-    const result = await signIn(mode, String(data.get("email")), String(data.get("password")));
+    const result = await signIn(
+      mode,
+      String(data.get("email")),
+      String(data.get("password")),
+      mode === "signup" ? captcha : undefined,
+    );
     setBusy(false);
-    if ("error" in result) return setError(result.error);
+    if ("error" in result) {
+      setCaptcha("");
+      setCaptchaRun((n) => n + 1); // a used token is not good twice: ask for a new one
+      return setError(result.error);
+    }
     accountStore.set((a) => ({ ...a, user: result.user }));
     setOpen(false);
     toast.success(mode === "signup" ? "Account created" : "Signed in");
-    // Nothing is uploaded unless chosen: offer the choice when there is something to choose.
+    // Nothing is uploaded unless chosen; an unconfirmed address is asked to confirm on first use.
+    if (!cloudReady({ ...account, user: result.user })) return;
     if ((await documentStore.list()).some((d) => d.content.trim())) setPicker(true);
   }
 
@@ -111,7 +122,9 @@ export function AccountMenu() {
               {user.email}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setPicker(true)}>
+            <DropdownMenuItem
+              onSelect={() => (cloudReady(account) ? setPicker(true) : setVerifying(true))}
+            >
               <Cloud className="h-4 w-4" /> Choose drafts for the cloud…
             </DropdownMenuItem>
             {account.images && (
@@ -126,6 +139,7 @@ export function AccountMenu() {
         </DropdownMenu>
         <ChooseCloudDrafts userId={user.id} open={picker} onOpenChange={setPicker} />
         <ManageImages open={manageImages} onOpenChange={setManageImages} />
+        <VerifyEmail open={verifying} onOpenChange={setVerifying} email={user.email} />
         <SignOutDialog
           prompt={prompt}
           onCancel={() => setPrompt(null)}
@@ -221,7 +235,13 @@ export function AccountMenu() {
                 {error}
               </p>
             )}
-            <Button type="submit" disabled={busy}>
+            {mode === "signup" && account.turnstile && (
+              <Turnstile key={captchaRun} siteKey={account.turnstile} onToken={setCaptcha} />
+            )}
+            <Button
+              type="submit"
+              disabled={busy || (mode === "signup" && !!account.turnstile && !captcha)}
+            >
               {mode === "login" ? "Sign in" : "Create account"}
             </Button>
           </form>
