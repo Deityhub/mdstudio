@@ -52,7 +52,11 @@ describe("githubSignIn", () => {
   it("creates a password-less user with a session", async () => {
     const result = await githubSignIn(db, cfg, input, github(), now);
     if ("error" in result) throw new Error(result.error);
-    expect(result.user).toMatchObject({ email: "ada@example.com", displayName: "Ada L" });
+    expect(result.user).toMatchObject({
+      email: "ada@example.com",
+      displayName: "Ada L",
+      emailVerified: true,
+    });
     expect((await userForToken(db, result.token, now))?.user.id).toBe(result.user.id);
     const [row] = await db.select().from(users);
     expect(row?.passwordHash).toBeNull();

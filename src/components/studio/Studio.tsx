@@ -12,7 +12,8 @@ import {
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountMenu } from "@/components/studio/AccountMenu";
-import { useAccount } from "@/lib/account/store";
+import { cloudReady, useAccount } from "@/lib/account/store";
+import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { addToCloud, removeFromCloud, syncLabel, useCloud, useSync } from "@/lib/sync/hooks";
 import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
@@ -281,7 +282,10 @@ export function Studio({ docId }: { docId: string }) {
   const [folderNames, setFolderNames] = useState<string[]>([]);
   // A draft kept in the cloud belongs to its account: it is hidden while anyone else, or nobody,
   // is signed in. Until the server has answered, nothing that belongs to an account is shown.
-  const { user: account, loaded: accountLoaded, images: hostingOn } = useAccount();
+  const accountState = useAccount();
+  const { user: account, loaded: accountLoaded, images: hostingOn } = accountState;
+  // The cloud is open to accounts whose email is confirmed (or when this server sends no mail).
+  const cloudOn = cloudReady(accountState);
   const visibleTo = useRef<string | undefined>(undefined);
   visibleTo.current = account?.id;
   const refreshList = useCallback(
@@ -365,7 +369,7 @@ export function Studio({ docId }: { docId: string }) {
 
   // Optional account sync of the drafts chosen for the cloud: a no-op while signed out. Cloud
   // changes to the open draft wait while it has unsaved edits, then load into the editor.
-  const syncStatus = useSync(account?.id, {
+  const syncStatus = useSync(cloudOn ? account?.id : undefined, {
     isBusy: (id) => pending.current?.id === id,
     onReport: (report) => {
       if (report.applied.length || report.removed.length || report.detached.length)
@@ -1012,9 +1016,11 @@ export function Studio({ docId }: { docId: string }) {
         cloud: {
           ids: cloudDrafts.linked,
           limit: cloudDrafts.limit,
-          onAdd: (d: MdDocument) => void addToCloud(account.id, [d.id]),
+          // Until the email is confirmed, trying the cloud opens the dialog that asks for that.
+          onAdd: (d: MdDocument) =>
+            cloudOn ? void addToCloud(account.id, [d.id]) : askToConfirmEmail(),
           onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
-          ...(hostingOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
+          ...(hostingOn && cloudOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
         },
       })}
     />

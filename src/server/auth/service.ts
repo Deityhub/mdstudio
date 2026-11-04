@@ -1,9 +1,10 @@
 // Account and session logic, independent of HTTP so it can be tested against a real database.
 // Sessions are database rows, not JWTs (ADR 10): revoking one takes effect immediately.
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, or } from "drizzle-orm";
 import { z } from "zod";
 import { sessions, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
+import { canonicalEmail } from "./email";
 import { hashPassword, needsRehash, verifyPassword } from "./password";
 
 export const SESSION_MS = 24 * 60 * 60 * 1000;
@@ -15,7 +16,13 @@ const Credentials = z.object({
   password: z.string().min(10).max(200),
 });
 
-export type PublicUser = { id: string; email: string; displayName: string | null };
+export type PublicUser = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  /** True once the address was confirmed, or when this server sends no mail to confirm with. */
+  emailVerified: boolean;
+};
 type Signed = { user: PublicUser; token: string };
 
 const toBase64Url = (bytes: Uint8Array) =>
@@ -29,10 +36,16 @@ async function sha256Hex(text: string) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-const publicUser = (u: { id: string; email: string; displayName: string | null }): PublicUser => ({
+const publicUser = (u: {
+  id: string;
+  email: string;
+  displayName: string | null;
+  emailVerifiedAt: number | null;
+}): PublicUser => ({
   id: u.id,
   email: u.email,
   displayName: u.displayName,
+  emailVerified: u.emailVerifiedAt !== null,
 });
 
 export async function startSession(db: Db, user: PublicUser, now: number): Promise<Signed> {
@@ -52,26 +65,35 @@ export async function signup(
   db: Db,
   input: unknown,
   now = Date.now(),
+  opts: { verifyByEmail?: boolean } = {},
 ): Promise<Signed | { error: "invalid" | "email_taken" }> {
   const parsed = Credentials.safeParse(input);
-  if (!parsed.success) return { error: "invalid" };
+  const emailKey = parsed.success ? canonicalEmail(parsed.data.email) : null;
+  if (!parsed.success || !emailKey) return { error: "invalid" };
   const { email, password } = parsed.data;
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+  // The inbox is the identity: spellings that reach the same mailbox are the same account.
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(or(eq(users.emailKey, emailKey), eq(users.email, email)));
   if (existing) return { error: "email_taken" };
-  const user = { id: crypto.randomUUID(), email, displayName: null };
+  // With no way to send mail there is nothing to confirm the address with, so it counts as confirmed.
+  const emailVerifiedAt = opts.verifyByEmail ? null : now;
+  const user = { id: crypto.randomUUID(), email, displayName: null, emailVerifiedAt };
   const passwordHash = await hashPassword(password);
   try {
     await db.insert(users).values({
       ...user,
+      emailKey,
       passwordHash,
       createdAt: now,
       updatedAt: now,
     });
   } catch {
-    // Two signups for one email raced; the unique index let only one through.
+    // Two signups for one inbox raced; the unique index let only one through.
     return { error: "email_taken" };
   }
-  return startSession(db, user, now);
+  return startSession(db, publicUser(user), now);
 }
 
 // Verified against this when the email is unknown, so both failures take the same time.
@@ -85,10 +107,23 @@ export async function login(
   const parsed = Credentials.safeParse(input);
   if (!parsed.success) return { error: "invalid_credentials" };
   const { email, password } = parsed.data;
-  const [row] = await db.select().from(users).where(eq(users.email, email));
+  const emailKey = canonicalEmail(email);
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(
+      emailKey ? or(eq(users.emailKey, emailKey), eq(users.email, email)) : eq(users.email, email),
+    );
   const hash = row?.passwordHash ?? (await (decoy ??= hashPassword("decoy")));
   const ok = await verifyPassword(password, hash);
   if (!row || !row.passwordHash || !ok) return { error: "invalid_credentials" };
+  // Accounts from before the key existed get one the first time they sign in.
+  if (!row.emailKey && emailKey)
+    await db
+      .update(users)
+      .set({ emailKey: canonicalEmail(row.email) ?? emailKey })
+      .where(eq(users.id, row.id))
+      .catch(() => undefined);
   if (needsRehash(row.passwordHash))
     await db
       .update(users)
@@ -114,6 +149,7 @@ export async function userForToken(
       id: users.id,
       email: users.email,
       displayName: users.displayName,
+      emailVerifiedAt: users.emailVerifiedAt,
       expiresAt: sessions.expiresAt,
       createdAt: sessions.createdAt,
     })

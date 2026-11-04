@@ -1,4 +1,4 @@
-import { withUser } from "../auth/guard";
+import { withVerifiedUser } from "../auth/guard";
 import { sameOrigin } from "../auth/http";
 import { getDb } from "../db";
 import { getEnv } from "../env";
@@ -42,7 +42,7 @@ export const imagesAvailable = async (request: Request) => (await getStore(reque
 const UNAVAILABLE = () => json({ error: "unavailable" }, 503);
 
 export const uploadHandler = (request: Request) =>
-  withUser(request, async (user, db) => {
+  withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
     const store = await getStore(request);
     if (!store) return UNAVAILABLE();
@@ -68,14 +68,14 @@ export const uploadHandler = (request: Request) =>
   });
 
 export const listHandler = (request: Request) =>
-  withUser(request, async (user, db) => {
+  withVerifiedUser(request, async (user, db) => {
     if (!(await imagesAvailable(request))) return UNAVAILABLE();
     const { assets, usage } = await listAssets(db, user.id, limitsFor(request));
     return json({ assets: assets.map(withUrl(request)), usage });
   });
 
 export const deleteHandler = (request: Request, id: string) =>
-  withUser(request, async (user, db) => {
+  withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
     const store = await getStore(request);
     if (!store) return UNAVAILABLE();

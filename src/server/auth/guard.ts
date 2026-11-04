@@ -2,6 +2,7 @@
 // here, so the session slides in one place and the browser's cookie is renewed with it (the
 // database expiry alone would leave the cookie to lapse at its original time).
 import { type Db, getDb } from "../db";
+import { getMailer } from "../mail";
 import { readToken, sessionCookie } from "./http";
 import { type PublicUser, userForToken } from "./service";
 
@@ -24,3 +25,20 @@ export async function withUser(
   );
   return response;
 }
+
+/**
+ * `withUser` for what lives in the cloud: an account must have confirmed its email first. On a
+ * server that sends no mail there is nothing to confirm with, so everyone counts as confirmed.
+ */
+export const withVerifiedUser = (
+  request: Request,
+  handler: (user: PublicUser, db: Db) => Promise<Response>,
+) =>
+  withUser(request, async (user, db) => {
+    if (!user.emailVerified && (await getMailer(request)) !== null)
+      return Response.json(
+        { error: "email_unverified" },
+        { status: 403, headers: { "cache-control": "no-store" } },
+      );
+    return handler(user, db);
+  });

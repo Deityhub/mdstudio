@@ -14,6 +14,8 @@ import { documentStore, indexedDbStore, type MdDocument } from "@/lib/storage/do
 import { addToCloud, useCloud } from "@/lib/sync/hooks";
 import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { toast } from "sonner";
+import { requestVerification } from "@/lib/account/client";
+import { accountStore } from "@/lib/account/store";
 
 /** Picks which drafts go to the account; everything else stays in this browser. */
 export function ChooseCloudDrafts({
@@ -167,6 +169,86 @@ export function SignOutDialog({
             </DialogFooter>
           </>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * The cloud is closed until the email address is confirmed. Opening this for the first time sends
+ * the link (nothing is sent at sign-up), and later openings do not send another unless asked.
+ */
+export function VerifyEmail({
+  open,
+  onOpenChange,
+  email,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  email: string;
+}) {
+  const [sending, setSending] = useState(false);
+  const [problem, setProblem] = useState("");
+  const [sent, setSent] = useState(false);
+
+  async function send(force: boolean) {
+    setSending(true);
+    setProblem("");
+    const result = await requestVerification(force);
+    setSending(false);
+    if ("error" in result) return setProblem(result.error);
+    if (result.alreadyVerified) {
+      await accountStore.refresh();
+      return onOpenChange(false);
+    }
+    setSent(true);
+    if (result.sent)
+      toast.success("Email sent", { description: "It can take a minute to arrive." });
+  }
+
+  useEffect(() => {
+    if (open) {
+      setSent(false);
+      void send(false);
+    }
+    // sends once per opening
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Confirm your email</DialogTitle>
+          <DialogDescription>
+            To store drafts in your cloud, confirm {email}.{" "}
+            {problem
+              ? ""
+              : sending && !sent
+                ? "Sending a link…"
+                : "We sent a link: click it, then come back. "}
+            Writing, previewing and exporting work without it.
+          </DialogDescription>
+        </DialogHeader>
+        {problem && (
+          <p role="alert" className="text-sm text-destructive">
+            {problem}
+          </p>
+        )}
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              await accountStore.refresh();
+              onOpenChange(false);
+            }}
+          >
+            I've confirmed it
+          </Button>
+          <Button variant="outline" disabled={sending} onClick={() => void send(true)}>
+            Send it again
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

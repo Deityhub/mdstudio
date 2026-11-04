@@ -38,6 +38,18 @@ Hosted images are on by default in Docker, and you pay for the disk. `MAX_ASSETS
 files live under `/data/uploads` on the volume; on Cloudflare they live in the R2 bucket bound as `IMAGES`
 (see `docs/RELEASING.md`). Set these in the environment of the server or container.
 
+## Email confirmation and sign-up limits (optional)
+
+Set `MAIL_FROM` plus one way to send: `SMTP_URL` (for example `smtps://user:pass@smtp.example.com:465`),
+or `RESEND_API_KEY`. With that, an account must confirm its address before it can store drafts in the
+cloud (the email goes out the first time it tries the cloud, not at sign-up); without it nothing is
+confirmed or blocked. For trying it out, `MAIL_OUTBOX_DIR=/data/outbox` writes
+each message as a JSON file instead of sending it. Sign-ups are limited per address (`SIGNUP_LIMIT`, default
+5 an hour), failed sign-ins per email and address (`LOGIN_FAIL_LIMIT`, default 10 in 15 minutes) and
+confirmation emails per account (`VERIFY_EMAIL_LIMIT`, default 3 an hour). Behind a reverse proxy set
+`TRUST_PROXY=1` so the address comes from `X-Forwarded-For`; without it only the per-email limits apply,
+because the address cannot be trusted. `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET` add a CAPTCHA to sign-up.
+
 ## Changing the schema
 
 Edit `db/schema.ts`, run `bun run db:generate`, commit the new migration. Never write

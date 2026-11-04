@@ -1,8 +1,9 @@
 // GitHub OAuth (authorization code + PKCE). Only the account's id, name, avatar and verified email
 // are used; the access token is never stored, it lives for the two calls made in the callback.
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { oauthAccounts, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
+import { canonicalEmail } from "./email";
 import { type PublicUser, startSession } from "./service";
 
 export type GithubConfig = { clientId: string; clientSecret: string };
@@ -89,11 +90,17 @@ export async function githubSignIn(
 
   const providerUserId = String(profile.id);
   const [linked] = await db
-    .select({ id: users.id, email: users.email, displayName: users.displayName })
+    .select({
+      id: users.id,
+      email: users.email,
+      displayName: users.displayName,
+      emailVerifiedAt: users.emailVerifiedAt,
+    })
     .from(oauthAccounts)
     .innerJoin(users, eq(users.id, oauthAccounts.userId))
     .where(eq(oauthAccounts.providerUserId, providerUserId));
-  if (linked) return startSession(db, linked, now);
+  if (linked)
+    return startSession(db, { ...linked, emailVerified: linked.emailVerifiedAt !== null }, now);
 
   const verified = emails.filter((e) => e.verified);
   const email = (verified.find((e) => e.primary) ?? verified[0])?.email.toLowerCase();
@@ -101,17 +108,28 @@ export async function githubSignIn(
 
   // Never attach to an existing account by email: sign-up does not verify addresses, so someone
   // could have registered this one first, with a password they know.
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+  const emailKey = canonicalEmail(email);
+  if (!emailKey) return { error: "no_verified_email" };
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(or(eq(users.emailKey, emailKey), eq(users.email, email)));
   if (existing) return { error: "email_in_use" };
 
+  // GitHub only reports addresses it has verified, so there is nothing left to confirm.
   const user = {
     id: crypto.randomUUID(),
     email,
     displayName: profile.name ?? profile.login ?? null,
+    emailVerified: true,
   };
   try {
     await db.insert(users).values({
-      ...user,
+      id: user.id,
+      email,
+      emailKey,
+      emailVerifiedAt: now,
+      displayName: user.displayName,
       avatarUrl: profile.avatar_url ?? null,
       createdAt: now,
       updatedAt: now,

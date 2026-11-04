@@ -17,6 +17,11 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-}
       # Drafts one account may keep in the cloud.
       MAX_CLOUD_DOCS: ${MAX_CLOUD_DOCS:-5}
+      # Email confirmation (optional): a sender and one way to send. Limits and proxy: see infra/README.md.
+      MAIL_FROM: ${MAIL_FROM:-}
+      SMTP_URL: ${SMTP_URL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      TRUST_PROXY: ${TRUST_PROXY:-}
       # Hosted images per account: how many, and how many bytes in all.
       MAX_ASSETS: ${MAX_ASSETS:-10}
       MAX_ASSET_BYTES: ${MAX_ASSET_BYTES:-10000000}

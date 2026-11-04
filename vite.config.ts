@@ -27,6 +27,12 @@ export default defineConfig(({ command }) => ({
       ...(preset === "cloudflare-module"
         ? [
             {
+              find: "@/server/node-mail",
+              replacement: fileURLToPath(
+                new URL("./src/server/node-mail.stub.ts", import.meta.url),
+              ),
+            },
+            {
               find: "@/server/node-storage",
               replacement: fileURLToPath(
                 new URL("./src/server/node-storage.stub.ts", import.meta.url),
