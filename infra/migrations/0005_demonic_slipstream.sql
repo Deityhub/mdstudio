@@ -1,0 +1,1 @@
+ALTER TABLE `email_tokens` ADD `purpose` text DEFAULT 'verify' NOT NULL;

@@ -16,7 +16,7 @@ export const users = sqliteTable("users", {
   updatedAt: integer("updated_at").notNull(),
 });
 
-/** One-time links that confirm an email address. Only a hash of the token is stored. */
+/** One-time links sent by email: confirming the address, or resetting the password. Only a hash of the token is stored. */
 export const emailTokens = sqliteTable("email_tokens", {
   id: text("id").primaryKey(),
   userId: text("user_id")
@@ -24,6 +24,8 @@ export const emailTokens = sqliteTable("email_tokens", {
     .references(() => users.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull().unique(),
   email: text("email").notNull(),
+  // What the link is for: confirming the address ("verify") or choosing a new password ("reset").
+  purpose: text("purpose").notNull().default("verify"),
   expiresAt: integer("expires_at").notNull(),
   createdAt: integer("created_at").notNull(),
 });

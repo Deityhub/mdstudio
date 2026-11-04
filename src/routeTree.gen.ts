@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AFileRouteImport } from './routes/a.$file'
 import { Route as ApiAssetsRouteImport } from './routes/api/assets'
@@ -19,10 +20,12 @@ import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
+import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
+import { Route as ApiAuthResetRouteImport } from './routes/api/auth/reset'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
 import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
@@ -33,6 +36,11 @@ import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verif
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -80,6 +88,11 @@ const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiAssetsRoute,
 } as any)
+const ApiAuthForgotRoute = ApiAuthForgotRouteImport.update({
+  id: '/api/auth/forgot',
+  path: '/api/auth/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthGithubRoute = ApiAuthGithubRouteImport.update({
   id: '/api/auth/github',
   path: '/api/auth/github',
@@ -98,6 +111,11 @@ const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
 const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
   id: '/api/auth/me',
   path: '/api/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthResetRoute = ApiAuthResetRouteImport.update({
+  id: '/api/auth/reset',
+  path: '/api/auth/reset',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
@@ -133,6 +151,7 @@ const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
@@ -142,10 +161,12 @@ export interface FileRoutesByFullPath {
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
@@ -155,6 +176,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
@@ -164,10 +186,12 @@ export interface FileRoutesByTo {
   '/editor': typeof EditorIndexRoute
   '/guides': typeof GuidesIndexRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
@@ -178,6 +202,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
@@ -187,10 +212,12 @@ export interface FileRoutesById {
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
@@ -202,6 +229,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/a/$file'
     | '/api/assets'
@@ -211,10 +239,12 @@ export interface FileRouteTypes {
     | '/editor/'
     | '/guides/'
     | '/api/assets/$id'
+    | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
     | '/api/sync/pull'
@@ -224,6 +254,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/a/$file'
     | '/api/assets'
@@ -233,10 +264,12 @@ export interface FileRouteTypes {
     | '/editor'
     | '/guides'
     | '/api/assets/$id'
+    | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
     | '/api/sync/pull'
@@ -246,6 +279,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/a/$file'
     | '/api/assets'
@@ -255,10 +289,12 @@ export interface FileRouteTypes {
     | '/editor/'
     | '/guides/'
     | '/api/assets/$id'
+    | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
     | '/api/sync/pull'
@@ -269,6 +305,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AFileRoute: typeof AFileRoute
   ApiAssetsRoute: typeof ApiAssetsRouteWithChildren
@@ -277,10 +314,12 @@ export interface RootRouteChildren {
   GuidesSlugRoute: typeof GuidesSlugRoute
   EditorIndexRoute: typeof EditorIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
+  ApiAuthForgotRoute: typeof ApiAuthForgotRoute
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
+  ApiAuthResetRoute: typeof ApiAuthResetRoute
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
   ApiSyncPullRoute: typeof ApiSyncPullRoute
@@ -294,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -359,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssetsIdRouteImport
       parentRoute: typeof ApiAssetsRoute
     }
+    '/api/auth/forgot': {
+      id: '/api/auth/forgot'
+      path: '/api/auth/forgot'
+      fullPath: '/api/auth/forgot'
+      preLoaderRoute: typeof ApiAuthForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/github': {
       id: '/api/auth/github'
       path: '/api/auth/github'
@@ -385,6 +438,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/me'
       fullPath: '/api/auth/me'
       preLoaderRoute: typeof ApiAuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/reset': {
+      id: '/api/auth/reset'
+      path: '/api/auth/reset'
+      fullPath: '/api/auth/reset'
+      preLoaderRoute: typeof ApiAuthResetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/signup': {
@@ -470,6 +530,7 @@ const ApiAuthVerifyRouteWithChildren = ApiAuthVerifyRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AFileRoute: AFileRoute,
   ApiAssetsRoute: ApiAssetsRouteWithChildren,
@@ -478,10 +539,12 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesSlugRoute: GuidesSlugRoute,
   EditorIndexRoute: EditorIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,
+  ApiAuthForgotRoute: ApiAuthForgotRoute,
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
+  ApiAuthResetRoute: ApiAuthResetRoute,
   ApiAuthSignupRoute: ApiAuthSignupRoute,
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
   ApiSyncPullRoute: ApiSyncPullRoute,

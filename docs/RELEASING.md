@@ -141,7 +141,9 @@ only the ones that are set.
   Without them sign-up has no CAPTCHA.
 - **Limits** (always on; each changeable with an environment variable): 5 sign-ups an hour per address
   (`SIGNUP_LIMIT`), 10 failed sign-ins per 15 minutes per email and per address (`LOGIN_FAIL_LIMIT`), 3
-  confirmation emails an hour per account (`VERIFY_EMAIL_LIMIT`). The address is Cloudflare's
+  confirmation emails an hour per account (`VERIFY_EMAIL_LIMIT`), 5 password reset requests an hour per address
+  (`FORGOT_LIMIT`) and 3 per inbox (`FORGOT_EMAIL_LIMIT`), and 10 reset attempts an hour per address
+  (`RESET_LIMIT`). The address is Cloudflare's
   `cf-connecting-ip`.
 - **One inbox, one account.** `test+shop@gmail.com` and `t.e.s.t@gmail.com` are the same account as
   `test@gmail.com` (a `+tag` is dropped everywhere, dots are ignored for Gmail, `googlemail.com` is `gmail.com`).

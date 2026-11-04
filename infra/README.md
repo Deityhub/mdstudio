@@ -47,7 +47,9 @@ cloud (the email goes out the first time it tries the cloud, not at sign-up); wi
 confirmed or blocked. For trying it out, `MAIL_OUTBOX_DIR=/data/outbox` writes
 each message as a JSON file instead of sending it. Sign-ups are limited per address (`SIGNUP_LIMIT`, default
 5 an hour), failed sign-ins per email and address (`LOGIN_FAIL_LIMIT`, default 10 in 15 minutes) and
-confirmation emails per account (`VERIFY_EMAIL_LIMIT`, default 3 an hour). Behind a reverse proxy set
+confirmation emails per account (`VERIFY_EMAIL_LIMIT`, default 3 an hour). Password reset ("Forgot your password?")
+needs mail too; its limits are `FORGOT_LIMIT` (5 an hour per address), `FORGOT_EMAIL_LIMIT` (3 an hour per inbox)
+and `RESET_LIMIT` (10 an hour per address). Behind a reverse proxy set
 `TRUST_PROXY=1` so the address comes from `X-Forwarded-For`; without it only the per-email limits apply,
 because the address cannot be trusted. `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET` add a CAPTCHA to sign-up.
 
