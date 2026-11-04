@@ -1,27 +1,22 @@
+import { getDb } from "../db";
 import { getEnv } from "../env";
-import { resendMailer } from "./resend";
+import { sendWithChain } from "./chain";
+import { MAIL_ENV_KEYS, providersFromEnv } from "./providers";
 import type { Mailer } from "./types";
 
 export type { Mail, Mailer } from "./types";
 
-const KEYS = ["RESEND_API_KEY", "MAIL_FROM", "SMTP_URL", "MAIL_OUTBOX_DIR"] as const;
-
 /**
- * Which way mail goes out: Resend when it has a key (anywhere), else SMTP or the outbox folder on
- * Node. Needs MAIL_FROM. Null means this server sends no mail, and email verification stays off.
+ * The way this server sends mail: through whichever configured provider has the most room left,
+ * falling back to the next on a failure (see chain.ts). Null means no provider is configured, so
+ * this server sends no mail and email confirmation stays off.
  */
-export function pickMailer(
-  env: Record<string, string | undefined>,
-  node: ((env: Record<string, string | undefined>) => Mailer | null) | null,
-): Mailer | null {
-  const from = env["MAIL_FROM"];
-  if (!from) return null;
-  if (env["RESEND_API_KEY"]) return resendMailer(env["RESEND_API_KEY"], from);
-  return node && (env["SMTP_URL"] || env["MAIL_OUTBOX_DIR"]) ? node(env) : null;
-}
-
 export async function getMailer(request: Request): Promise<Mailer | null> {
-  const env = Object.fromEntries(KEYS.map((k) => [k, getEnv(request, k)]));
+  const env = Object.fromEntries(MAIL_ENV_KEYS.map((k) => [k, getEnv(request, k)]));
   const { createNodeMailer } = await import("@/server/node-mail");
-  return pickMailer(env, createNodeMailer);
+  const providers = providersFromEnv(env, createNodeMailer);
+  if (!providers.length) return null;
+  return async (mail) => {
+    await sendWithChain(await getDb(request), providers, mail);
+  };
 }

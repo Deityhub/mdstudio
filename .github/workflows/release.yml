@@ -124,12 +124,13 @@ jobs:
           GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
           GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: |
           names=""
-          for name in GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET RESEND_API_KEY MAIL_FROM TURNSTILE_SECRET TURNSTILE_SITE_KEY; do
+          for name in GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET RESEND_API_KEY MAILTRAP_API_TOKEN MAIL_FROM TURNSTILE_SECRET TURNSTILE_SITE_KEY; do
             if [ -n "${!name}" ]; then names+="$name"$'\n'; fi
           done
           { echo "names<<EOF"; printf '%s' "$names"; echo "EOF"; } >> "$GITHUB_OUTPUT"
@@ -138,6 +139,7 @@ jobs:
           GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
           GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}

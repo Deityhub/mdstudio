@@ -119,17 +119,23 @@ mdstudio.deityhub.com protects the cloud from throwaway accounts with four thing
 from you; the email and the CAPTCHA each switch on when their secrets exist, and the release workflow sends
 only the ones that are set.
 
-- **Email confirmation (Resend).** Create a Resend account (free: 3,000 emails a month, 100 a day), add your
-  domain and the DNS records it shows (SPF and DKIM), and create an API key. Then:
+- **Email confirmation (Resend, Mailtrap, or more).** Mail goes out through any provider that has its key
+  set, and each free tier has its own daily and monthly allowance, so the server keeps count and picks the
+  provider with the most room left. When one fails or is full it tries the next, and a failing provider
+  is left alone for five minutes. Set `MAIL_FROM` (the same sender for all, e.g. `mdstudio <noreply@deityhub.com>`)
+  and a key for each provider you use, after adding your domain's DNS records (SPF and DKIM) at that provider:
   ```bash
-  gh secret set RESEND_API_KEY
-  gh secret set MAIL_FROM        # e.g.  mdstudio <noreply@deityhub.com>
+  gh secret set MAIL_FROM
+  gh secret set RESEND_API_KEY        # Resend: free 100 a day, 3,000 a month
+  gh secret set MAILTRAP_API_TOKEN    # Mailtrap Email Sending: free 150 a day, 4,000 a month
   ```
-  Until both are set the server sends no mail, every address counts as confirmed, and nothing is blocked.
-  Once they are, an account must click an emailed link before it can store drafts in the cloud (GitHub
-  sign-in counts as confirmed). The link is sent the first time the account tries the cloud, not at
-  sign-up, so people who only write locally never use up the free sending allowance. Writing, previewing
-  and exporting never need it.
+  Until `MAIL_FROM` and at least one key are set the server sends no mail, every address counts as
+  confirmed, and nothing is blocked. Once they are, an account must click an emailed link before it can store
+  drafts in the cloud (GitHub sign-in counts as confirmed). The link is sent the first time the account tries
+  the cloud, not at sign-up, so people who only write locally never use up the free sending allowance.
+  Writing, previewing and exporting never need it. `MAIL_PROVIDERS=mailtrap,resend` limits and orders the
+  providers, and `MAIL_<ID>_DAILY` / `MAIL_<ID>_MONTHLY` (for example `MAIL_RESEND_DAILY=50`) change the
+  limits the server assumes, for when a plan changes. To add another provider, see `src/server/mail/providers.ts`.
 - **Sign-up CAPTCHA (Cloudflare Turnstile).** Create a Turnstile widget (Cloudflare dashboard → Turnstile; free)
   for `mdstudio.deityhub.com`, then `gh secret set TURNSTILE_SITE_KEY` and `gh secret set TURNSTILE_SECRET`.
   Without them sign-up has no CAPTCHA.

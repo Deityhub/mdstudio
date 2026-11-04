@@ -36,6 +36,20 @@ export async function blockedFor(db: Db, key: string, limit: number, now = Date.
 export const lockedOut = (db: Db, key: string, maxFailures: number, now = Date.now()) =>
   blockedFor(db, key, maxFailures - 1, now);
 
+/** The count for `key` in its current window, 0 when there is none. */
+export async function readCount(db: Db, key: string, now = Date.now()) {
+  const [row] = await db.select().from(rateLimits).where(eq(rateLimits.key, key));
+  return row && row.resetsAt > now ? row.count : 0;
+}
+
+/** Sets a counter outright, for a provider that says it is full whatever we counted. */
+export async function setCount(db: Db, key: string, count: number, resetsAt: number) {
+  await db
+    .insert(rateLimits)
+    .values({ key, count, resetsAt })
+    .onConflictDoUpdate({ target: rateLimits.key, set: { count, resetsAt } });
+}
+
 export const clearLimit = (db: Db, key: string) =>
   db
     .delete(rateLimits)

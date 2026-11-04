@@ -41,7 +41,8 @@ files live under `/data/uploads` on the volume; on Cloudflare they live in the R
 ## Email confirmation and sign-up limits (optional)
 
 Set `MAIL_FROM` plus one way to send: `SMTP_URL` (for example `smtps://user:pass@smtp.example.com:465`),
-or `RESEND_API_KEY`. With that, an account must confirm its address before it can store drafts in the
+`RESEND_API_KEY` or `MAILTRAP_API_TOKEN` (every one that is set is used, the one with the most room left
+first, falling back to the next on a failure; `MAIL_PROVIDERS` limits and orders them). With that, an account must confirm its address before it can store drafts in the
 cloud (the email goes out the first time it tries the cloud, not at sign-up); without it nothing is
 confirmed or blocked. For trying it out, `MAIL_OUTBOX_DIR=/data/outbox` writes
 each message as a JSON file instead of sending it. Sign-ups are limited per address (`SIGNUP_LIMIT`, default
