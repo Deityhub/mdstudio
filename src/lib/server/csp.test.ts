@@ -3,6 +3,8 @@ import {
   buildCsp,
   createNonce,
   getRequestNonce,
+  IMAGE_CSP,
+  isImagePath,
   previewHeaders,
   securityHeaders,
   setRequestNonce,
@@ -45,5 +47,17 @@ describe("csp", () => {
   it("keeps preview deployments out of search results, and only those", () => {
     expect(previewHeaders(true)).toEqual({ "X-Robots-Tag": "noindex, nofollow" });
     expect(previewHeaders(false)).toEqual({});
+  });
+});
+
+describe("hosted images", () => {
+  it("get a policy that lets nothing load or run, other paths keep the page policy", () => {
+    expect(isImagePath("/a/abc.png")).toBe(true);
+    expect(isImagePath("/api/assets")).toBe(false);
+    expect(isImagePath("/editor")).toBe(false);
+    expect(securityHeaders("n", true)["Content-Security-Policy"]).toBe(IMAGE_CSP);
+    expect(securityHeaders("n")["Content-Security-Policy"]).toContain(
+      "script-src 'self' 'nonce-n'",
+    );
   });
 });

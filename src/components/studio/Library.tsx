@@ -12,6 +12,7 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
+  ImageUp,
   MoreHorizontal,
   Pencil,
   Search,
@@ -176,6 +177,8 @@ export function Library({
     limit: number;
     onAdd: (d: MdDocument) => void;
     onRemove: (d: MdDocument) => void;
+    /** Present when this server hosts images: moves a draft's local images to hosting. */
+    onHostImages?: (d: MdDocument) => void;
   };
 }) {
   const [query, setQuery] = useState("");
@@ -363,6 +366,11 @@ export function Library({
                     {cloud.ids.size >= cloud.limit ? "Cloud is full" : "Save to cloud"}
                   </DropdownMenuItem>
                 ))}
+              {cloud?.onHostImages && cloud.ids.has(d.id) && Object.keys(d.images).length > 0 && (
+                <DropdownMenuItem onSelect={() => cloud.onHostImages?.(d)}>
+                  <ImageUp className="h-3.5 w-3.5" /> Host images ({Object.keys(d.images).length})
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onSelect={() => onDuplicate(d)}>
                 <CopyPlus className="h-3.5 w-3.5" /> Duplicate
               </DropdownMenuItem>

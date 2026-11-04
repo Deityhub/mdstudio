@@ -27,6 +27,12 @@ export default defineConfig(({ command }) => ({
       ...(preset === "cloudflare-module"
         ? [
             {
+              find: "@/server/node-storage",
+              replacement: fileURLToPath(
+                new URL("./src/server/node-storage.stub.ts", import.meta.url),
+              ),
+            },
+            {
               find: "@/server/node-driver",
               replacement: fileURLToPath(
                 new URL("./src/server/node-driver.stub.ts", import.meta.url),

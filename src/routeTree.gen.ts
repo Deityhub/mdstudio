@@ -11,11 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AFileRouteImport } from './routes/a.$file'
+import { Route as ApiAssetsRouteImport } from './routes/api/assets'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
+import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -33,6 +36,16 @@ const IndexRoute = IndexRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AFileRoute = AFileRouteImport.update({
+  id: '/a/$file',
+  path: '/a/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssetsRoute = ApiAssetsRouteImport.update({
+  id: '/api/assets',
+  path: '/api/assets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -59,6 +72,11 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
   id: '/guides/$slug',
   path: '/guides/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAssetsRoute,
 } as any)
 const ApiAuthGithubRoute = ApiAuthGithubRouteImport.update({
   id: '/api/auth/github',
@@ -104,11 +122,14 @@ const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/a/$file': typeof AFileRoute
+  '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -121,11 +142,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/a/$file': typeof AFileRoute
+  '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor': typeof EditorIndexRoute
   '/guides': typeof GuidesIndexRoute
+  '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -139,11 +163,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/a/$file': typeof AFileRoute
+  '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -158,11 +185,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sitemap.xml'
+    | '/a/$file'
+    | '/api/assets'
     | '/api/health'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/assets/$id'
     | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -175,11 +205,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/sitemap.xml'
+    | '/a/$file'
+    | '/api/assets'
     | '/api/health'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor'
     | '/guides'
+    | '/api/assets/$id'
     | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -192,11 +225,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/sitemap.xml'
+    | '/a/$file'
+    | '/api/assets'
     | '/api/health'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/assets/$id'
     | '/api/auth/github'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -210,6 +246,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AFileRoute: typeof AFileRoute
+  ApiAssetsRoute: typeof ApiAssetsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   EditorDocIdRoute: typeof EditorDocIdRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
@@ -238,6 +276,20 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/a/$file': {
+      id: '/a/$file'
+      path: '/a/$file'
+      fullPath: '/a/$file'
+      preLoaderRoute: typeof AFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assets': {
+      id: '/api/assets'
+      path: '/api/assets'
+      fullPath: '/api/assets'
+      preLoaderRoute: typeof ApiAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -274,6 +326,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/guides/$slug'
       preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/assets/$id': {
+      id: '/api/assets/$id'
+      path: '/$id'
+      fullPath: '/api/assets/$id'
+      preLoaderRoute: typeof ApiAssetsIdRouteImport
+      parentRoute: typeof ApiAssetsRoute
     }
     '/api/auth/github': {
       id: '/api/auth/github'
@@ -334,6 +393,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ApiAssetsRouteChildren {
+  ApiAssetsIdRoute: typeof ApiAssetsIdRoute
+}
+
+const ApiAssetsRouteChildren: ApiAssetsRouteChildren = {
+  ApiAssetsIdRoute: ApiAssetsIdRoute,
+}
+
+const ApiAssetsRouteWithChildren = ApiAssetsRoute._addFileChildren(
+  ApiAssetsRouteChildren,
+)
+
 interface ApiAuthGithubRouteChildren {
   ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
 }
@@ -349,6 +420,8 @@ const ApiAuthGithubRouteWithChildren = ApiAuthGithubRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AFileRoute: AFileRoute,
+  ApiAssetsRoute: ApiAssetsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   EditorDocIdRoute: EditorDocIdRoute,
   GuidesSlugRoute: GuidesSlugRoute,

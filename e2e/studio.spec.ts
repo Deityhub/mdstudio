@@ -1026,3 +1026,36 @@ test("checker rules: export, reset and import a rules file", async ({ page }) =>
   });
   await expect(page.getByText("That isn't valid JSON.")).toBeVisible();
 });
+
+test("export: a plain .md that points at local images warns, the self-contained one does not", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "# Pictures\n\n");
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "photo.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    });
+  await expect(editor(page)).toContainText("./images/photo.png");
+
+  await page.getByRole("button", { name: "Export" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Download .md" }).click();
+  await download;
+  await expect(
+    page.getByText("1 image points to files that only exist in this draft"),
+  ).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Export" }).click();
+  const self = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Download self-contained .md" }).click();
+  await self;
+});

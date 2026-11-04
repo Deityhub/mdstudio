@@ -108,6 +108,7 @@ jobs:
       - run: bun run build
         env:
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
       - name: Apply database migrations
         if: vars.D1_DATABASE_ID != ''
         uses: cloudflare/wrangler-action@v4

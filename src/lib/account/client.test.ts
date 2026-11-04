@@ -14,6 +14,7 @@ describe("account client", () => {
     expect(await fetchAccount()).toEqual({
       user: { id: "1", email: "a@b.co", displayName: null },
       github: true,
+      images: false,
     });
   });
 
@@ -25,7 +26,7 @@ describe("account client", () => {
       );
     localStorage.clear();
     offline();
-    expect(await fetchAccount()).toEqual({ user: null, github: false });
+    expect(await fetchAccount()).toEqual({ user: null, github: false, images: false });
     reply({ user: { id: "1", email: "a@b.co", displayName: null }, providers: {} });
     await fetchAccount();
     offline();

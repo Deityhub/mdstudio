@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Cloud, Eye, EyeOff, Github, LogOut, UserRound } from "lucide-react";
+import { Cloud, Eye, EyeOff, Github, ImageIcon, LogOut, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -27,6 +27,7 @@ import { accountStore, useAccount } from "@/lib/account/store";
 import { documentStore } from "@/lib/storage/documentStore";
 import { completeSignOut, prepareSignOut } from "@/lib/sync/hooks";
 import { ChooseCloudDrafts, SignOutDialog, type SignOutPrompt } from "./CloudDialogs";
+import { ManageImages } from "./ManageImages";
 
 /** Optional account: signed out is the default and the editor never needs it. */
 export function AccountMenu() {
@@ -38,6 +39,7 @@ export function AccountMenu() {
   const [busy, setBusy] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [manageImages, setManageImages] = useState(false);
   const [prompt, setPrompt] = useState<SignOutPrompt | null>(null);
 
   useEffect(() => {
@@ -112,12 +114,18 @@ export function AccountMenu() {
             <DropdownMenuItem onSelect={() => setPicker(true)}>
               <Cloud className="h-4 w-4" /> Choose drafts for the cloud…
             </DropdownMenuItem>
+            {account.images && (
+              <DropdownMenuItem onSelect={() => setManageImages(true)}>
+                <ImageIcon className="h-4 w-4" /> Manage images…
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={() => void startSignOut()}>
               <LogOut className="h-4 w-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <ChooseCloudDrafts userId={user.id} open={picker} onOpenChange={setPicker} />
+        <ManageImages open={manageImages} onOpenChange={setManageImages} />
         <SignOutDialog
           prompt={prompt}
           onCancel={() => setPrompt(null)}

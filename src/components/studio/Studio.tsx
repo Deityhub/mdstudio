@@ -90,6 +90,9 @@ import {
   type MdDocument,
 } from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
+import { rewriteImageRefs, shrinkImage } from "@/lib/editor/shrink";
+import { imageMessage, uploadImage } from "@/lib/account/assets";
+import { dataUriToBytes } from "@/lib/storage/archive";
 import {
   PROFILES,
   type Profile,
@@ -278,7 +281,7 @@ export function Studio({ docId }: { docId: string }) {
   const [folderNames, setFolderNames] = useState<string[]>([]);
   // A draft kept in the cloud belongs to its account: it is hidden while anyone else, or nobody,
   // is signed in. Until the server has answered, nothing that belongs to an account is shown.
-  const { user: account, loaded: accountLoaded } = useAccount();
+  const { user: account, loaded: accountLoaded, images: hostingOn } = useAccount();
   const visibleTo = useRef<string | undefined>(undefined);
   visibleTo.current = account?.id;
   const refreshList = useCallback(
@@ -582,21 +585,89 @@ export function Studio({ docId }: { docId: string }) {
     if (first) navigate({ to: "/editor/$docId", params: { docId: first.id } });
   };
 
+  // In a cloud draft an image is uploaded and linked by its public address, so the Markdown works
+  // on other platforms too. Anywhere else, or when the upload fails, it stays in the draft.
   const addImages = async (files: File[], alt?: string) => {
     if (!doc) return;
+    const hosted = hostingOn && cloudDrafts.linked.has(doc.id);
     const next = { ...doc.images };
     const refs: string[] = [];
+    const labelOf = (name: string) =>
+      ((files.length === 1 && alt) || name.replace(/\.[a-z0-9]+$/, "")).replace(/[[\]]/g, "\\$&");
     for (const f of files) {
+      if (hosted) {
+        const sent = await hostFile(f);
+        if (sent) {
+          refs.push(`![${labelOf(f.name || "image")}](${sent})`);
+          continue;
+        }
+      }
       const data = await compressImage(f);
       const name = safeImageName(f.name || "pasted.png", next);
       next[name] = data;
-      const label = (files.length === 1 && alt) || name.replace(/\.[a-z0-9]+$/, "");
-      refs.push(`![${label.replace(/[[\]]/g, "\\$&")}](./images/${name})`);
+      refs.push(`![${labelOf(name)}](./images/${name})`);
       if (kb(data) > 500)
         toast.warning(`${name} is ${kb(data)} KB. Large embedded images make the file heavy.`);
     }
-    update({ images: next });
+    if (Object.keys(next).length !== Object.keys(doc.images).length) update({ images: next });
     editor.current?.insert(refs.join("\n"));
+  };
+
+  /** Shrinks and uploads one image; the hosted link, or null (after saying why). */
+  const hostFile = async (file: File): Promise<string | null> => {
+    try {
+      const small = await shrinkImage(file);
+      if (!small) {
+        toast.error("That image is too large to host", {
+          description: "It was added to the draft instead.",
+        });
+        return null;
+      }
+      const result = await uploadImage(small);
+      if ("image" in result) {
+        toast.success(`Image hosted (${Math.max(1, Math.round(result.image.byteSize / 1024))} KB)`);
+        return result.image.url;
+      }
+      toast.error(imageMessage(result.error), {
+        description: "It was added to the draft instead.",
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error("Couldn't prepare that image for hosting", {
+        description: "It was added to the draft instead.",
+      });
+    }
+    return null;
+  };
+
+  /** Moves a cloud draft's local images to hosting and points the text at the hosted links. */
+  const hostImages = async (d: MdDocument) => {
+    const names = Object.keys(d.images).filter((n) => d.content.includes(`images/${n}`));
+    const links: Record<string, string> = {};
+    for (const name of names) {
+      const parsed = dataUriToBytes(d.images[name]!);
+      if (!parsed) continue;
+      const file = new File([parsed.bytes as BlobPart], name, { type: parsed.mime });
+      const url = await hostFile(file);
+      if (!url) break; // full or offline: keep the rest as they are
+      links[name] = url;
+    }
+    const done = Object.keys(links).length;
+    if (!done) return;
+    const images = Object.fromEntries(Object.entries(d.images).filter(([n]) => !(n in links)));
+    const next = {
+      ...d,
+      content: rewriteImageRefs(d.content, links),
+      images,
+      updatedAt: Date.now(),
+    };
+    next.title = docTitle(next);
+    await documentStore.save(next);
+    if (d.id === doc?.id) setDoc(next);
+    await refreshList();
+    toast.success(`Hosted ${done} image${done === 1 ? "" : "s"}`, {
+      description: "The draft now links to them by address. Ctrl/⌘+Z undoes the text change.",
+    });
   };
 
   const onFiles = async (files: File[]) => {
@@ -707,6 +778,19 @@ export function Studio({ docId }: { docId: string }) {
     return typeof s === "string" && s ? slugify(s) : slugify(doc?.title ?? "untitled");
   };
   const hasLocalImages = issues.some((i) => i.rule === "local-image");
+  /** Plain exports keep `./images/...` paths, which only mean something inside this draft. */
+  const warnLocalImages = () => {
+    const n = issues.filter((i) => i.rule === "local-image").length;
+    if (!n) return;
+    toast.warning(
+      `${n} image${n === 1 ? " points" : "s point"} to files that only exist in this draft`,
+      {
+        id: "export-local-images",
+        description:
+          "Anywhere else they show as missing. Use the self-contained export, or replace them with image URLs.",
+      },
+    );
+  };
   /** HTML export renders math and diagrams, which load on demand and can fail offline. */
   const exportAsync = (fn: () => Promise<unknown>) =>
     fn().catch((error) => {
@@ -930,6 +1014,7 @@ export function Studio({ docId }: { docId: string }) {
           limit: cloudDrafts.limit,
           onAdd: (d: MdDocument) => void addToCloud(account.id, [d.id]),
           onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
+          ...(hostingOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
         },
       })}
     />
@@ -1069,11 +1154,19 @@ export function Studio({ docId }: { docId: string }) {
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel>Markdown</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={() => download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8")}
+                  onClick={() => {
+                    warnLocalImages();
+                    download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8");
+                  }}
                 >
                   <Download className="h-4 w-4" /> Download .md
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => copy(out(), "Markdown")}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    warnLocalImages();
+                    void copy(out(), "Markdown");
+                  }}
+                >
                   <Copy className="h-4 w-4" /> Copy Markdown
                 </DropdownMenuItem>
                 <DropdownMenuItem

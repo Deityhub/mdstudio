@@ -1,7 +1,12 @@
 // Browser side of /api/auth/*. Accounts are optional: when the server is unreachable (offline,
 // or a build without a database) the editor behaves as signed out and nothing else changes.
 export type AccountUser = { id: string; email: string; displayName: string | null };
-export type Account = { user: AccountUser | null; github: boolean };
+export type Account = {
+  user: AccountUser | null;
+  github: boolean;
+  /** True when this server can host images (R2 or a disk volume). */
+  images: boolean;
+};
 
 const MESSAGES: Record<string, string> = {
   invalid: "Enter a valid email and a password of at least 10 characters.",
@@ -39,13 +44,17 @@ export async function fetchAccount(): Promise<Account> {
     const res = await fetch("/api/auth/me");
     const body = (await res.json()) as {
       user?: AccountUser | null;
-      providers?: { github?: boolean };
+      providers?: { github?: boolean; images?: boolean };
     };
     rememberUser(body.user ?? null);
-    return { user: body.user ?? null, github: body.providers?.github === true };
+    return {
+      user: body.user ?? null,
+      github: body.providers?.github === true,
+      images: body.providers?.images === true,
+    };
   } catch {
     // Can't reach the server: assume nothing changed rather than hiding the account's drafts.
-    return { user: rememberedUser(), github: false };
+    return { user: rememberedUser(), github: false, images: false };
   }
 }
 

@@ -41,6 +41,17 @@ describe("workerConfig", () => {
     ]);
   });
 
+  it("binds an R2 bucket as IMAGES only when one is named", () => {
+    expect(workerConfig({})).not.toHaveProperty("r2_buckets");
+    expect(workerConfig({ R2_BUCKET: "mdstudio-assets" })).toMatchObject({
+      r2_buckets: [{ binding: "IMAGES", bucket_name: "mdstudio-assets" }],
+    });
+    // a preview names its own bucket, so it never writes into production's
+    expect(
+      workerConfig({ PREVIEW_WORKER_NAME: "mdstudio-pr-4", R2_BUCKET: "mdstudio-preview-assets" }),
+    ).toMatchObject({ r2_buckets: [{ bucket_name: "mdstudio-preview-assets" }] });
+  });
+
   it("treats an empty name as production", () =>
     expect(workerConfig({ PREVIEW_WORKER_NAME: "" })).toHaveProperty("routes"));
 });

@@ -50,7 +50,10 @@ export async function logoutHandler(request: Request) {
 export async function meHandler(request: Request) {
   const token = readToken(request);
   const session = token ? await userForToken(await getDb(request), token) : null;
-  const providers = { github: githubConfig(request) !== null };
+  const providers = {
+    github: githubConfig(request) !== null,
+    images: await (await import("../assets/routes")).imagesAvailable(request),
+  };
   if (!session || !token) return json({ user: null, providers });
   // Re-issue the cookie so the browser keeps it exactly as long as the (sliding) session lives.
   return json({ user: session.user, providers }, 200, {

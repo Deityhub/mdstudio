@@ -44,6 +44,7 @@ jobs:
         env:
           PREVIEW_WORKER_NAME: ${{ env.WORKER }}
           D1_DATABASE_ID: ${{ vars.D1_PREVIEW_DATABASE_ID }}
+          R2_BUCKET: ${{ vars.R2_PREVIEW_BUCKET }}
       # All previews share one throwaway database; the schema is applied before the Worker ships.
       - name: Apply database migrations
         if: vars.D1_PREVIEW_DATABASE_ID != ''

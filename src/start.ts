@@ -1,7 +1,13 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 import { getRequest, setResponseHeader } from "@tanstack/react-start/server";
 
-import { createNonce, previewHeaders, securityHeaders, setRequestNonce } from "./lib/server/csp";
+import {
+  createNonce,
+  isImagePath,
+  previewHeaders,
+  securityHeaders,
+  setRequestNonce,
+} from "./lib/server/csp";
 
 import { renderErrorPage } from "./lib/server/error-page";
 
@@ -24,8 +30,10 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 const securityHeadersMiddleware = createMiddleware().server(async ({ next }) => {
   if (import.meta.env.PROD) {
     const nonce = createNonce();
-    setRequestNonce(getRequest(), nonce);
-    for (const [name, value] of Object.entries(securityHeaders(nonce)))
+    const request = getRequest();
+    setRequestNonce(request, nonce);
+    const image = isImagePath(new URL(request.url).pathname);
+    for (const [name, value] of Object.entries(securityHeaders(nonce, image)))
       setResponseHeader(name, value);
   }
   for (const [name, value] of Object.entries(

@@ -57,7 +57,7 @@
 | **Local History**           | Automatic snapshots of each draft in IndexedDB (at most one every 5 minutes, up to 50 per draft, automatic ones dropped first), a manual "Save a version now", a side-by-side line diff against the current text, and one-click restore that first keeps the text it replaces                                                                                                                                                                                                                                                                                                                                                                                     | Done                                                                |
 | **Accounts**                | Email + password / magic link, GitHub OAuth                                                                                                                                                                                                                                                                                                                                                                                                                                | Milestone 3                                                         |
 | **Cloud Sync**              | Multi-device synchronization with versioned last-write-wins and automatic conflict forks                                                                                                                                                                                                                                                                                                                                                                                   | Milestone 3                                                         |
-| **Hosted Assets**           | Upload images to Cloudflare R2 or local disk storage; rewrites relative refs to absolute CDN URLs                                                                                                                                                                                                                                                                                                                                                                          | Milestone 3                                                         |
+| **Hosted Assets**           | Images added to cloud drafts upload to Cloudflare R2 (or the Docker volume) and are linked by public address, so the Markdown works on other platforms. Shrunk in the browser first; 10 images and 10 MB per account (`MAX_ASSETS`, `MAX_ASSET_BYTES`), 1 MB each; managed and deleted from the account menu | Done for self-hosting; off on the official site (see `docs/RELEASING.md`) |
 | **Server History**          | Immutable server revision log per document                                                                                                                                                                                                                                                                                                                                                                                                                                 | Milestone 3                                                         |
 | **Share Links**             | Read-only public web view (`/s/:slug`) of a specific document version with revoke and expiration options                                                                                                                                                                                                                                                                                                                                                                   | Milestone 4                                                         |
 | **Publishing Integrations** | Direct push to GitHub repositories via personal access token, dev.to API, Hashnode API                                                                                                                                                                                                                                                                                                                                                                                     | Milestone 4                                                         |
@@ -228,7 +228,9 @@ Scroll sync: Editor onScroll → compute scroll percentage → Preview scrollToR
 ```text
 1. File Import (.md, .txt): File API → splitFrontMatter → create new draft or replace current.
 2. Rich Paste (text/html): Clipboard event → rehype-parse → rehype-remark → remark-stringify(GFM) → insert Markdown text; toast notification confirms conversion.
-3. Image Paste / Drop: File blob → compressImage (canvas max 1600px) → store data URI in draft.images → insert `![alt](images/filename.png)`.
+3. Image Paste / Drop: in a draft that is not in the cloud (or when hosting is off or fails): File blob → compressImage (canvas max 1600px) → store data URI in draft.images → insert `![alt](./images/filename.png)`.
+   In a cloud draft with hosting on: File blob → shrinkImage (PNG/JPEG/WebP/GIF under 300 KB go as they are, anything larger is re-encoded as WebP, or JPEG where WebP can't be written, at up to 1600px and falling quality until it fits 300 KB; 1 MB is the hard limit) → `POST /api/assets` → insert `![alt](https://<host>/a/<id>.<ext>)`. A failure falls back to the local path and says so.
+   "Host images (n)" in a cloud draft's menu moves its local images to hosting and rewrites `images/x.png` and `./images/x.png` (Markdown and `<img src>`) to the hosted links; it is the only thing that rewrites existing text, and Ctrl/⌘+Z undoes it.
 ```
 
 ### 5.3 Content Export
@@ -356,12 +358,13 @@ CREATE TABLE assets (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   document_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
-  storage_key TEXT NOT NULL UNIQUE,          -- Path in R2 or local disk
+  storage_key TEXT NOT NULL UNIQUE,          -- `<random id>.<ext>` in R2 or under DATA_DIR/uploads
   file_name TEXT NOT NULL,
   mime_type TEXT NOT NULL,
   byte_size INTEGER NOT NULL,
   sha256 TEXT NOT NULL,                      -- Deduplication hash
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  UNIQUE (user_id, sha256)                   -- The same picture is stored once per account
 );
 
 -- Public read-only shareable links
@@ -393,8 +396,10 @@ CREATE TABLE share_links (
 | `POST` | `/api/sync/push`               | Session       | Pushes dirty documents; enforces optimistic concurrency.   |
 | `GET`  | `/api/sync/pull`               | Session       | Incremental pull of updated documents and deletions.       |
 | `GET`  | `/api/documents/:id/revisions` | Session       | Retrieves document snapshot history.                       |
-| `POST` | `/api/assets`                  | Session       | Uploads image asset (multipart/form-data, size-capped).    |
-| `GET`  | `/a/:key`                      | None          | Serves image asset with public immutable caching headers.  |
+| `POST` | `/api/assets`                  | Session       | Uploads an image (multipart `file`); type is decided by its bytes (PNG, JPEG, WebP, GIF; never SVG), 1 MB each, per-account count and size limits. |
+| `GET`  | `/api/assets`                  | Session       | Lists the account's images with usage and limits.          |
+| `DELETE` | `/api/assets/:id`            | Session       | Deletes an image; links to it stop working.                |
+| `GET`  | `/a/:file`                     | None          | Serves an image publicly (`<id>.<ext>`): immutable cache, `nosniff`, `default-src 'none'; sandbox`, embeddable cross-origin. |
 | `POST` | `/api/share`                   | Session       | Creates an unguessable read-only share link.               |
 | `GET`  | `/s/:slug`                     | None          | Server-side renders sanitized static HTML of a shared doc. |
 | `POST` | `/api/publish/:target`         | Session       | Dispatches document to GitHub repo, dev.to, or Hashnode.   |

@@ -12,16 +12,35 @@ const id =
   execFileSync("gh", ["variable", "get", "D1_PREVIEW_DATABASE_ID"], { encoding: "utf8" }).trim();
 if (!id) throw new Error("Set D1_PREVIEW_DATABASE_ID or the repository variable of that name.");
 
+// The preview bucket for hosted images is optional: without it image upload stays switched off.
+let bucket = process.env.R2_PREVIEW_BUCKET;
+if (bucket === undefined) {
+  try {
+    bucket = execFileSync("gh", ["variable", "get", "R2_PREVIEW_BUCKET"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    bucket = "";
+  }
+}
+
 // The preview build names the Worker and binds the preview database (infra/worker-config.ts).
 execFileSync("bun", ["run", "build"], {
   stdio: "inherit",
-  env: { ...process.env, PREVIEW_WORKER_NAME: "mdstudio-pr-0", D1_DATABASE_ID: id },
+  env: {
+    ...process.env,
+    PREVIEW_WORKER_NAME: "mdstudio-pr-0",
+    D1_DATABASE_ID: id,
+    ...(bucket && { R2_BUCKET: bucket }),
+  },
 });
 
 const config = ".output/server/wrangler.json";
 const local = ".output/server/wrangler.remote.json";
 const json = JSON.parse(readFileSync(config, "utf8"));
 for (const db of json.d1_databases ?? []) db.remote = true;
+for (const bucket of json.r2_buckets ?? []) bucket.remote = true;
 writeFileSync(local, JSON.stringify(json, null, 2));
 
 if (process.argv.includes("--migrate"))
