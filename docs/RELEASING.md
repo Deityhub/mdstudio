@@ -76,7 +76,30 @@ The API token needs **D1: Edit**. The build binds the database as `DB` when the 
 makes it. Without the variables the Worker still deploys, and `/api/health` reports
 `"database":"unavailable"`.
 
-R2 is not used yet; the image unit creates the bucket (`wrangler r2 bucket create mdstudio-assets`).
+### Hosted images (R2): off on mdstudio.deityhub.com
+
+Image hosting is built for **self-hosted** installs, where the person running the server owns the storage
+and the bill (in Docker it is on by default and lives on the volume). **The official site does not enable
+it, on purpose**: sign-up is open, so anyone could create accounts to fill the R2 free allowance, and a
+hot-linked image served through the Worker could use the free plan's 100,000 daily requests and take the
+whole site down. Without a bucket the Worker deploys as usual, the upload controls stay hidden and
+`/api/auth/me` reports `"images": false`. On the hosted site, local images stay in the draft, and a plain
+export warns that they only exist there.
+
+A fork that wants hosting on Cloudflare creates a bucket per tier and sets repository **variables** (not
+secrets); enabling R2 asks for a payment method even though the free allowance is 10 GB:
+
+```bash
+wrangler r2 bucket create my-assets            # variable R2_BUCKET
+wrangler r2 bucket create my-preview-assets    # variable R2_PREVIEW_BUCKET, shared by every preview
+```
+
+The API token then needs **Workers R2 Storage: Edit**, and the build binds the bucket as `IMAGES` when
+`R2_BUCKET` is set (`infra/worker-config.ts`; Nitro already uses `ASSETS` for the static files). Before
+doing this on a public site, add email verification, sign-up throttling and a global storage cap. Each
+account may keep 10 images and 10 MB (`MAX_ASSETS`, `MAX_ASSET_BYTES`).
+Image links contain the address of the site that hosted them, so a draft written on a PR preview links to
+that preview, which disappears when the pull request closes.
 
 ## GitHub sign-in
 

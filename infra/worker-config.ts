@@ -29,6 +29,10 @@ const d1 = (env: Env, name: string) => {
     : {};
 };
 
+// Hosted images: the bucket is named by the build, one for production and one shared by previews.
+const r2 = (env: Env) =>
+  env["R2_BUCKET"] ? { r2_buckets: [{ binding: "IMAGES", bucket_name: env["R2_BUCKET"] }] } : {};
+
 export function workerConfig(env: Env) {
   const preview = env["PREVIEW_WORKER_NAME"];
   if (!preview) {
@@ -36,9 +40,10 @@ export function workerConfig(env: Env) {
       name: "mdstudio",
       routes: [{ pattern: "mdstudio.deityhub.com", custom_domain: true }],
       ...d1(env, "mdstudio"),
+      ...r2(env),
     };
   }
   if (!PREVIEW_NAME.test(preview))
     throw new Error(`PREVIEW_WORKER_NAME must look like mdstudio-pr-<number>, got "${preview}"`);
-  return { name: preview, workers_dev: true, ...d1(env, "mdstudio-preview") };
+  return { name: preview, workers_dev: true, ...d1(env, "mdstudio-preview"), ...r2(env) };
 }

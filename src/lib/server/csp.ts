@@ -25,9 +25,13 @@ export function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-export function securityHeaders(nonce: string): Record<string, string> {
+/** Hosted images (`/a/...`) are plain files: nothing in them may load or run anything. */
+export const IMAGE_CSP = "default-src 'none'; sandbox";
+export const isImagePath = (pathname: string) => pathname.startsWith("/a/");
+
+export function securityHeaders(nonce: string, image = false): Record<string, string> {
   return {
-    "Content-Security-Policy": buildCsp(nonce),
+    "Content-Security-Policy": image ? IMAGE_CSP : buildCsp(nonce),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",

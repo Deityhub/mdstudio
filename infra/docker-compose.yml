@@ -17,6 +17,9 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-}
       # Drafts one account may keep in the cloud.
       MAX_CLOUD_DOCS: ${MAX_CLOUD_DOCS:-5}
+      # Hosted images per account: how many, and how many bytes in all.
+      MAX_ASSETS: ${MAX_ASSETS:-10}
+      MAX_ASSET_BYTES: ${MAX_ASSET_BYTES:-10000000}
     volumes:
       - mdstudio-data:/data
     restart: unless-stopped

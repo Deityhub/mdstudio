@@ -77,19 +77,24 @@ export const documentRevisions = sqliteTable(
   (t) => [index("idx_revisions_doc_version").on(t.documentId, t.version)],
 );
 
-export const assets = sqliteTable("assets", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  documentId: text("document_id").references(() => documents.id, { onDelete: "set null" }),
-  storageKey: text("storage_key").notNull().unique(),
-  fileName: text("file_name").notNull(),
-  mimeType: text("mime_type").notNull(),
-  byteSize: integer("byte_size").notNull(),
-  sha256: text("sha256").notNull(),
-  createdAt: integer("created_at").notNull(),
-});
+export const assets = sqliteTable(
+  "assets",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    documentId: text("document_id").references(() => documents.id, { onDelete: "set null" }),
+    storageKey: text("storage_key").notNull().unique(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    sha256: text("sha256").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  // The same picture uploaded twice by one account is stored once.
+  (t) => [unique().on(t.userId, t.sha256)],
+);
 
 export const shareLinks = sqliteTable("share_links", {
   id: text("id").primaryKey(),

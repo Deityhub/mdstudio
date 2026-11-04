@@ -36,6 +36,7 @@ describe("service worker routing", () => {
 
   it("keeps built files cache first and fonts, icons and the manifest refreshing in the background", () => {
     expect(kind("/assets/index-AbC123.js")).toBe("immutable");
+    expect(kind("/a/0123abcd0123abcd0123abcd0123abcd.webp")).toBe("immutable");
     expect(kind("/fonts/fraunces.woff2")).toBe("static");
     expect(kind("/katex/fonts/KaTeX_Main-Regular.woff2")).toBe("static");
     expect(kind("/icon-192.png")).toBe("static");
