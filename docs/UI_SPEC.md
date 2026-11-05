@@ -75,3 +75,5 @@ Fields: title, slug, date, cover image URL, description, tags (comma separated).
 - Drag-drop `.md` / `.markdown` / `.mdown` / `.txt` files to import them as new drafts; dropping images compresses them and inserts `![name](./images/name.jpg)`.
 - Pasting rich HTML converts it to Markdown, with a toast that explains how to undo.
 - Shortcuts (also listed in the app: Insert menu > Keyboard shortcuts, or Mod-/): Mod-B bold, Mod-I italic, Mod-E inline code, Mod-Shift-X strikethrough, Mod-Shift-H highlight, Mod-K link, Mod-Alt-0..6 paragraph and headings, Mod-Shift-7 numbered list, Mod-Shift-8 bulleted list, Mod-Shift-L task list, Mod-Shift-. quote, Tab / Shift-Tab nest and outdent list items, Mod-F search, Mod-Z / Shift-Mod-Z undo and redo, Mod-/ shortcuts list, Alt-F10 focus the toolbar. Enter continues lists and quotes.
+
+- **History panel, cloud drafts:** below the local versions, an "In your cloud" section lists the versions the server keeps (time, size, and "Replaced by a newer edit elsewhere" where one was taken over by another device). Opening one fetches its text into the same compare dialog, and restoring is an ordinary edit.

@@ -7,8 +7,9 @@ export type Revision = {
   title: string;
   content: string;
   /** `auto` from the periodic snapshot, `manual` when the writer saved it, `restore` before a
-   * restore, `replaced` when a newer edit made on another device took this text's place. */
-  kind: "auto" | "manual" | "restore" | "replaced";
+   * restore, `replaced` when a newer edit made on another device took this text's place, and
+   * `cloud` for a version the server kept (never stored locally). */
+  kind: "auto" | "manual" | "restore" | "replaced" | "cloud";
 };
 
 /** Minimum time between automatic snapshots of one draft. */

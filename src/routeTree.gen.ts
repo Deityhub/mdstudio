@@ -32,6 +32,8 @@ import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
 import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
+import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
+import { Route as ApiDocumentsIdRevisionsRevisionIdRouteImport } from './routes/api/documents.$id.revisions.$revisionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -148,6 +150,17 @@ const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
   path: '/resend',
   getParentRoute: () => ApiAuthVerifyRoute,
 } as any)
+const ApiDocumentsIdRevisionsRoute = ApiDocumentsIdRevisionsRouteImport.update({
+  id: '/api/documents/$id/revisions',
+  path: '/api/documents/$id/revisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDocumentsIdRevisionsRevisionIdRoute =
+  ApiDocumentsIdRevisionsRevisionIdRouteImport.update({
+    id: '/$revisionId',
+    path: '/$revisionId',
+    getParentRoute: () => ApiDocumentsIdRevisionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -173,6 +186,8 @@ export interface FileRoutesByFullPath {
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,6 +213,8 @@ export interface FileRoutesByTo {
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -224,6 +241,8 @@ export interface FileRoutesById {
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -251,6 +270,8 @@ export interface FileRouteTypes {
     | '/api/sync/push'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
+    | '/api/documents/$id/revisions'
+    | '/api/documents/$id/revisions/$revisionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -276,6 +297,8 @@ export interface FileRouteTypes {
     | '/api/sync/push'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
+    | '/api/documents/$id/revisions'
+    | '/api/documents/$id/revisions/$revisionId'
   id:
     | '__root__'
     | '/'
@@ -301,6 +324,8 @@ export interface FileRouteTypes {
     | '/api/sync/push'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
+    | '/api/documents/$id/revisions'
+    | '/api/documents/$id/revisions/$revisionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -324,6 +349,7 @@ export interface RootRouteChildren {
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
   ApiSyncPullRoute: typeof ApiSyncPullRoute
   ApiSyncPushRoute: typeof ApiSyncPushRoute
+  ApiDocumentsIdRevisionsRoute: typeof ApiDocumentsIdRevisionsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -489,6 +515,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthVerifyResendRouteImport
       parentRoute: typeof ApiAuthVerifyRoute
     }
+    '/api/documents/$id/revisions': {
+      id: '/api/documents/$id/revisions'
+      path: '/api/documents/$id/revisions'
+      fullPath: '/api/documents/$id/revisions'
+      preLoaderRoute: typeof ApiDocumentsIdRevisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/documents/$id/revisions/$revisionId': {
+      id: '/api/documents/$id/revisions/$revisionId'
+      path: '/$revisionId'
+      fullPath: '/api/documents/$id/revisions/$revisionId'
+      preLoaderRoute: typeof ApiDocumentsIdRevisionsRevisionIdRouteImport
+      parentRoute: typeof ApiDocumentsIdRevisionsRoute
+    }
   }
 }
 
@@ -528,6 +568,21 @@ const ApiAuthVerifyRouteWithChildren = ApiAuthVerifyRoute._addFileChildren(
   ApiAuthVerifyRouteChildren,
 )
 
+interface ApiDocumentsIdRevisionsRouteChildren {
+  ApiDocumentsIdRevisionsRevisionIdRoute: typeof ApiDocumentsIdRevisionsRevisionIdRoute
+}
+
+const ApiDocumentsIdRevisionsRouteChildren: ApiDocumentsIdRevisionsRouteChildren =
+  {
+    ApiDocumentsIdRevisionsRevisionIdRoute:
+      ApiDocumentsIdRevisionsRevisionIdRoute,
+  }
+
+const ApiDocumentsIdRevisionsRouteWithChildren =
+  ApiDocumentsIdRevisionsRoute._addFileChildren(
+    ApiDocumentsIdRevisionsRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ResetPasswordRoute: ResetPasswordRoute,
@@ -549,6 +604,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
   ApiSyncPullRoute: ApiSyncPullRoute,
   ApiSyncPushRoute: ApiSyncPushRoute,
+  ApiDocumentsIdRevisionsRoute: ApiDocumentsIdRevisionsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -2,6 +2,7 @@ import { withVerifiedUser } from "../auth/guard";
 import { sameOrigin } from "../auth/http";
 import { getEnv } from "../env";
 import { DEFAULT_CLOUD_LIMIT } from "@/lib/sync/protocol";
+import { revisionConfig } from "../revisions/routes";
 import { parsePush, pullDocs, pushDocs } from "./service";
 
 const json = (body: unknown, status = 200) =>
@@ -29,7 +30,16 @@ export const pushHandler = (request: Request) =>
     }
     const docs = parsePush(body);
     if (!docs) return json({ error: "invalid" }, 400);
-    return json({ results: await pushDocs(db, user.id, docs, Date.now(), cloudLimit(request)) });
+    return json({
+      results: await pushDocs(
+        db,
+        user.id,
+        docs,
+        Date.now(),
+        cloudLimit(request),
+        revisionConfig(request),
+      ),
+    });
   });
 
 export const pullHandler = (request: Request) =>
