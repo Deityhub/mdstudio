@@ -1026,3 +1026,161 @@ test("checker rules: export, reset and import a rules file", async ({ page }) =>
   });
   await expect(page.getByText("That isn't valid JSON.")).toBeVisible();
 });
+
+test("export: a plain .md that points at local images warns, the self-contained one does not", async ({
+  page,
+}) => {
+  await open(page);
+  await replaceText(page, "# Pictures\n\n");
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "photo.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    });
+  await expect(editor(page)).toContainText("./images/photo.png");
+
+  await page.getByRole("button", { name: "Export" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Download .md" }).click();
+  await download;
+  await expect(
+    page.getByText("1 image points to files that only exist in this draft"),
+  ).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Export" }).click();
+  const self = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Download self-contained .md" }).click();
+  await self;
+});
+
+test("the editor header shows the release next to the logo", async ({ page }) => {
+  await open(page);
+  const { version } = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+  await expect(page.getByLabel(`Version ${version}`)).toHaveText(`v${version}`);
+});
+
+test("focus mode is a toolbar button right after redo, not in the header", async ({ page }) => {
+  await open(page);
+  await expect(page.getByRole("banner").getByRole("button", { name: "Focus mode" })).toHaveCount(0);
+
+  const toolbar = page.getByRole("toolbar");
+  const buttons = toolbar.getByRole("button");
+  await expect(buttons.nth(0)).toHaveAccessibleName(/^Undo/);
+  await expect(buttons.nth(1)).toHaveAccessibleName(/^Redo/);
+  const focus = buttons.nth(2);
+  await expect(focus).toHaveAccessibleName("Focus mode");
+  await expect(focus).toHaveAttribute("aria-pressed", "false");
+
+  const drafts = page.getByRole("navigation", { name: "Drafts" });
+  await expect(drafts).toBeVisible();
+  await focus.click();
+  await expect(focus).toHaveAttribute("aria-pressed", "true");
+  await expect(drafts).toBeHidden();
+  await focus.click();
+  await expect(focus).toHaveAttribute("aria-pressed", "false");
+  await expect(drafts).toBeVisible();
+});
+
+test("in focus mode the drafts button opens the list as a panel and focus mode stays on", async ({
+  page,
+}) => {
+  await open(page);
+  const focus = page.getByRole("toolbar").getByRole("button", { name: "Focus mode" });
+  const toggle = page.getByRole("banner").getByRole("button", { name: "Toggle drafts" });
+  const sidebar = page.getByRole("complementary").getByRole("navigation", { name: "Drafts" });
+
+  // normal mode: the button still opens and closes the sidebar in place
+  await expect(sidebar).toBeVisible();
+  await toggle.click();
+  await expect(sidebar).toBeHidden();
+  await toggle.click();
+  await expect(sidebar).toBeVisible();
+
+  await focus.click();
+  await expect(sidebar).toBeHidden();
+  await toggle.click();
+  const panel = page.getByRole("dialog", { name: "Your drafts" });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("navigation", { name: "Drafts" })).toBeVisible();
+
+  // Escape closes it, focus mode is still on, and the cursor goes back to the writing
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(focus).toHaveAttribute("aria-pressed", "true");
+  await expect(editor(page)).toBeFocused();
+
+  // choosing something in it (here a new draft) closes it and focus mode stays on
+  await toggle.click();
+  await panel.getByRole("button", { name: "New draft" }).click();
+  await expect(panel).toBeHidden();
+  await expect(focus).toHaveAttribute("aria-pressed", "true");
+  await expect(sidebar).toBeHidden();
+
+  // leaving focus mode brings the sidebar back as it was, and the panel does not linger
+  await focus.click();
+  await expect(sidebar).toBeVisible();
+  await expect(panel).toBeHidden();
+});
+
+test("in focus mode the panel buttons stay, and open their panel from the right", async ({
+  page,
+}) => {
+  await open(page);
+  const focus = page.getByRole("toolbar").getByRole("button", { name: "Focus mode" });
+  const rules = page.getByRole("button", { name: "Rules" }); // the Checks panel's own button
+
+  // a panel docked beside the editor in normal mode
+  await page.getByRole("button", { name: "Checks", exact: true }).click();
+  await expect(rules).toBeVisible();
+
+  // focus mode hides the docked panel, but not the buttons
+  await focus.click();
+  await expect(rules).toBeHidden();
+  const history = page.getByRole("button", { name: "History", exact: true });
+  await expect(history).toBeVisible();
+
+  // a button opens its panel as an overlay; Esc closes it and the cursor returns to the editor
+  await history.click();
+  const panel = page.getByRole("dialog", { name: /history/i });
+  await expect(panel.getByRole("button", { name: "Save a version now" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(focus).toHaveAttribute("aria-pressed", "true");
+  await expect(editor(page)).toBeFocused();
+
+  await page.getByRole("button", { name: "Outline", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: /outline/i })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // leaving focus mode closes any overlay and brings the docked panel back as it was
+  await page.getByRole("button", { name: "Checks", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: /checks/i })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await focus.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(rules).toBeVisible();
+});
+
+test("on a phone the panel bar stays in focus mode too", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await open(page);
+  const focus = page.getByRole("toolbar").getByRole("button", { name: "Focus mode" });
+  await focus.click();
+  await expect(focus).toHaveAttribute("aria-pressed", "true");
+
+  const bar = page.getByRole("navigation", { name: "Document panels" });
+  await expect(bar).toBeVisible();
+  await bar.getByRole("button", { name: "History", exact: true }).click();
+  const panel = page.getByRole("dialog", { name: /history/i });
+  await expect(panel.getByRole("button", { name: "Save a version now" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(focus).toHaveAttribute("aria-pressed", "true");
+});

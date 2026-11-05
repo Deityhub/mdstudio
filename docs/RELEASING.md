@@ -58,11 +58,94 @@ One-time setup, in addition to the secrets above:
   `https://mdstudio-pr-<number>.<your-subdomain>.workers.dev`.
 - Pull requests from forks are skipped (they cannot read the secrets). If a preview fails, the PR
   comment links to the workflow run.
-- A preview is a separate Worker, so it never touches production data. When milestone 3 adds D1 and
-  R2, give previews their own bindings.
+- A preview is a separate Worker bound to a separate preview database, so it never touches production data.
 
 ## Hosted database and storage
 
-The hosted tier does not use D1 or R2 yet. When milestone 3 activates them, create the database and
-bucket (`wrangler d1 create mdstudio`, `wrangler r2 bucket create mdstudio-assets`), then add the
-bindings from `infra/wrangler.toml` to the `cloudflare.wrangler` block in `vite.config.ts`.
+Create the databases once, then add their ids as repository **variables** (Settings → Secrets and
+variables → Actions → Variables; the ids are not secret):
+
+```bash
+wrangler d1 create mdstudio           # variable D1_DATABASE_ID
+wrangler d1 create mdstudio-preview   # variable D1_PREVIEW_DATABASE_ID, shared by every preview
+```
+
+The API token needs **D1: Edit**. The build binds the database as `DB` when the variable is set
+(`infra/worker-config.ts`), and the preview and release workflows run
+`wrangler d1 migrations apply` before deploying, so a schema change ships with the pull request that
+makes it. Without the variables the Worker still deploys, and `/api/health` reports
+`"database":"unavailable"`.
+
+### Hosted images (R2): off on mdstudio.deityhub.com
+
+Image hosting is built for **self-hosted** installs, where the person running the server owns the storage
+and the bill (in Docker it is on by default and lives on the volume). **The official site does not enable
+it, on purpose**: sign-up is open, so anyone could create accounts to fill the R2 free allowance, and a
+hot-linked image served through the Worker could use the free plan's 100,000 daily requests and take the
+whole site down. Without a bucket the Worker deploys as usual, the upload controls stay hidden and
+`/api/auth/me` reports `"images": false`. On the hosted site, local images stay in the draft, and a plain
+export warns that they only exist there.
+
+A fork that wants hosting on Cloudflare creates a bucket per tier and sets repository **variables** (not
+secrets); enabling R2 asks for a payment method even though the free allowance is 10 GB:
+
+```bash
+wrangler r2 bucket create my-assets            # variable R2_BUCKET
+wrangler r2 bucket create my-preview-assets    # variable R2_PREVIEW_BUCKET, shared by every preview
+```
+
+The API token then needs **Workers R2 Storage: Edit**, and the build binds the bucket as `IMAGES` when
+`R2_BUCKET` is set (`infra/worker-config.ts`; Nitro already uses `ASSETS` for the static files). Before
+doing this on a public site, add email verification, sign-up throttling and a global storage cap. Each
+account may keep 10 images and 10 MB (`MAX_ASSETS`, `MAX_ASSET_BYTES`).
+Image links contain the address of the site that hosted them, so a draft written on a PR preview links to
+that preview, which disappears when the pull request closes.
+
+## GitHub sign-in
+
+Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) with the homepage
+`https://mdstudio.deityhub.com` and the callback URL
+`https://mdstudio.deityhub.com/api/auth/github/callback`, then store its credentials as repository
+secrets: `gh secret set GH_OAUTH_CLIENT_ID` and `gh secret set GH_OAUTH_CLIENT_SECRET` (GitHub
+reserves the `GITHUB_` prefix for secret names, so the workflow maps them). The release workflow
+sets them on the Worker as `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. An OAuth app has one
+callback URL, so previews do not offer GitHub sign-in; password sign-in works everywhere. For local
+development use a second OAuth app with `http://localhost:8080/api/auth/github/callback` and export the
+two values in your shell before `bun run dev`.
+
+## Sign-up protection
+
+mdstudio.deityhub.com protects the cloud from throwaway accounts with four things. The limits need nothing
+from you; the email and the CAPTCHA each switch on when their secrets exist, and the release workflow sends
+only the ones that are set.
+
+- **Email confirmation (Resend, Mailtrap, or more).** Mail goes out through any provider that has its key
+  set, and each free tier has its own daily and monthly allowance, so the server keeps count and picks the
+  provider with the most room left. When one fails or is full it tries the next, and a failing provider
+  is left alone for five minutes. Set `MAIL_FROM` (the same sender for all, e.g. `mdstudio <noreply@deityhub.com>`)
+  and a key for each provider you use, after adding your domain's DNS records (SPF and DKIM) at that provider:
+  ```bash
+  gh secret set MAIL_FROM
+  gh secret set RESEND_API_KEY        # Resend: free 100 a day, 3,000 a month
+  gh secret set MAILTRAP_API_TOKEN    # Mailtrap Email Sending: free 150 a day, 4,000 a month
+  ```
+  Until `MAIL_FROM` and at least one key are set the server sends no mail, every address counts as
+  confirmed, and nothing is blocked. Once they are, an account must click an emailed link before it can store
+  drafts in the cloud (GitHub sign-in counts as confirmed). The link is sent the first time the account tries
+  the cloud, not at sign-up, so people who only write locally never use up the free sending allowance.
+  Writing, previewing and exporting never need it. `MAIL_PROVIDERS=mailtrap,resend` limits and orders the
+  providers, and `MAIL_<ID>_DAILY` / `MAIL_<ID>_MONTHLY` (for example `MAIL_RESEND_DAILY=50`) change the
+  limits the server assumes, for when a plan changes. To add another provider, see `src/server/mail/providers.ts`.
+- **Sign-up CAPTCHA (Cloudflare Turnstile).** Create a Turnstile widget (Cloudflare dashboard → Turnstile; free)
+  for `mdstudio.deityhub.com`, then `gh secret set TURNSTILE_SITE_KEY` and `gh secret set TURNSTILE_SECRET`.
+  Without them sign-up has no CAPTCHA.
+- **Limits** (always on; each changeable with an environment variable): 5 sign-ups an hour per address
+  (`SIGNUP_LIMIT`), 10 failed sign-ins per 15 minutes per email and per address (`LOGIN_FAIL_LIMIT`), 3
+  confirmation emails an hour per account (`VERIFY_EMAIL_LIMIT`), 5 password reset requests an hour per address
+  (`FORGOT_LIMIT`) and 3 per inbox (`FORGOT_EMAIL_LIMIT`), and 10 reset attempts an hour per address
+  (`RESET_LIMIT`). The address is Cloudflare's
+  `cf-connecting-ip`.
+- **One inbox, one account.** `test+shop@gmail.com` and `t.e.s.t@gmail.com` are the same account as
+  `test@gmail.com` (a `+tag` is dropped everywhere, dots are ignored for Gmail, `googlemail.com` is `gmail.com`).
+
+Pull request previews send no mail, so confirmation is off there, like GitHub sign-in.

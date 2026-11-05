@@ -106,11 +106,48 @@ jobs:
       # Default preset builds the Workers bundle and the wrangler config (name and custom domain
       # come from vite.config.ts).
       - run: bun run build
+        env:
+          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+      - name: Apply database migrations
+        if: vars.D1_DATABASE_ID != ''
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply DB --remote --config .output/server/wrangler.json
+      # Optional features are switched on by their secrets (GitHub sign-in, email confirmation,
+      # the sign-up CAPTCHA). Only the ones that are set are sent to the Worker, so a missing one
+      # is skipped instead of failing the release.
+      - id: worker-secrets
+        env:
+          GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
+        run: |
+          names=""
+          for name in GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET RESEND_API_KEY MAILTRAP_API_TOKEN MAIL_FROM TURNSTILE_SECRET TURNSTILE_SITE_KEY; do
+            if [ -n "${!name}" ]; then names+="$name"$'\n'; fi
+          done
+          { echo "names<<EOF"; printf '%s' "$names"; echo "EOF"; } >> "$GITHUB_OUTPUT"
       - uses: cloudflare/wrangler-action@v4
+        env:
+          GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+          secrets: ${{ steps.worker-secrets.outputs.names }}
       # Tell Bing and other IndexNow engines the site changed. Never blocks a release.
       - run: bun scripts/indexnow.ts
         continue-on-error: true

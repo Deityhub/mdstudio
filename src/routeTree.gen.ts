@@ -10,21 +10,54 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AFileRouteImport } from './routes/a.$file'
+import { Route as ApiAssetsRouteImport } from './routes/api/assets'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
+import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
+import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
+import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
+import { Route as ApiAuthResetRouteImport } from './routes/api/auth/reset'
+import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
+import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
+import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
+import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
+import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
+import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
+import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
+import { Route as ApiDocumentsIdRevisionsRevisionIdRouteImport } from './routes/api/documents.$id.revisions.$revisionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AFileRoute = AFileRouteImport.update({
+  id: '/a/$file',
+  path: '/a/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAssetsRoute = ApiAssetsRouteImport.update({
+  id: '/api/assets',
+  path: '/api/assets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -52,73 +85,271 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
   path: '/guides/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAssetsRoute,
+} as any)
+const ApiAuthForgotRoute = ApiAuthForgotRouteImport.update({
+  id: '/api/auth/forgot',
+  path: '/api/auth/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGithubRoute = ApiAuthGithubRouteImport.update({
+  id: '/api/auth/github',
+  path: '/api/auth/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
+  id: '/api/auth/me',
+  path: '/api/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthResetRoute = ApiAuthResetRouteImport.update({
+  id: '/api/auth/reset',
+  path: '/api/auth/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSignupRoute = ApiAuthSignupRouteImport.update({
+  id: '/api/auth/signup',
+  path: '/api/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
+  id: '/api/auth/verify',
+  path: '/api/auth/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSyncPullRoute = ApiSyncPullRouteImport.update({
+  id: '/api/sync/pull',
+  path: '/api/sync/pull',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSyncPushRoute = ApiSyncPushRouteImport.update({
+  id: '/api/sync/push',
+  path: '/api/sync/push',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthGithubRoute,
+} as any)
+const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
+  id: '/resend',
+  path: '/resend',
+  getParentRoute: () => ApiAuthVerifyRoute,
+} as any)
+const ApiDocumentsIdRevisionsRoute = ApiDocumentsIdRevisionsRouteImport.update({
+  id: '/api/documents/$id/revisions',
+  path: '/api/documents/$id/revisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDocumentsIdRevisionsRevisionIdRoute =
+  ApiDocumentsIdRevisionsRevisionIdRouteImport.update({
+    id: '/$revisionId',
+    path: '/$revisionId',
+    getParentRoute: () => ApiDocumentsIdRevisionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/a/$file': typeof AFileRoute
+  '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/forgot': typeof ApiAuthForgotRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/reset': typeof ApiAuthResetRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/sync/pull': typeof ApiSyncPullRoute
+  '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/a/$file': typeof AFileRoute
+  '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor': typeof EditorIndexRoute
   '/guides': typeof GuidesIndexRoute
+  '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/forgot': typeof ApiAuthForgotRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/reset': typeof ApiAuthResetRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/sync/pull': typeof ApiSyncPullRoute
+  '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/a/$file': typeof AFileRoute
+  '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/forgot': typeof ApiAuthForgotRoute
+  '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/reset': typeof ApiAuthResetRoute
+  '/api/auth/signup': typeof ApiAuthSignupRoute
+  '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/sync/pull': typeof ApiSyncPullRoute
+  '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/reset-password'
     | '/sitemap.xml'
+    | '/a/$file'
+    | '/api/assets'
     | '/api/health'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/assets/$id'
+    | '/api/auth/forgot'
+    | '/api/auth/github'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
+    | '/api/auth/reset'
+    | '/api/auth/signup'
+    | '/api/auth/verify'
+    | '/api/sync/pull'
+    | '/api/sync/push'
+    | '/api/auth/github/callback'
+    | '/api/auth/verify/resend'
+    | '/api/documents/$id/revisions'
+    | '/api/documents/$id/revisions/$revisionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/reset-password'
     | '/sitemap.xml'
+    | '/a/$file'
+    | '/api/assets'
     | '/api/health'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor'
     | '/guides'
+    | '/api/assets/$id'
+    | '/api/auth/forgot'
+    | '/api/auth/github'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
+    | '/api/auth/reset'
+    | '/api/auth/signup'
+    | '/api/auth/verify'
+    | '/api/sync/pull'
+    | '/api/sync/push'
+    | '/api/auth/github/callback'
+    | '/api/auth/verify/resend'
+    | '/api/documents/$id/revisions'
+    | '/api/documents/$id/revisions/$revisionId'
   id:
     | '__root__'
     | '/'
+    | '/reset-password'
     | '/sitemap.xml'
+    | '/a/$file'
+    | '/api/assets'
     | '/api/health'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/assets/$id'
+    | '/api/auth/forgot'
+    | '/api/auth/github'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
+    | '/api/auth/reset'
+    | '/api/auth/signup'
+    | '/api/auth/verify'
+    | '/api/sync/pull'
+    | '/api/sync/push'
+    | '/api/auth/github/callback'
+    | '/api/auth/verify/resend'
+    | '/api/documents/$id/revisions'
+    | '/api/documents/$id/revisions/$revisionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AFileRoute: typeof AFileRoute
+  ApiAssetsRoute: typeof ApiAssetsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   EditorDocIdRoute: typeof EditorDocIdRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   EditorIndexRoute: typeof EditorIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
+  ApiAuthForgotRoute: typeof ApiAuthForgotRoute
+  ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthMeRoute: typeof ApiAuthMeRoute
+  ApiAuthResetRoute: typeof ApiAuthResetRoute
+  ApiAuthSignupRoute: typeof ApiAuthSignupRoute
+  ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
+  ApiSyncPullRoute: typeof ApiSyncPullRoute
+  ApiSyncPushRoute: typeof ApiSyncPushRoute
+  ApiDocumentsIdRevisionsRoute: typeof ApiDocumentsIdRevisionsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -130,11 +361,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/a/$file': {
+      id: '/a/$file'
+      path: '/a/$file'
+      fullPath: '/a/$file'
+      preLoaderRoute: typeof AFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/assets': {
+      id: '/api/assets'
+      path: '/api/assets'
+      fullPath: '/api/assets'
+      preLoaderRoute: typeof ApiAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -172,17 +424,187 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/assets/$id': {
+      id: '/api/assets/$id'
+      path: '/$id'
+      fullPath: '/api/assets/$id'
+      preLoaderRoute: typeof ApiAssetsIdRouteImport
+      parentRoute: typeof ApiAssetsRoute
+    }
+    '/api/auth/forgot': {
+      id: '/api/auth/forgot'
+      path: '/api/auth/forgot'
+      fullPath: '/api/auth/forgot'
+      preLoaderRoute: typeof ApiAuthForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/github': {
+      id: '/api/auth/github'
+      path: '/api/auth/github'
+      fullPath: '/api/auth/github'
+      preLoaderRoute: typeof ApiAuthGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/me': {
+      id: '/api/auth/me'
+      path: '/api/auth/me'
+      fullPath: '/api/auth/me'
+      preLoaderRoute: typeof ApiAuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/reset': {
+      id: '/api/auth/reset'
+      path: '/api/auth/reset'
+      fullPath: '/api/auth/reset'
+      preLoaderRoute: typeof ApiAuthResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/signup': {
+      id: '/api/auth/signup'
+      path: '/api/auth/signup'
+      fullPath: '/api/auth/signup'
+      preLoaderRoute: typeof ApiAuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/verify': {
+      id: '/api/auth/verify'
+      path: '/api/auth/verify'
+      fullPath: '/api/auth/verify'
+      preLoaderRoute: typeof ApiAuthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sync/pull': {
+      id: '/api/sync/pull'
+      path: '/api/sync/pull'
+      fullPath: '/api/sync/pull'
+      preLoaderRoute: typeof ApiSyncPullRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sync/push': {
+      id: '/api/sync/push'
+      path: '/api/sync/push'
+      fullPath: '/api/sync/push'
+      preLoaderRoute: typeof ApiSyncPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/github/callback': {
+      id: '/api/auth/github/callback'
+      path: '/callback'
+      fullPath: '/api/auth/github/callback'
+      preLoaderRoute: typeof ApiAuthGithubCallbackRouteImport
+      parentRoute: typeof ApiAuthGithubRoute
+    }
+    '/api/auth/verify/resend': {
+      id: '/api/auth/verify/resend'
+      path: '/resend'
+      fullPath: '/api/auth/verify/resend'
+      preLoaderRoute: typeof ApiAuthVerifyResendRouteImport
+      parentRoute: typeof ApiAuthVerifyRoute
+    }
+    '/api/documents/$id/revisions': {
+      id: '/api/documents/$id/revisions'
+      path: '/api/documents/$id/revisions'
+      fullPath: '/api/documents/$id/revisions'
+      preLoaderRoute: typeof ApiDocumentsIdRevisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/documents/$id/revisions/$revisionId': {
+      id: '/api/documents/$id/revisions/$revisionId'
+      path: '/$revisionId'
+      fullPath: '/api/documents/$id/revisions/$revisionId'
+      preLoaderRoute: typeof ApiDocumentsIdRevisionsRevisionIdRouteImport
+      parentRoute: typeof ApiDocumentsIdRevisionsRoute
+    }
   }
 }
 
+interface ApiAssetsRouteChildren {
+  ApiAssetsIdRoute: typeof ApiAssetsIdRoute
+}
+
+const ApiAssetsRouteChildren: ApiAssetsRouteChildren = {
+  ApiAssetsIdRoute: ApiAssetsIdRoute,
+}
+
+const ApiAssetsRouteWithChildren = ApiAssetsRoute._addFileChildren(
+  ApiAssetsRouteChildren,
+)
+
+interface ApiAuthGithubRouteChildren {
+  ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
+}
+
+const ApiAuthGithubRouteChildren: ApiAuthGithubRouteChildren = {
+  ApiAuthGithubCallbackRoute: ApiAuthGithubCallbackRoute,
+}
+
+const ApiAuthGithubRouteWithChildren = ApiAuthGithubRoute._addFileChildren(
+  ApiAuthGithubRouteChildren,
+)
+
+interface ApiAuthVerifyRouteChildren {
+  ApiAuthVerifyResendRoute: typeof ApiAuthVerifyResendRoute
+}
+
+const ApiAuthVerifyRouteChildren: ApiAuthVerifyRouteChildren = {
+  ApiAuthVerifyResendRoute: ApiAuthVerifyResendRoute,
+}
+
+const ApiAuthVerifyRouteWithChildren = ApiAuthVerifyRoute._addFileChildren(
+  ApiAuthVerifyRouteChildren,
+)
+
+interface ApiDocumentsIdRevisionsRouteChildren {
+  ApiDocumentsIdRevisionsRevisionIdRoute: typeof ApiDocumentsIdRevisionsRevisionIdRoute
+}
+
+const ApiDocumentsIdRevisionsRouteChildren: ApiDocumentsIdRevisionsRouteChildren =
+  {
+    ApiDocumentsIdRevisionsRevisionIdRoute:
+      ApiDocumentsIdRevisionsRevisionIdRoute,
+  }
+
+const ApiDocumentsIdRevisionsRouteWithChildren =
+  ApiDocumentsIdRevisionsRoute._addFileChildren(
+    ApiDocumentsIdRevisionsRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AFileRoute: AFileRoute,
+  ApiAssetsRoute: ApiAssetsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   EditorDocIdRoute: EditorDocIdRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   EditorIndexRoute: EditorIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,
+  ApiAuthForgotRoute: ApiAuthForgotRoute,
+  ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthMeRoute: ApiAuthMeRoute,
+  ApiAuthResetRoute: ApiAuthResetRoute,
+  ApiAuthSignupRoute: ApiAuthSignupRoute,
+  ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
+  ApiSyncPullRoute: ApiSyncPullRoute,
+  ApiSyncPushRoute: ApiSyncPushRoute,
+  ApiDocumentsIdRevisionsRoute: ApiDocumentsIdRevisionsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

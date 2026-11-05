@@ -96,7 +96,7 @@ export function AiWriter({
       <Button
         variant="outline"
         size="sm"
-        className="h-10 px-2 sm:px-3"
+        className="h-8 px-2 sm:px-3"
         onClick={() => {
           setDraft(content);
           setOpen(true);

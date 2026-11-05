@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `assets_user_id_sha256_unique` ON `assets` (`user_id`,`sha256`);

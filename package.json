@@ -1,6 +1,6 @@
 {
   "name": "mdstudio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Free, open-source, local-first Markdown editor with live preview and portability checks.",
   "license": "MIT",
   "author": "Chizoba Jude Ojini",
@@ -31,6 +31,7 @@
     "db:generate": "drizzle-kit generate",
     "brand": "node scripts/brand-assets.mjs",
     "screenshots": "node scripts/screenshots.mjs",
+    "dev:remote": "node scripts/dev-remote.mjs",
     "bundle:check": "bun scripts/bundle-size.ts"
   },
   "overrides": {
@@ -64,6 +65,7 @@
     "katex": "^0.19.1",
     "lucide-react": "^0.575.0",
     "mermaid": "^12.2.0",
+    "nodemailer": "^10.3.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "rehype-highlight": "^7.0.2",
@@ -95,6 +97,7 @@
     "@testing-library/react": "^16.0.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.16.5",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",

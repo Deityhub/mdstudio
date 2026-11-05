@@ -27,6 +27,31 @@ describe("workerConfig", () => {
       expect(() => workerConfig({ PREVIEW_WORKER_NAME: bad }), bad).toThrow(/PREVIEW_WORKER_NAME/);
   });
 
+  it("binds D1 as DB only when a database id is given, with a database per tier", () => {
+    expect(workerConfig({})).not.toHaveProperty("d1_databases");
+    const bind = (config: ReturnType<typeof workerConfig>) =>
+      "d1_databases" in config ? config.d1_databases : undefined;
+    expect(bind(workerConfig({ D1_DATABASE_ID: "prod-id" }))).toEqual([
+      expect.objectContaining({ binding: "DB", database_name: "mdstudio", database_id: "prod-id" }),
+    ]);
+    expect(
+      bind(workerConfig({ PREVIEW_WORKER_NAME: "mdstudio-pr-1", D1_DATABASE_ID: "prev-id" })),
+    ).toEqual([
+      expect.objectContaining({ database_name: "mdstudio-preview", database_id: "prev-id" }),
+    ]);
+  });
+
+  it("binds an R2 bucket as IMAGES only when one is named", () => {
+    expect(workerConfig({})).not.toHaveProperty("r2_buckets");
+    expect(workerConfig({ R2_BUCKET: "mdstudio-assets" })).toMatchObject({
+      r2_buckets: [{ binding: "IMAGES", bucket_name: "mdstudio-assets" }],
+    });
+    // a preview names its own bucket, so it never writes into production's
+    expect(
+      workerConfig({ PREVIEW_WORKER_NAME: "mdstudio-pr-4", R2_BUCKET: "mdstudio-preview-assets" }),
+    ).toMatchObject({ r2_buckets: [{ bucket_name: "mdstudio-preview-assets" }] });
+  });
+
   it("treats an empty name as production", () =>
     expect(workerConfig({ PREVIEW_WORKER_NAME: "" })).toHaveProperty("routes"));
 });

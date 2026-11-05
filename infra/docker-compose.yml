@@ -11,6 +11,24 @@ services:
       - "${PORT:-3000}:3000"
     environment:
       DATA_DIR: /data
+      # Optional GitHub sign-in (see infra/README.md). Both are needed to switch it on.
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      # Drafts one account may keep in the cloud.
+      MAX_CLOUD_DOCS: ${MAX_CLOUD_DOCS:-5}
+      # Versions kept per cloud draft, and minutes between automatic ones.
+      MAX_REVISIONS: ${MAX_REVISIONS:-10}
+      REVISION_INTERVAL_MINUTES: ${REVISION_INTERVAL_MINUTES:-5}
+      # Email confirmation (optional): a sender and one way to send. Limits and proxy: see infra/README.md.
+      MAIL_FROM: ${MAIL_FROM:-}
+      SMTP_URL: ${SMTP_URL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAILTRAP_API_TOKEN: ${MAILTRAP_API_TOKEN:-}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      # Hosted images per account: how many, and how many bytes in all.
+      MAX_ASSETS: ${MAX_ASSETS:-10}
+      MAX_ASSET_BYTES: ${MAX_ASSET_BYTES:-10000000}
     volumes:
       - mdstudio-data:/data
     restart: unless-stopped

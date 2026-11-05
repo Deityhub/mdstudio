@@ -13,7 +13,9 @@ export function createNonce(): string {
 export function buildCsp(nonce: string): string {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'`,
+    // Turnstile (the optional sign-up CAPTCHA) loads its script and a frame from Cloudflare.
+    `script-src 'self' 'nonce-${nonce}' https://challenges.cloudflare.com`,
+    "frame-src https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self'",
@@ -25,9 +27,13 @@ export function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-export function securityHeaders(nonce: string): Record<string, string> {
+/** Hosted images (`/a/...`) are plain files: nothing in them may load or run anything. */
+export const IMAGE_CSP = "default-src 'none'; sandbox";
+export const isImagePath = (pathname: string) => pathname.startsWith("/a/");
+
+export function securityHeaders(nonce: string, image = false): Record<string, string> {
   return {
-    "Content-Security-Policy": buildCsp(nonce),
+    "Content-Security-Policy": image ? IMAGE_CSP : buildCsp(nonce),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",

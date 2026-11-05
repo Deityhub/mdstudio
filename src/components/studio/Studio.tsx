@@ -11,6 +11,13 @@ import {
 } from "react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VersionTag } from "@/components/VersionTag";
+import { AccountMenu } from "@/components/studio/AccountMenu";
+import { cloudReady, useAccount } from "@/lib/account/store";
+import { askToConfirmEmail } from "@/lib/account/verify-prompt";
+import { addToCloud, removeFromCloud, syncLabel, useCloud, useSync } from "@/lib/sync/hooks";
+import { type CloudRevision, fetchCloudRevision, listCloudRevisions } from "@/lib/sync/revisions";
+import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -23,26 +30,17 @@ import {
   MonitorDown,
   Download,
   Copy,
-  FilePlus,
-  Trash2,
-  CopyPlus,
   Columns2,
   PanelLeft,
   FileText,
   Eye,
-  Maximize2,
-  Minimize2,
   AlertTriangle,
   Info,
   CircleAlert,
   CheckCircle2,
-  Check,
-  X,
   ListTree,
   Tags,
-  Pencil,
   History,
-  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,8 +76,17 @@ import { RulesDialog } from "@/components/studio/RulesDialog";
 import { buildArchive, parseArchive, type ImportedDoc } from "@/lib/storage/archive";
 import { useInstallPrompt, useOnline } from "@/lib/pwa/hooks";
 import { createZip, readZip, ZIP_LIMITS, type ZipEntry } from "@/lib/storage/zip";
-import { documentStore, docTitle, SAMPLE, type MdDocument } from "@/lib/storage/documentStore";
+import {
+  documentStore,
+  docTitle,
+  indexedDbStore,
+  SAMPLE,
+  type MdDocument,
+} from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
+import { rewriteImageRefs, shrinkImage } from "@/lib/editor/shrink";
+import { imageMessage, uploadImage } from "@/lib/account/assets";
+import { dataUriToBytes } from "@/lib/storage/archive";
 import {
   PROFILES,
   type Profile,
@@ -190,6 +197,16 @@ export function Studio({ docId }: { docId: string }) {
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
   const [mobileLibrary, setMobileLibrary] = useState(false);
+  // the panel only exists on phones and in focus mode; leaving both closes it for good
+  useEffect(() => {
+    if (!compact && !focus) setMobileLibrary(false);
+  }, [compact, focus]);
+  // Panels open beside the editor, except on phones and in focus mode, where they open as a panel
+  // from the right so the writing area never shrinks. Leaving both closes the panel for good.
+  const overlay = compact || focus;
+  useEffect(() => {
+    if (!overlay) setMobilePanel(null);
+  }, [overlay]);
   const [mobilePanel, setMobilePanel] = useState<Panel>(null);
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1280px)");
@@ -266,19 +283,38 @@ export function Studio({ docId }: { docId: string }) {
   };
 
   const [folderNames, setFolderNames] = useState<string[]>([]);
+  // A draft kept in the cloud belongs to its account: it is hidden while anyone else, or nobody,
+  // is signed in. Until the server has answered, nothing that belongs to an account is shown.
+  const accountState = useAccount();
+  const { user: account, loaded: accountLoaded, images: hostingOn } = accountState;
+  // The cloud is open to accounts whose email is confirmed (or when this server sends no mail).
+  const cloudOn = cloudReady(accountState);
+  const visibleTo = useRef<string | undefined>(undefined);
+  visibleTo.current = account?.id;
   const refreshList = useCallback(
     () =>
-      Promise.all([documentStore.list(), documentStore.folders.list()]).then(([d, f]) => {
-        setDocs(d);
+      Promise.all([
+        documentStore.list(),
+        documentStore.folders.list(),
+        cloudOwners(indexedDbStore),
+      ]).then(([d, f, owners]) => {
+        setDocs(d.filter((x) => isVisible(owners, x.id, visibleTo.current)));
         setFolderNames(f);
       }),
     [],
   );
   useEffect(() => {
+    if (!accountLoaded) return;
     setMissing(false);
-    documentStore.get(docId).then((d) => (d ? setDoc(d) : setMissing(true)));
+    Promise.all([documentStore.get(docId), cloudOwners(indexedDbStore)]).then(([d, owners]) => {
+      if (d && isVisible(owners, d.id, account?.id)) setDoc(d);
+      else {
+        setDoc(null);
+        setMissing(true);
+      }
+    });
     refreshList();
-  }, [docId, refreshList]);
+  }, [docId, refreshList, accountLoaded, account?.id]);
 
   // autosave: debounced, but any unsaved draft is flushed before it can be lost
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -334,7 +370,60 @@ export function Studio({ docId }: { docId: string }) {
     };
   }, [docId, flush]);
 
-  const historyOpen = (compact ? mobilePanel : panel) === "history";
+  // Optional account sync of the drafts chosen for the cloud: a no-op while signed out. Cloud
+  // changes to the open draft wait while it has unsaved edits, then load into the editor.
+  const syncStatus = useSync(cloudOn ? account?.id : undefined, {
+    isBusy: (id) => pending.current?.id === id,
+    onReport: (report) => {
+      if (report.applied.length || report.removed.length || report.detached.length)
+        void refreshList();
+      if (report.applied.includes(docId)) void documentStore.get(docId).then((d) => d && setDoc(d));
+      if (report.removed.includes(docId)) setMissing(true);
+      if (report.replaced.length)
+        toast.info(
+          `A newer edit from another device replaced ${report.replaced.length === 1 ? "a draft" : `${report.replaced.length} drafts`}`,
+          {
+            id: "sync-replaced",
+            description: "The text it replaced is in the draft's History.",
+          },
+        );
+      if (report.detached.length)
+        toast.info("A draft is no longer in your cloud", {
+          id: "sync-detached",
+          description:
+            "It was deleted on another device after you edited it here, so it stays on this device only.",
+        });
+      if (report.overLimit.length)
+        toast.error("Your cloud is full", {
+          id: "sync-full",
+          description: `${report.overLimit.length === 1 ? "A draft" : `${report.overLimit.length} drafts`} stayed on this device only. Remove a draft from the cloud to make room.`,
+        });
+      if (report.tooLarge.length)
+        toast.error("A draft is too large for the cloud", {
+          id: "sync-large",
+          description: "Drafts over 1 MB of text stay on this device.",
+        });
+    },
+  });
+  const cloudDrafts = useCloud();
+
+  const historyOpen = (overlay ? mobilePanel : panel) === "history";
+  // The versions the cloud keeps for this draft: read while History is open, and again after each
+  // sync, since that is when the server may have kept another one.
+  const [cloudRevs, setCloudRevs] = useState<{ items: CloudRevision[]; max: number } | null>(null);
+  const inCloud = !!doc && cloudOn && cloudDrafts.linked.has(doc.id);
+  useEffect(() => {
+    if (!historyOpen || !inCloud || !doc || !account) return setCloudRevs(null);
+    let live = true;
+    void listCloudRevisions(account.id, doc.id).then(
+      (r) => live && setCloudRevs(r ? { items: r.revisions, max: r.max } : null),
+    );
+    return () => {
+      live = false;
+    };
+    // keyed on the draft's id and the sync time, not on the objects that change on every keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyOpen, inCloud, doc?.id, account?.id, syncStatus.at]);
   useEffect(() => {
     if (!historyOpen || !doc?.id) return;
     let live = true;
@@ -519,21 +608,89 @@ export function Studio({ docId }: { docId: string }) {
     if (first) navigate({ to: "/editor/$docId", params: { docId: first.id } });
   };
 
+  // In a cloud draft an image is uploaded and linked by its public address, so the Markdown works
+  // on other platforms too. Anywhere else, or when the upload fails, it stays in the draft.
   const addImages = async (files: File[], alt?: string) => {
     if (!doc) return;
+    const hosted = hostingOn && cloudDrafts.linked.has(doc.id);
     const next = { ...doc.images };
     const refs: string[] = [];
+    const labelOf = (name: string) =>
+      ((files.length === 1 && alt) || name.replace(/\.[a-z0-9]+$/, "")).replace(/[[\]]/g, "\\$&");
     for (const f of files) {
+      if (hosted) {
+        const sent = await hostFile(f);
+        if (sent) {
+          refs.push(`![${labelOf(f.name || "image")}](${sent})`);
+          continue;
+        }
+      }
       const data = await compressImage(f);
       const name = safeImageName(f.name || "pasted.png", next);
       next[name] = data;
-      const label = (files.length === 1 && alt) || name.replace(/\.[a-z0-9]+$/, "");
-      refs.push(`![${label.replace(/[[\]]/g, "\\$&")}](./images/${name})`);
+      refs.push(`![${labelOf(name)}](./images/${name})`);
       if (kb(data) > 500)
         toast.warning(`${name} is ${kb(data)} KB. Large embedded images make the file heavy.`);
     }
-    update({ images: next });
+    if (Object.keys(next).length !== Object.keys(doc.images).length) update({ images: next });
     editor.current?.insert(refs.join("\n"));
+  };
+
+  /** Shrinks and uploads one image; the hosted link, or null (after saying why). */
+  const hostFile = async (file: File): Promise<string | null> => {
+    try {
+      const small = await shrinkImage(file);
+      if (!small) {
+        toast.error("That image is too large to host", {
+          description: "It was added to the draft instead.",
+        });
+        return null;
+      }
+      const result = await uploadImage(small);
+      if ("image" in result) {
+        toast.success(`Image hosted (${Math.max(1, Math.round(result.image.byteSize / 1024))} KB)`);
+        return result.image.url;
+      }
+      toast.error(imageMessage(result.error), {
+        description: "It was added to the draft instead.",
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error("Couldn't prepare that image for hosting", {
+        description: "It was added to the draft instead.",
+      });
+    }
+    return null;
+  };
+
+  /** Moves a cloud draft's local images to hosting and points the text at the hosted links. */
+  const hostImages = async (d: MdDocument) => {
+    const names = Object.keys(d.images).filter((n) => d.content.includes(`images/${n}`));
+    const links: Record<string, string> = {};
+    for (const name of names) {
+      const parsed = dataUriToBytes(d.images[name]!);
+      if (!parsed) continue;
+      const file = new File([parsed.bytes as BlobPart], name, { type: parsed.mime });
+      const url = await hostFile(file);
+      if (!url) break; // full or offline: keep the rest as they are
+      links[name] = url;
+    }
+    const done = Object.keys(links).length;
+    if (!done) return;
+    const images = Object.fromEntries(Object.entries(d.images).filter(([n]) => !(n in links)));
+    const next = {
+      ...d,
+      content: rewriteImageRefs(d.content, links),
+      images,
+      updatedAt: Date.now(),
+    };
+    next.title = docTitle(next);
+    await documentStore.save(next);
+    if (d.id === doc?.id) setDoc(next);
+    await refreshList();
+    toast.success(`Hosted ${done} image${done === 1 ? "" : "s"}`, {
+      description: "The draft now links to them by address. Ctrl/⌘+Z undoes the text change.",
+    });
   };
 
   const onFiles = async (files: File[]) => {
@@ -644,6 +801,19 @@ export function Studio({ docId }: { docId: string }) {
     return typeof s === "string" && s ? slugify(s) : slugify(doc?.title ?? "untitled");
   };
   const hasLocalImages = issues.some((i) => i.rule === "local-image");
+  /** Plain exports keep `./images/...` paths, which only mean something inside this draft. */
+  const warnLocalImages = () => {
+    const n = issues.filter((i) => i.rule === "local-image").length;
+    if (!n) return;
+    toast.warning(
+      `${n} image${n === 1 ? " points" : "s point"} to files that only exist in this draft`,
+      {
+        id: "export-local-images",
+        description:
+          "Anywhere else they show as missing. Use the self-contained export, or replace them with image URLs.",
+      },
+    );
+  };
   /** HTML export renders math and diagrams, which load on demand and can fail offline. */
   const exportAsync = (fn: () => Promise<unknown>) =>
     fn().catch((error) => {
@@ -816,7 +986,7 @@ export function Studio({ docId }: { docId: string }) {
   const errCount = issues.filter((i) => i.severity !== "info").length;
   const showLibrary = library && !focus && !compact;
   const showPanel = panel && !focus && !compact;
-  const activePanel = compact ? mobilePanel : panel;
+  const activePanel = overlay ? mobilePanel : panel;
   const goToLine = (line: number) => {
     setView("editor");
     setMobilePanel(null);
@@ -835,7 +1005,7 @@ export function Studio({ docId }: { docId: string }) {
       variant={activePanel === p ? "secondary" : "ghost"}
       size="icon"
       className="relative h-10 w-10 shrink-0"
-      onClick={() => (compact ? setMobilePanel(p) : setPanel(panel === p ? null : p))}
+      onClick={() => (overlay ? setMobilePanel(p) : setPanel(panel === p ? null : p))}
       aria-label={label}
       title={label}
     >
@@ -861,6 +1031,17 @@ export function Studio({ docId }: { docId: string }) {
       onDuplicate={duplicate}
       onDelete={setToDelete}
       onMove={move}
+      {...(account && {
+        cloud: {
+          ids: cloudDrafts.linked,
+          limit: cloudDrafts.limit,
+          // Until the email is confirmed, trying the cloud opens the dialog that asks for that.
+          onAdd: (d: MdDocument) =>
+            cloudOn ? void addToCloud(account.id, [d.id]) : askToConfirmEmail(),
+          onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
+          ...(hostingOn && cloudOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
+        },
+      })}
     />
   );
   const panelContent = (
@@ -896,6 +1077,14 @@ export function Studio({ docId }: { docId: string }) {
           content={content}
           onSave={saveVersion}
           onRestore={restoreVersion}
+          {...(cloudRevs &&
+            doc &&
+            account && {
+              cloud: {
+                ...cloudRevs,
+                onOpen: (r: CloudRevision) => fetchCloudRevision(account.id, doc.id, r),
+              },
+            })}
         />
       )}
       {activePanel === "meta" && (
@@ -917,12 +1106,14 @@ export function Studio({ docId }: { docId: string }) {
               variant="ghost"
               size="icon"
               className="h-10 w-10 shrink-0"
-              onClick={() => (compact ? setMobileLibrary(true) : setLibrary((v) => !v))}
+              // Where the sidebar is not shown (phones, focus mode) the drafts open as a panel from the left
+              onClick={() => (compact || focus ? setMobileLibrary(true) : setLibrary((v) => !v))}
               aria-label="Toggle drafts"
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
             <Logo textClassName="text-base sm:text-lg" markClassName="h-6 w-6" />
+            <VersionTag className="hidden sm:inline-block" />
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}
             </span>
@@ -932,7 +1123,7 @@ export function Studio({ docId }: { docId: string }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-10 px-2 sm:px-3"
+                className="h-8 px-2 sm:px-3"
                 aria-label="Install mdstudio"
                 onClick={() => install()}
               >
@@ -946,7 +1137,7 @@ export function Studio({ docId }: { docId: string }) {
               onCreate={newDoc}
               onApply={(metadata) => {
                 setContent(joinFrontMatter({ ...fm.data, ...metadata }, fm.body));
-                if (compact) setMobilePanel("meta");
+                if (overlay) setMobilePanel("meta");
                 else setPanel("meta");
                 toast.success("AI suggestions applied to front matter");
               }}
@@ -956,7 +1147,7 @@ export function Studio({ docId }: { docId: string }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 px-2 sm:px-3"
+                  className="h-8 px-2 sm:px-3"
                   aria-label="Import Markdown"
                 >
                   <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
@@ -988,7 +1179,7 @@ export function Studio({ docId }: { docId: string }) {
                 <Button
                   variant="default"
                   size="sm"
-                  className="h-10 px-2 sm:px-3"
+                  className="h-8 px-2 sm:px-3"
                   aria-label="Export"
                 >
                   <Download className="h-4 w-4" />
@@ -998,11 +1189,19 @@ export function Studio({ docId }: { docId: string }) {
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel>Markdown</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={() => download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8")}
+                  onClick={() => {
+                    warnLocalImages();
+                    download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8");
+                  }}
                 >
                   <Download className="h-4 w-4" /> Download .md
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => copy(out(), "Markdown")}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    warnLocalImages();
+                    void copy(out(), "Markdown");
+                  }}
+                >
                   <Copy className="h-4 w-4" /> Copy Markdown
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -1075,15 +1274,7 @@ export function Studio({ docId }: { docId: string }) {
               </DropdownMenuContent>
             </DropdownMenu>
             <ThemeToggle className="hidden sm:inline-flex" />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden sm:inline-flex"
-              onClick={() => setFocus((f) => !f)}
-              aria-label="Focus mode"
-            >
-              {focus ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
+            <AccountMenu />
           </div>
           <input
             ref={fileInput}
@@ -1147,7 +1338,7 @@ export function Studio({ docId }: { docId: string }) {
                   </Button>
                 ))}
               </div>
-              {!focus && <div className="hidden md:flex xl:hidden">{panelButtons}</div>}
+              <div className="hidden md:flex xl:hidden">{panelButtons}</div>
             </div>
           </div>
         </header>
@@ -1208,6 +1399,8 @@ export function Studio({ docId }: { docId: string }) {
                 onOpenImage={openImage}
                 onOpenTable={() => setTableDialog(true)}
                 onOpenShortcuts={() => setShortcuts(true)}
+                focus={focus}
+                onToggleFocus={() => setFocus((f) => !f)}
               />
             )}
             <div className="flex min-h-0 flex-1">
@@ -1264,9 +1457,20 @@ export function Studio({ docId }: { docId: string }) {
               <span>{stats.minutes} min read</span>
               <span>{Object.keys(images).length} images</span>
               {!online && <span>Offline, your drafts are still saved here</span>}
+              {account && syncStatus.state !== "idle" && (
+                <span
+                  data-testid="sync-status"
+                  className={cn("ml-auto", syncStatus.state === "error" && "text-destructive")}
+                >
+                  {syncLabel(syncStatus)}
+                </span>
+              )}
               <span
                 role="status"
-                className={cn("ml-auto", saveState === "error" && "text-destructive")}
+                className={cn(
+                  account && syncStatus.state !== "idle" ? "" : "ml-auto",
+                  saveState === "error" && "text-destructive",
+                )}
               >
                 {saveState === "saving"
                   ? "Saving…"
@@ -1281,7 +1485,7 @@ export function Studio({ docId }: { docId: string }) {
           </main>
 
           {/* Side panel */}
-          {!focus && !compact && (
+          {!compact && (
             <div className="flex shrink-0 border-l border-border">
               {showPanel && (
                 <aside className="flex w-72 flex-col overflow-hidden">
@@ -1295,14 +1499,12 @@ export function Studio({ docId }: { docId: string }) {
             </div>
           )}
         </div>
-        {!focus && (
-          <nav
-            aria-label="Document panels"
-            className="flex shrink-0 items-center justify-around border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
-          >
-            {panelButtons}
-          </nav>
-        )}
+        <nav
+          aria-label="Document panels"
+          className="flex shrink-0 items-center justify-around border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
+        >
+          {panelButtons}
+        </nav>
         <Dialog open={toDelete !== null} onOpenChange={(open) => !open && setToDelete(null)}>
           <DialogContent>
             <DialogHeader>
@@ -1355,18 +1557,24 @@ export function Studio({ docId }: { docId: string }) {
           }}
           returnFocus={() => editor.current?.focus()}
         />
-        <Sheet open={compact && mobileLibrary} onOpenChange={setMobileLibrary}>
+        <Sheet open={(compact || focus) && mobileLibrary} onOpenChange={setMobileLibrary}>
           <SheetContent
             side="left"
             className="flex h-dvh w-[min(90vw,360px)] flex-col gap-0 p-0"
             aria-describedby={undefined}
+            // in focus mode, closing the list puts the cursor back where the writing is
+            onCloseAutoFocus={(e) => {
+              if (!focus) return;
+              e.preventDefault();
+              editor.current?.focus();
+            }}
           >
             <SheetTitle className="border-b border-border px-4 py-4">Your drafts</SheetTitle>
             {libraryContent}
           </SheetContent>
         </Sheet>
         <Sheet
-          open={compact && mobilePanel !== null}
+          open={overlay && mobilePanel !== null}
           onOpenChange={(open) => {
             if (!open) setMobilePanel(null);
           }}
@@ -1375,6 +1583,12 @@ export function Studio({ docId }: { docId: string }) {
             side="right"
             className="flex h-dvh w-[min(92vw,380px)] flex-col gap-0 p-0"
             aria-describedby={undefined}
+            // in focus mode, closing a panel puts the cursor back where the writing is
+            onCloseAutoFocus={(e) => {
+              if (!focus) return;
+              e.preventDefault();
+              editor.current?.focus();
+            }}
           >
             <SheetTitle className="border-b border-border px-4 py-4 capitalize">
               {mobilePanel === "meta" ? "Front matter" : mobilePanel}

@@ -19,3 +19,6 @@ test-results
 # tests
 /test-results
 /playwright-report
+
+# local self-hosted database
+/data

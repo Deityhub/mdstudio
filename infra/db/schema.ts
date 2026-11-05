@@ -5,11 +5,36 @@ import { index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-co
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
+  // The same inbox under every spelling (plus tags, Gmail dots), so one inbox is one account.
+  emailKey: text("email_key").unique(),
+  // When the address was confirmed by a link in an email (or by GitHub, which verifies its own).
+  emailVerifiedAt: integer("email_verified_at"),
   passwordHash: text("password_hash"),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
+});
+
+/** One-time links sent by email: confirming the address, or resetting the password. Only a hash of the token is stored. */
+export const emailTokens = sqliteTable("email_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  email: text("email").notNull(),
+  // What the link is for: confirming the address ("verify") or choosing a new password ("reset").
+  purpose: text("purpose").notNull().default("verify"),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
+/** Fixed-window counters behind the sign-up, sign-in and email limits. */
+export const rateLimits = sqliteTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  resetsAt: integer("resets_at").notNull(),
 });
 
 export const sessions = sqliteTable("sessions", {
@@ -44,11 +69,16 @@ export const documents = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull().default("Untitled"),
+    // Library label and folder, as in the browser's draft (src/lib/storage/documentStore.ts).
+    name: text("name"),
+    folder: text("folder"),
     content: text("content").notNull().default(""),
     version: integer("version").notNull().default(1),
     contentHash: text("content_hash").notNull(),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
+    // When the text was last edited on a device; the later edit wins a sync conflict.
+    editedAt: integer("edited_at").notNull().default(0),
     deletedAt: integer("deleted_at"),
   },
   (t) => [index("idx_documents_user_updated").on(t.userId, t.updatedAt)],
@@ -66,25 +96,38 @@ export const documentRevisions = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
     title: text("title").notNull(),
+    // The text, or its gzip as base64 when `encoding` says so (compressed only when smaller).
     content: text("content").notNull(),
+    encoding: text("encoding").notNull().default("plain"),
+    // Size of the text itself, so a list can show it without unpacking anything.
+    size: integer("size").notNull().default(0),
+    // Hash of the text, so an unchanged text is never kept twice in a row.
+    hash: text("hash").notNull().default(""),
+    // "auto" for the periodic version, "replaced" for text a newer edit from another device took over.
+    reason: text("reason").notNull().default("auto"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("idx_revisions_doc_version").on(t.documentId, t.version)],
 );
 
-export const assets = sqliteTable("assets", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  documentId: text("document_id").references(() => documents.id, { onDelete: "set null" }),
-  storageKey: text("storage_key").notNull().unique(),
-  fileName: text("file_name").notNull(),
-  mimeType: text("mime_type").notNull(),
-  byteSize: integer("byte_size").notNull(),
-  sha256: text("sha256").notNull(),
-  createdAt: integer("created_at").notNull(),
-});
+export const assets = sqliteTable(
+  "assets",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    documentId: text("document_id").references(() => documents.id, { onDelete: "set null" }),
+    storageKey: text("storage_key").notNull().unique(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    sha256: text("sha256").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  // The same picture uploaded twice by one account is stored once.
+  (t) => [unique().on(t.userId, t.sha256)],
+);
 
 export const shareLinks = sqliteTable("share_links", {
   id: text("id").primaryKey(),

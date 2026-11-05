@@ -21,7 +21,8 @@ function classify(url, method, mode, origin) {
   const path = url.pathname;
   if (path === "/sw.js" || path.startsWith("/api/") || path.startsWith("/_")) return "skip";
   if (mode === "navigate") return /\.[a-z0-9]+$/i.test(path) ? "skip" : "navigate";
-  if (path.startsWith("/assets/")) return "immutable";
+  // Hosted images: a name never points at different bytes, so the cached copy is always right.
+  if (path.startsWith("/assets/") || path.startsWith("/a/")) return "immutable";
   if (/^\/(fonts|katex)\//.test(path) || /\.(png|svg|ico|webmanifest|woff2)$/.test(path))
     return "static";
   return "skip";
