@@ -35,6 +35,7 @@ Write the test first (`src/lib/**/*.test.ts`, plus a Playwright spec in `e2e/` w
 
 ```bash
 bun run lint
+bun run tailwind:check   # Tailwind classes in their recommended form; tailwind:fix rewrites them
 bun run typecheck
 bun run test
 bun run e2e         # builds the self-hosted output and runs Playwright

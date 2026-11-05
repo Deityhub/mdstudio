@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { startDraft } from "./draft";
 
 // The first server keeps a version at every sync and only the last 3 (see playwright.config.ts).
 const password = "a long enough password";
@@ -66,7 +67,7 @@ test("History lists the cloud's versions of a cloud draft, and one can be compar
   page,
 }) => {
   const address = email();
-  await page.goto("/editor");
+  await startDraft(page);
   await expect(editor(page)).toBeVisible();
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("tab", { name: "Create account" }).click();

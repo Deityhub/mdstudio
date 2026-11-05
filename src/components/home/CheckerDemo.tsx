@@ -102,7 +102,7 @@ export default function CheckerDemo() {
         >
           {issues.length === 0 && (
             <li className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
+              <CheckCircle2 className="size-4 text-primary" />
               Nothing to flag. This renders the same on{" "}
               {PROFILES.find((p) => p.id === profile)?.label}.
             </li>
@@ -116,7 +116,7 @@ export default function CheckerDemo() {
                   onClick={() => jumpTo(i.line)}
                   className="flex w-full items-start gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
                 >
-                  <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", TONES[i.severity])} />
+                  <Icon className={cn("mt-0.5 size-4 shrink-0", TONES[i.severity])} />
                   <span>
                     <span className="mr-2 font-mono text-xs text-muted-foreground">
                       Line {i.line}

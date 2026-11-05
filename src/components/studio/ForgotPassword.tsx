@@ -68,7 +68,7 @@ export function ForgotPassword({
         </p>
       )}
       {turnstile && <Turnstile key={captchaRun} siteKey={turnstile} onToken={setCaptcha} />}
-      <Button type="submit" disabled={busy || (!!turnstile && !captcha)}>
+      <Button type="submit" loading={busy} disabled={!!turnstile && !captcha}>
         Send reset link
       </Button>
       <Button type="button" variant="ghost" onClick={onBack}>

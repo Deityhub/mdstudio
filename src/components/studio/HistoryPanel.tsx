@@ -59,7 +59,7 @@ function fold(rows: DiffRow[]): Shown[] {
   return out;
 }
 
-const CELL = "min-w-0 whitespace-pre-wrap break-words px-2 py-0.5 font-mono text-xs";
+const CELL = "min-w-0 whitespace-pre-wrap wrap-break-word px-2 py-0.5 font-mono text-xs";
 
 function Cell({
   side,
@@ -114,7 +114,7 @@ export function HistoryPanel({
   return (
     <div className="space-y-3">
       <Button variant="outline" size="sm" className="w-full" onClick={onSave}>
-        <Save className="h-4 w-4" /> Save a version now
+        <Save className="size-4" /> Save a version now
       </Button>
       {revisions.length ? (
         <ul className="space-y-1">
@@ -138,7 +138,7 @@ export function HistoryPanel({
         </ul>
       ) : (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
-          <HistoryIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
+          <HistoryIcon className="size-8 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium">No versions yet</p>
           <p className="text-xs text-muted-foreground">
             A version is kept automatically every few minutes while you write. They stay in this

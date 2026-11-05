@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startDraft } from "./draft";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -8,7 +9,7 @@ const editor = (page: Page) => page.locator(".cm-content");
 
 async function signedIn(page: Page) {
   const address = `pics-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
-  await page.goto("/editor");
+  await startDraft(page);
   await expect(editor(page)).toBeVisible();
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("tab", { name: "Create account" }).click();

@@ -32,7 +32,9 @@
     "brand": "node scripts/brand-assets.mjs",
     "screenshots": "node scripts/screenshots.mjs",
     "dev:remote": "node scripts/dev-remote.mjs",
-    "bundle:check": "bun scripts/bundle-size.ts"
+    "bundle:check": "bun scripts/bundle-size.ts",
+    "tailwind:check": "bun scripts/tailwind-classes.ts",
+    "tailwind:fix": "bun scripts/tailwind-classes.ts --fix"
   },
   "overrides": {
     "rolldown": "1.2.1"

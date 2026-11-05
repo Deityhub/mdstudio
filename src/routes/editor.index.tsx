@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { fetchAccount } from "@/lib/account/client";
-import { documentStore, indexedDbStore, SAMPLE } from "@/lib/storage/documentStore";
+import { documentStore, indexedDbStore, NEW_DOC_ID } from "@/lib/storage/documentStore";
 import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { pageHead } from "@/lib/site/seo";
 
@@ -26,10 +26,9 @@ function EditorIndex() {
         cloudOwners(indexedDbStore),
         fetchAccount(),
       ]);
-      const d =
-        docs.find((x) => isVisible(owners, x.id, user?.id)) ??
-        (await documentStore.create({ content: SAMPLE }));
-      navigate({ to: "/editor/$docId", params: { docId: d.id }, replace: true });
+      // With nothing of their own, they see the example, which is saved only once they edit it.
+      const docId = docs.find((x) => isVisible(owners, x.id, user?.id))?.id ?? NEW_DOC_ID;
+      navigate({ to: "/editor/$docId", params: { docId }, replace: true });
     })();
   }, [navigate]);
   return (

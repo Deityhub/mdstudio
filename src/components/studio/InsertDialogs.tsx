@@ -195,7 +195,7 @@ export function ImageDialog({
               size="sm"
               onClick={() => picker.current?.click()}
             >
-              <Upload className="h-4 w-4" /> Upload from device
+              <Upload className="size-4" /> Upload from device
             </Button>
             <span className="min-w-0 truncate text-sm text-muted-foreground">
               {file ? file.name : "or paste a URL above"}

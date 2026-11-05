@@ -405,22 +405,22 @@ export function RulesDialog({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="size-8"
                     aria-label={`Edit ${r.name}`}
                     onClick={() => startEdit(r)}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="size-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive"
+                    className="size-8 text-destructive"
                     aria-label={`Delete ${r.name}`}
                     onClick={() =>
                       onChange({ ...config, custom: config.custom.filter((c) => c.id !== r.id) })
                     }
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                   </Button>
                 </li>
               ))}
@@ -529,7 +529,7 @@ export function RulesDialog({
                 disabled={config.custom.length >= CUSTOM_LIMITS.rules}
                 onClick={() => startEdit(null)}
               >
-                <Plus className="h-4 w-4" /> Add a rule
+                <Plus className="size-4" /> Add a rule
               </Button>
             )}
           </TabsContent>
@@ -558,10 +558,10 @@ export function RulesDialog({
           </p>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={download}>
-              <Download className="h-4 w-4" /> Export
+              <Download className="size-4" /> Export
             </Button>
             <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()}>
-              <Upload className="h-4 w-4" /> Import
+              <Upload className="size-4" /> Import
             </Button>
             <input
               ref={fileInput}

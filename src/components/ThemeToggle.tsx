@@ -12,8 +12,8 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label="Toggle dark mode"
       onClick={() => toggleTheme()}
     >
-      <Sun className="hidden h-4 w-4 dark:block" />
-      <Moon className="h-4 w-4 dark:hidden" />
+      <Sun className="hidden size-4 dark:block" />
+      <Moon className="size-4 dark:hidden" />
     </Button>
   );
 }
