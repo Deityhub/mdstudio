@@ -52,7 +52,7 @@
 
 ---
 
-## Milestone 3: Accounts, Cloud Sync & Hosted Storage (Target: Q2 2027)
+## Milestone 3: Accounts, Cloud Sync & Hosted Storage (complete)
 
 - [x] **Activate Server Blueprint:** Transition `infra/` backend blueprints into `src/server/`.
 - [x] **Password Reset:** "Forgot your password?" emails a one-hour, single-use link to a reset page; it never reveals whether an address has an account, ends every session, and counts as confirming the address.
@@ -61,11 +61,11 @@
 - [x] **Optimistic Cloud Sync:** Incremental sync engine with monotonic version counters and automatic conflict branch resolution. (Done: opt-in cloud drafts with a 5-draft limit, last-edit-wins with the replaced text kept in History, sign-out removes cloud drafts from the browser, footer status.)
 - [x] **Hosted Image Pipeline (self-hosted installs; deliberately off on mdstudio.deityhub.com to keep it at $0):** Drag-and-drop image upload to Cloudflare R2 (hosted) or local disk volume (Docker); auto-rewrites relative paths to CDN URLs.
 - [x] **Cloud Revision Log:** Immutable server-side document revision history (the last 10 versions per cloud draft by default, stored compressed; `MAX_REVISIONS` changes it).
-- [ ] **Dual Deployment CI/CD:** GitHub Actions workflows for automated Cloudflare Workers deployment and multi-arch Docker image publication (`ghcr.io`).
+- [x] **Dual Deployment CI/CD:** GitHub Actions workflows for automated Cloudflare Workers deployment and multi-arch Docker image publication (`ghcr.io`).
 
 ---
 
-## Milestone 4: Sharing & Multi-Platform Publishing (Target: Q3 2027)
+## Milestone 4: Sharing & Multi-Platform Publishing (Target: Q4 2026)
 
 - [ ] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML.
 - [ ] **Link Management:** Configurable expiration dates and one-click link revocation.

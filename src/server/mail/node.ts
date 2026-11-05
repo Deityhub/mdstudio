@@ -7,8 +7,8 @@ import type { Mailer } from "./types";
 
 export const smtpMailer =
   (transport: Pick<Transporter, "sendMail">, from: string): Mailer =>
-  async ({ to, subject, text }) => {
-    await transport.sendMail({ from, to, subject, text });
+  async ({ to, subject, text, html }) => {
+    await transport.sendMail({ from, to, subject, text, ...(html ? { html } : {}) });
   };
 
 /** Writes each message to `<dir>/<time>-<random>.json`, so a test or a developer can read it. */
