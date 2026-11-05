@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 (2026-11-05)
+
+### Fixes
+
+- retry a confirmation email that failed to send, and design the account emails
+- upload Worker secrets with the built config
+
 ## 0.3.0 (2026-11-05)
 
 ### Features
