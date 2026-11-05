@@ -80,7 +80,9 @@ import {
   documentStore,
   docTitle,
   indexedDbStore,
-  SAMPLE,
+  emptyDocument,
+  NEW_DOC_ID,
+  sampleDocument,
   type MdDocument,
 } from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
@@ -170,6 +172,9 @@ function readFile(file: File) {
 
 export function Studio({ docId }: { docId: string }) {
   const navigate = useNavigate();
+  // effects use it without depending on it: its identity changes with every route change
+  const go = useRef(navigate);
+  go.current = navigate;
   // The studio is a fixed app shell: only the panes inside it scroll, never the page.
   useEffect(() => {
     document.documentElement.classList.add("studio-open");
@@ -303,9 +308,43 @@ export function Studio({ docId }: { docId: string }) {
       }),
     [],
   );
+  // The example (first visit) or a blank draft shown when nothing is stored (docId "new"). It lives
+  // in memory only: it is saved when the writer first changes it, and dropped if drafts of their own turn up (signing in).
+  const example = useRef<{ doc: MdDocument } | null>(null);
+  // the id of a draft this studio just saved as its own and navigated to, so it is not reloaded
+  const adopted = useRef<string | null>(null);
   useEffect(() => {
     if (!accountLoaded) return;
     setMissing(false);
+    if (adopted.current === docId) {
+      adopted.current = null;
+      refreshList();
+      return;
+    }
+    if (docId === NEW_DOC_ID) {
+      // drop the draft that was open (a deleted one, say) so the editor never mounts with its text
+      // and then reports the swap to the blank one as an edit
+      setDoc(null);
+      Promise.all([
+        documentStore.list(),
+        cloudOwners(indexedDbStore),
+        documentStore.hadDraft(),
+      ]).then(([all, owners, had]) => {
+        const own = all.find((x) => isVisible(owners, x.id, account?.id));
+        if (own) {
+          example.current = null;
+          go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
+          return;
+        }
+        // the example is for a first visit; after that, nothing is shown that they did not write
+        const sample = had ? emptyDocument() : sampleDocument();
+        example.current = { doc: sample };
+        setDoc(sample);
+      });
+      refreshList();
+      return;
+    }
+    example.current = null;
     Promise.all([documentStore.get(docId), cloudOwners(indexedDbStore)]).then(([d, owners]) => {
       if (d && isVisible(owners, d.id, account?.id)) setDoc(d);
       else {
@@ -315,6 +354,22 @@ export function Studio({ docId }: { docId: string }) {
     });
     refreshList();
   }, [docId, refreshList, accountLoaded, account?.id]);
+  // Drafts arriving while the example is open (a sign-in pulling the cloud) replace it. The list in
+  // memory only says "look": the store decides, because a stale list can still name a draft that
+  // was just deleted.
+  useEffect(() => {
+    if (docId !== NEW_DOC_ID || !docs[0] || !doc || example.current?.doc !== doc) return;
+    let live = true;
+    Promise.all([documentStore.list(), cloudOwners(indexedDbStore)]).then(([all, owners]) => {
+      const own = all.find((x) => isVisible(owners, x.id, visibleTo.current));
+      if (!live || !own || example.current?.doc !== doc) return;
+      example.current = null;
+      go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
+    });
+    return () => {
+      live = false;
+    };
+  }, [docs, docId, doc]);
 
   // autosave: debounced, but any unsaved draft is flushed before it can be lost
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -329,6 +384,13 @@ export function Studio({ docId }: { docId: string }) {
     const seq = ++saveSeq.current;
     return documentStore
       .save(d)
+      .then(() => {
+        // the example just became a draft: carry on in it, under its own address
+        if (example.current?.doc.id !== d.id) return;
+        example.current = null;
+        adopted.current = d.id;
+        go.current({ to: "/editor/$docId", params: { docId: d.id }, replace: true });
+      })
       .then(() =>
         historyStore
           .maybeSnapshot(d, Date.now())
@@ -353,6 +415,8 @@ export function Studio({ docId }: { docId: string }) {
   }, [refreshList]);
   useEffect(() => {
     if (!doc) return;
+    // the example is not saved until it has been changed
+    if (example.current?.doc === doc) return;
     pending.current = doc;
     setSaveState("saving");
     const t = setTimeout(flush, 400);
@@ -891,12 +955,21 @@ export function Studio({ docId }: { docId: string }) {
   const [toDelete, setToDelete] = useState<MdDocument | null>(null);
   const remove = async (d: MdDocument) => {
     setToDelete(null);
+    // an edit still waiting for its autosave must not write the draft back after it is deleted
+    if (d.id === docId) pending.current = null;
     await documentStore.remove(d.id);
     historyStore.clear(d.id).catch(console.error);
     const rest = docs.filter((x) => x.id !== d.id);
+    // the list must forget it at once: anything that reads it while the page moves on (the
+    // example waiting for drafts to arrive) would otherwise send us back to the deleted draft
+    setDocs(rest);
     if (d.id === docId) {
-      if (rest[0]) navigate({ to: "/editor/$docId", params: { docId: rest[0].id } });
-      else newDoc(SAMPLE);
+      // leave the deleted address for good (replace), so Back cannot return to a missing draft
+      go.current({
+        to: "/editor/$docId",
+        params: { docId: rest[0]?.id ?? NEW_DOC_ID },
+        replace: true,
+      });
     } else refreshList();
   };
 
@@ -925,8 +998,12 @@ export function Studio({ docId }: { docId: string }) {
     await documentStore.folders.remove(name);
     if (inside.some((d) => d.id === docId)) {
       const rest = docs.filter((d) => d.folder !== name);
-      if (rest[0]) navigate({ to: "/editor/$docId", params: { docId: rest[0].id } });
-      else newDoc(SAMPLE);
+      setDocs(rest);
+      go.current({
+        to: "/editor/$docId",
+        params: { docId: rest[0]?.id ?? NEW_DOC_ID },
+        replace: true,
+      });
     } else refreshList();
   };
 
@@ -1004,12 +1081,12 @@ export function Studio({ docId }: { docId: string }) {
       key={p}
       variant={activePanel === p ? "secondary" : "ghost"}
       size="icon"
-      className="relative h-10 w-10 shrink-0"
+      className="relative size-10 shrink-0"
       onClick={() => (overlay ? setMobilePanel(p) : setPanel(panel === p ? null : p))}
       aria-label={label}
       title={label}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="size-4" />
       {p === "checks" && errCount > 0 && (
         <span className="absolute right-0 top-0 rounded-full bg-warning px-1 text-[10px] text-foreground">
           {errCount}
@@ -1105,14 +1182,14 @@ export function Studio({ docId }: { docId: string }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0"
+              className="size-10 shrink-0"
               // Where the sidebar is not shown (phones, focus mode) the drafts open as a panel from the left
               onClick={() => (compact || focus ? setMobileLibrary(true) : setLibrary((v) => !v))}
               aria-label="Toggle drafts"
             >
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeft className="size-4" />
             </Button>
-            <Logo textClassName="text-base sm:text-lg" markClassName="h-6 w-6" />
+            <Logo textClassName="text-base sm:text-lg" markClassName="size-6" />
             <VersionTag className="hidden sm:inline-block" />
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}
@@ -1127,8 +1204,7 @@ export function Studio({ docId }: { docId: string }) {
                 aria-label="Install mdstudio"
                 onClick={() => install()}
               >
-                <MonitorDown className="h-4 w-4" />{" "}
-                <span className="hidden xl:inline">Install</span>
+                <MonitorDown className="size-4" /> <span className="hidden xl:inline">Install</span>
               </Button>
             )}
             <AiWriter
@@ -1150,12 +1226,12 @@ export function Studio({ docId }: { docId: string }) {
                   className="h-8 px-2 sm:px-3"
                   aria-label="Import Markdown"
                 >
-                  <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
+                  <Upload className="size-4" /> <span className="hidden sm:inline">Import</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
-                  <FileUp className="h-4 w-4" />
+                  <FileUp className="size-4" />
                   <div className="flex flex-col">
                     <span>Files or a ZIP…</span>
                     <span className="text-xs text-muted-foreground">
@@ -1164,7 +1240,7 @@ export function Studio({ docId }: { docId: string }) {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => folderInput.current?.click()}>
-                  <FolderUp className="h-4 w-4" />
+                  <FolderUp className="size-4" />
                   <div className="flex flex-col">
                     <span>A folder…</span>
                     <span className="text-xs text-muted-foreground">
@@ -1182,7 +1258,7 @@ export function Studio({ docId }: { docId: string }) {
                   className="h-8 px-2 sm:px-3"
                   aria-label="Export"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="size-4" />
                   <span className="hidden sm:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -1194,7 +1270,7 @@ export function Studio({ docId }: { docId: string }) {
                     download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8");
                   }}
                 >
-                  <Download className="h-4 w-4" /> Download .md
+                  <Download className="size-4" /> Download .md
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -1202,7 +1278,7 @@ export function Studio({ docId }: { docId: string }) {
                     void copy(out(), "Markdown");
                   }}
                 >
-                  <Copy className="h-4 w-4" /> Copy Markdown
+                  <Copy className="size-4" /> Copy Markdown
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={!hasLocalImages}
@@ -1210,7 +1286,7 @@ export function Studio({ docId }: { docId: string }) {
                     download(`${fileBase()}.md`, out(true), "text/markdown;charset=utf-8")
                   }
                 >
-                  <ImageIcon className="h-4 w-4" />
+                  <ImageIcon className="size-4" />
                   <div className="flex flex-col">
                     <span>Download self-contained .md</span>
                     <span className="text-xs text-muted-foreground">Images embedded as base64</span>
@@ -1220,7 +1296,7 @@ export function Studio({ docId }: { docId: string }) {
                   disabled={!hasLocalImages}
                   onClick={() => copy(out(true), "Self-contained Markdown")}
                 >
-                  <Copy className="h-4 w-4" /> Copy self-contained Markdown
+                  <Copy className="size-4" /> Copy self-contained Markdown
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>HTML</DropdownMenuLabel>
@@ -1232,7 +1308,7 @@ export function Studio({ docId }: { docId: string }) {
                     })
                   }
                 >
-                  <Copy className="h-4 w-4" /> Copy rendered HTML
+                  <Copy className="size-4" /> Copy rendered HTML
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() =>
@@ -1245,12 +1321,12 @@ export function Studio({ docId }: { docId: string }) {
                     )
                   }
                 >
-                  <Download className="h-4 w-4" /> Download standalone .html
+                  <Download className="size-4" /> Download standalone .html
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>All drafts</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => exportAsync(exportAll)}>
-                  <Archive className="h-4 w-4" />
+                  <Archive className="size-4" />
                   <div className="flex flex-col">
                     <span>Download all drafts (.zip)</span>
                     <span className="text-xs text-muted-foreground">
@@ -1302,7 +1378,7 @@ export function Studio({ docId }: { docId: string }) {
           <div className="col-span-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <Select value={profile} onValueChange={(v) => chooseProfile(v as Profile)}>
               <SelectTrigger
-                className="h-10 w-full min-w-0 sm:max-w-[200px] [&_.text-xs]:hidden"
+                className="h-10 w-full min-w-0 sm:max-w-50 [&_.text-xs]:hidden"
                 aria-label="Target platform"
               >
                 <SelectValue />
@@ -1328,13 +1404,13 @@ export function Studio({ docId }: { docId: string }) {
                     key={v}
                     variant={effectiveView === v ? "secondary" : "ghost"}
                     size="icon"
-                    className={cn("h-10 w-10 shrink-0", v === "split" && "hidden md:inline-flex")}
+                    className={cn("size-10 shrink-0", v === "split" && "hidden md:inline-flex")}
                     onClick={() => setView(v)}
                     aria-label={`${v} view`}
                     aria-pressed={effectiveView === v}
                     title={`${v} view`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="size-4" />
                   </Button>
                 ))}
               </div>
@@ -1616,7 +1692,7 @@ function ChecksPanel({
 }) {
   const rules = (
     <Button variant="outline" size="sm" className="w-full" onClick={onOpenRules}>
-      <SlidersHorizontal className="h-4 w-4" /> Rules
+      <SlidersHorizontal className="size-4" /> Rules
     </Button>
   );
   if (!issues.length)
@@ -1624,7 +1700,7 @@ function ChecksPanel({
       <div className="space-y-3">
         {rules}
         <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <CheckCircle2 className="h-8 w-8 text-primary" />
+          <CheckCircle2 className="size-8 text-primary" />
           <p className="text-sm font-medium">Portable</p>
           <p className="text-xs text-muted-foreground">
             Nothing here should render differently on your target platform.
@@ -1647,7 +1723,7 @@ function ChecksPanel({
               >
                 <Icon
                   className={cn(
-                    "mt-0.5 h-4 w-4 shrink-0",
+                    "mt-0.5 size-4 shrink-0",
                     i.severity === "error"
                       ? "text-destructive"
                       : i.severity === "warning"
@@ -1655,7 +1731,7 @@ function ChecksPanel({
                         : "text-info",
                   )}
                 />
-                <span className="text-sm leading-snug">
+                <span className="text-sm/snug">
                   <span className="mr-1 font-mono text-xs text-muted-foreground">L{i.line}</span>
                   {i.message}
                   {i.group && (

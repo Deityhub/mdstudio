@@ -75,7 +75,7 @@ function GuidePage() {
           </ol>
         </nav>
         <article className="mt-6">
-          <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
+          <h1 className="font-display text-3xl/tight font-semibold tracking-tight sm:text-5xl">
             {guide.title}
           </h1>
           <p className="mt-4 text-sm text-muted-foreground">
@@ -110,7 +110,7 @@ function GuidePage() {
           <div className="mt-6">
             <Button asChild size="lg" variant="secondary">
               <Link to="/editor">
-                Open the editor <ArrowRight className="h-4 w-4" />
+                Open the editor <ArrowRight className="size-4" />
               </Link>
             </Button>
           </div>

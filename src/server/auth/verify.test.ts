@@ -1,15 +1,17 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createNodeDb } from "../../../infra/db/node";
 import { emailTokens, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
+import type { Mail } from "../mail";
 import { signup, userForToken } from "./service";
 import {
   TOKEN_TTL_MS,
   confirmVerification,
   hasLiveVerification,
   issueVerification,
+  sendVerification,
   verificationMail,
 } from "./verify";
 
@@ -91,5 +93,32 @@ describe("verificationMail", () => {
     expect(mail.to).toBe("ada@example.com");
     expect(mail.text).toContain("https://mdstudio.example/api/auth/verify?token=tok123");
     expect(mail.subject).toMatch(/confirm|verify/i);
+  });
+});
+
+describe("sendVerification", () => {
+  it("sends one email with a working link and leaves it live", async () => {
+    const mailer = vi.fn(async (_mail: Mail) => {});
+    await sendVerification(db, mailer, "https://mdstudio.example", user, now);
+    const mail = mailer.mock.calls[0]![0];
+    expect(mail.to).toBe(user.email);
+    const token = /token=([\w-]+)/.exec(mail.text)![1]!;
+    expect(await hasLiveVerification(db, user.id, now + 1)).toBe(true);
+    expect(await confirmVerification(db, token, now + 2)).toEqual({ ok: true, userId: user.id });
+  });
+
+  it("does not leave a link behind when the send fails, so asking again tries again", async () => {
+    const down = vi.fn(async () => {
+      throw new Error("provider down");
+    });
+    await expect(sendVerification(db, down, "https://mdstudio.example", user, now)).rejects.toThrow(
+      "provider down",
+    );
+    expect(await hasLiveVerification(db, user.id, now + 1)).toBe(false);
+
+    const up = vi.fn(async () => {});
+    await sendVerification(db, up, "https://mdstudio.example", user, now + 2);
+    expect(up).toHaveBeenCalledTimes(1);
+    expect(await hasLiveVerification(db, user.id, now + 3)).toBe(true);
   });
 });

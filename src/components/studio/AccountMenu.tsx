@@ -113,7 +113,7 @@ export function AccountMenu() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label={`Account: ${label}`}>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-medium uppercase text-primary-foreground">
+              <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-medium uppercase text-primary-foreground">
                 {label.charAt(0)}
               </span>
             </Button>
@@ -127,15 +127,15 @@ export function AccountMenu() {
             <DropdownMenuItem
               onSelect={() => (cloudReady(account) ? setPicker(true) : setVerifying(true))}
             >
-              <Cloud className="h-4 w-4" /> Choose drafts for the cloud…
+              <Cloud className="size-4" /> Choose drafts for the cloud…
             </DropdownMenuItem>
             {account.images && (
               <DropdownMenuItem onSelect={() => setManageImages(true)}>
-                <ImageIcon className="h-4 w-4" /> Manage images…
+                <ImageIcon className="size-4" /> Manage images…
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={() => void startSignOut()}>
-              <LogOut className="h-4 w-4" /> Sign out
+              <LogOut className="size-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -172,7 +172,7 @@ export function AccountMenu() {
           setOpen(true);
         }}
       >
-        <UserRound className="h-4 w-4" />
+        <UserRound className="size-4" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -238,7 +238,7 @@ export function AccountMenu() {
                       aria-pressed={reveal}
                       onClick={() => setReveal((r) => !r)}
                     >
-                      {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </Button>
                   </div>
                   {mode === "signup" && (
@@ -267,7 +267,8 @@ export function AccountMenu() {
                 )}
                 <Button
                   type="submit"
-                  disabled={busy || (mode === "signup" && !!account.turnstile && !captcha)}
+                  loading={busy}
+                  disabled={mode === "signup" && !!account.turnstile && !captcha}
                 >
                   {mode === "login" ? "Sign in" : "Create account"}
                 </Button>
@@ -275,7 +276,7 @@ export function AccountMenu() {
               {account.github && (
                 <Button variant="outline" asChild>
                   <a href="/api/auth/github">
-                    <Github className="h-4 w-4" /> Continue with GitHub
+                    <Github className="size-4" /> Continue with GitHub
                   </a>
                 </Button>
               )}

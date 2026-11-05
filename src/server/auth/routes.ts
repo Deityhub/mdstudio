@@ -17,12 +17,7 @@ import {
 import { clearLimit, clientIp, hit, lockedOut } from "./limits";
 import { SESSION_MS, login, logout, signup, userForToken } from "./service";
 import { verifyTurnstile } from "./turnstile";
-import {
-  confirmVerification,
-  hasLiveVerification,
-  issueVerification,
-  verificationMail,
-} from "./verify";
+import { confirmVerification, hasLiveVerification, sendVerification } from "./verify";
 import { withUser } from "./guard";
 
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
@@ -209,8 +204,7 @@ export const resendHandler = (request: Request) =>
     const t = await hit(db, `verify:${user.id}`, limit(request, "VERIFY_EMAIL_LIMIT", 3), HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
     try {
-      const token = await issueVerification(db, user);
-      await mailer(verificationMail(siteOrigin(request), token, user.email));
+      await sendVerification(db, mailer, siteOrigin(request), user);
     } catch (error) {
       console.error("Couldn't send the verification email", error);
       return json({ error: "email_failed" }, 502);

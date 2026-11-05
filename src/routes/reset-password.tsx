@@ -103,7 +103,7 @@ function ResetPassword() {
                   aria-pressed={reveal}
                   onClick={() => setReveal((r) => !r)}
                 >
-                  {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </Button>
               </div>
               <span className="text-xs text-muted-foreground">
@@ -115,7 +115,7 @@ function ResetPassword() {
                 {error}
               </p>
             )}
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" loading={busy}>
               Change password
             </Button>
           </form>

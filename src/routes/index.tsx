@@ -127,7 +127,7 @@ function Index() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
                 <Link to="/editor">
-                  Start writing <ArrowRight className="h-4 w-4" />
+                  Start writing <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
@@ -144,9 +144,9 @@ function Index() {
             className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
           >
             <div className="flex gap-1.5 border-b border-border px-4 py-3">
-              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
-              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
-              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+              <span className="size-2.5 rounded-full bg-muted-foreground/30" />
+              <span className="size-2.5 rounded-full bg-muted-foreground/30" />
+              <span className="size-2.5 rounded-full bg-muted-foreground/30" />
             </div>
             <div className="grid min-w-0 grid-cols-1 text-sm sm:grid-cols-2">
               <pre className="min-w-0 overflow-x-auto border-b border-border bg-paper p-5 font-mono text-[13px] leading-relaxed text-muted-foreground sm:border-b-0 sm:border-r">{`# Hello
@@ -180,7 +180,7 @@ on two lines.
           <ol className="mt-8 grid gap-8 md:grid-cols-3">
             {steps.map((s, i) => (
               <li key={s.title} className="flex gap-4">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary font-display text-lg font-semibold text-primary-foreground">
+                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary font-display text-lg font-semibold text-primary-foreground">
                   {i + 1}
                 </span>
                 <div>
@@ -217,7 +217,7 @@ on two lines.
           <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
               <div key={f.title}>
-                <f.icon className="h-5 w-5 text-primary" />
+                <f.icon className="size-5 text-primary" />
                 <h3 className="mt-3 font-display text-lg font-semibold">{f.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
               </div>
@@ -256,7 +256,7 @@ on two lines.
             </div>
             <Button asChild variant="outline">
               <Link to="/guides">
-                All guides <ArrowRight className="h-4 w-4" />
+                All guides <ArrowRight className="size-4" />
               </Link>
             </Button>
           </div>
@@ -318,7 +318,7 @@ on two lines.
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" variant="secondary">
               <Link to="/editor">
-                Start writing <ArrowRight className="h-4 w-4" />
+                Start writing <ArrowRight className="size-4" />
               </Link>
             </Button>
           </div>

@@ -76,6 +76,7 @@ All backend code lives in or is scaffolded via `infra/` (see `infra/README.md`):
 - **Worker size:** Browser-only heavy libraries (Mermaid, KaTeX and the like) are loaded with a dynamic `import()` behind `import.meta.env.SSR`, so the server build drops them. `bun run bundle:check` (run in CI) fails if the Worker passes its size budget or if one of those libraries leaks into it.
 - **Compatibility:** Do not use Node.js standard library modules (`fs`, `path`, `crypto`, ...) in client-side code; client code must run in all browsers and on Cloudflare Workers. Node APIs are fine in `scripts/` and the Node-only `infra/` drivers.
 - **Types:** Prefer clean types and deterministic state machines. The TypeScript config is strict (`exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`).
+- **Tailwind classes:** write them in the form Tailwind recommends (`size-4` not `h-4 w-4`, `shrink-0` not `flex-shrink-0`, `data-disabled:` not `data-[disabled]:`, `wrap-break-word` not `break-words`). `bun run tailwind:check` lists anything that is not, CI runs it, and `bun run tailwind:fix` rewrites it using Tailwind's own rules.
 - **Accessibility:** Build accessible UX by default (Radix primitives, roving focus on toolbars, labelled controls).
 
 ---

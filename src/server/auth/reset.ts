@@ -6,6 +6,7 @@ import { z } from "zod";
 import { emailTokens, sessions, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
 import type { Mail } from "../mail";
+import { renderMail } from "../mail/template";
 import { canonicalEmail } from "./email";
 import { hashPassword } from "./password";
 import { findToken, issueToken } from "./tokens";
@@ -58,15 +59,17 @@ export async function resetPassword(
   return { ok: true, userId: user.id, email: user.email };
 }
 
-export const resetMail = (origin: string, token: string, to: string): Mail => ({
-  to,
-  subject: "Reset your mdstudio password",
-  text: [
-    "Someone asked to reset the password for this mdstudio account. To choose a new one, open:",
-    "",
-    `${origin}/reset-password?token=${token}`,
-    "",
-    "The link works once and expires in an hour. If you didn't ask for this, ignore this message:",
-    "your password has not changed.",
-  ].join("\n"),
-});
+export const resetMail = (origin: string, token: string, to: string): Mail =>
+  renderMail({
+    to,
+    subject: "Reset your mdstudio password",
+    preheader: "Choose a new password for your mdstudio account.",
+    heading: "Reset your password",
+    intro: [
+      "Someone asked to reset the password for this mdstudio account. To choose a new one, use the button below.",
+    ],
+    action: { label: "Choose a new password", url: `${origin}/reset-password?token=${token}` },
+    outro: [
+      "The link works once and expires in an hour. If you didn't ask for this, ignore this message: your password has not changed.",
+    ],
+  });

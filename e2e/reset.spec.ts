@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { startDraft } from "./draft";
 import { SITE, asVisitor, linkIn, mailTo, password, sentTo, signUp, unique } from "./mail-server";
 
 // These specs run against the server that sends mail (see playwright.config.ts).
@@ -101,7 +102,7 @@ test("in the app: forgot password, the emailed page, a new password, signed in a
   await signUp(page.request, email);
   await page.request.post("/api/auth/logout");
 
-  await page.goto("/editor");
+  await startDraft(page);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("button", { name: "Forgot your password?" }).click();
   await page.getByLabel("Email").fill(email);

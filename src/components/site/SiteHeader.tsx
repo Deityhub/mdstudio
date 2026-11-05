@@ -10,7 +10,7 @@ export function SiteHeader() {
     <header className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-4 sm:px-6 sm:py-6">
       <Logo
         className="justify-self-start"
-        markClassName="h-8 w-8"
+        markClassName="size-8"
         textClassName="text-xl sm:text-2xl"
       />
       <div className="flex items-center gap-1">
@@ -22,7 +22,7 @@ export function SiteHeader() {
             rel="noopener noreferrer"
             aria-label="mdstudio on GitHub (opens in a new tab)"
           >
-            <Github className="h-4 w-4" /> GitHub <ArrowUpRight className="h-4 w-4" />
+            <Github className="size-4" /> GitHub <ArrowUpRight className="size-4" />
           </a>
         </Button>
       </div>
