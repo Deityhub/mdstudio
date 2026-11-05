@@ -1,51 +1,11 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { SITE, asVisitor, linkIn, mailTo, password, sentTo, signUp, unique } from "./mail-server";
 
 // These specs run against the server that confirms email addresses (see playwright.config.ts).
-const SITE = process.env["E2E_MAIL_URL"]!;
-const MAIL_DIR = process.env["E2E_MAIL_DIR"]!;
 test.use({ baseURL: SITE });
 
-const password = "a long enough password";
-const unique = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const visitor = () => `203.0.113.${Math.floor(Math.random() * 250) + 1}-${unique()}`;
-const asVisitor = (ip = visitor()) => ({ "x-forwarded-for": ip });
-
-type Sent = { to: string; subject: string; text: string };
-/** Every message so far, oldest first. A file still being written is skipped until it is whole. */
-function outbox(): Sent[] {
-  return readdirSync(MAIL_DIR)
-    .sort()
-    .flatMap((f) => {
-      try {
-        return [JSON.parse(readFileSync(join(MAIL_DIR, f), "utf8")) as Sent];
-      } catch {
-        return [];
-      }
-    });
-}
-/** The newest message sent to an address, once it has arrived. */
-async function mailTo(address: string): Promise<Sent> {
-  let found: Sent | undefined;
-  await expect
-    .poll(() => {
-      found = outbox()
-        .filter((m) => m.to === address)
-        .at(-1);
-      return found !== undefined;
-    })
-    .toBe(true);
-  return found!;
-}
-const linkIn = (mail: Sent) => new URL(mail.text.match(/https?:\/\/\S+/)![0]);
-/** How many messages have gone to an address so far. */
-const sentTo = (address: string) => outbox().filter((m) => m.to === address).length;
 const askForLink = (request: APIRequestContext, force = false) =>
   request.post("/api/auth/verify/resend", { data: { force } });
-
-const signUp = (request: APIRequestContext, email: string, headers = asVisitor()) =>
-  request.post("/api/auth/signup", { data: { email, password }, headers });
 const pull = (request: APIRequestContext) => request.get("/api/sync/pull");
 
 test("the cloud stays closed until the emailed link is used, once", async ({ request }) => {

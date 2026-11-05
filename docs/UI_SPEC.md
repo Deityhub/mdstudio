@@ -4,7 +4,9 @@ Screenshots in `docs/ui-screenshots/` are generated from the production build wi
 Items marked **(planned)** are specified but not built yet.
 
 ## 1. Landing `/` — `01_home_page.png`, `08_home_checker_demo.png`
+
 Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home), a light/dark toggle and a GitHub link (opens the repository in a new tab). Sections, top to bottom:
+
 - **Hero:** "Write once. Render the same everywhere.", a short description, a primary "Start writing" button to `/editor`, a "Try the checker" anchor, and a decorative (`aria-hidden`) editor/preview mock. The page has exactly one `h1`.
 - **How it works:** Write, Check, Export.
 - **Live checker demo** (`#try-it`): the real portability engine, lazy-loaded behind `ClientOnly`. An editable sample, four target pills with live issue counts, and a clickable report that selects the offending line.
@@ -12,10 +14,12 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 - **Theme:** an inline head script applies the saved or OS theme before first paint; the toggle also lives in the studio header.
 
 ## 1b. Guides `/guides` and `/guides/$slug`
+
 Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.
 
 ## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`, `13_library.png`, `11_export_menu.png`
-- **Top bar, row 1:** drafts toggle · wordmark link and current title · Import dropdown (files or a ZIP, or a folder) · Install (only when the browser offers to install the app) · AI writer · Export dropdown (including Download all drafts as a ZIP) · Focus mode · Account (sign in or create an account, optional; GitHub sign-in when the server has it). Signed in, the menu has "Choose drafts for the cloud…" and "Manage images…" (when this server hosts images) and "Sign out"; the drafts list shows "Cloud: n of 5 drafts", a cloud icon on drafts stored in the account, and "Save to cloud" / "Remove from cloud" in each draft's menu.
+
+- **Top bar, row 1:** drafts toggle · wordmark link and current title · Import dropdown (files or a ZIP, or a folder) · Install (only when the browser offers to install the app) · AI writer · Export dropdown (including Download all drafts as a ZIP) · Focus mode · Account (sign in or create an account, with "Forgot your password?" when the server sends mail and a `/reset-password` page for the emailed link; optional; GitHub sign-in when the server has it). Signed in, the menu has "Choose drafts for the cloud…" and "Manage images…" (when this server hosts images) and "Sign out"; the drafts list shows "Cloud: n of 5 drafts", a cloud icon on drafts stored in the account, and "Save to cloud" / "Remove from cloud" in each draft's menu.
 - **Top bar, row 2:** target-platform Select (GitHub, Strict CommonMark, dev.to / Hashnode, Obsidian; remembered per device) · view toggle (Editor / Split / Preview) · panel buttons on mid-size screens.
 - **Export dropdown:** Download .md, Copy Markdown, Download self-contained .md and Copy self-contained Markdown (both enabled only when the draft has local images), Copy rendered HTML, Download standalone .html, and the "Normalize on export" switch.
 - **Drafts sidebar:** New folder and New draft buttons, a search box, tag chips, and a folder tree. Search matches every word in a draft's title or text (a matching line is shown under the title); tag chips come from each draft's front matter `tags` and narrow the list when selected. Folders are labels kept in the library, not in the text: they list first (A to Z, collapsible, drafts indented beneath them with a guide line) and unfiled drafts follow. A draft moves by dragging it onto a folder, or onto the empty part of the list to take it out, and also from its three-dot menu (Rename, Move to folder, Duplicate, Delete), which is the route on touch screens. A folder's menu has Rename folder (an inline field with save and cancel; the drafts follow, and a name another folder already has is refused) and Delete folder: an empty one goes at once, one with drafts asks first because the drafts inside are deleted too. Delete opens a confirmation Dialog.
@@ -32,35 +36,41 @@ Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and
 - **Editor** (CodeMirror, line numbers) and **Preview** (`.md-preview`) with two-way scroll sync (by source line, so both panes show the same text) and click-through sync: the block that holds the editor cursor gets a faint highlight in the preview, and clicking a block in the preview puts the editor cursor on its first source line (links, controls and text selections are left alone; from the preview-only view the click brings the editor back). The studio is a fixed shell: only the editor, preview and side panels scroll, never the page.
   - **Highlights:** `==text==` renders as a marker highlight for the Obsidian profile; other profiles show the text unchanged.
   - **Smooth updates:** the preview replaces only the blocks that changed, so images, math and diagrams don't flash while you type; a diagram being edited keeps its previous version on screen until the new one is ready.
-  - **Math:** `$x$`, `$$…$$` and ```` ```math ```` render with KaTeX for GitHub and Obsidian; `$5 and $10` stays text. KaTeX loads the first time a document needs it.
-  - **Diagrams:** ```` ```mermaid ```` blocks render as SVG for GitHub and Obsidian; an invalid diagram keeps its code and shows the error beneath it. Other profiles show the source, as their platforms do.
+  - **Math:** `$x$`, `$$…$$` and ` ```math ` render with KaTeX for GitHub and Obsidian; `$5 and $10` stays text. KaTeX loads the first time a document needs it.
+  - **Diagrams:** ` ```mermaid ` blocks render as SVG for GitHub and Obsidian; an invalid diagram keeps its code and shows the error beneath it. Other profiles show the source, as their platforms do.
   - **Export:** "Copy rendered HTML" and "Download standalone .html" include the rendered math (the standalone file embeds the KaTeX stylesheet and fonts) and inline SVG diagrams.
 - **Side panel buttons:** Checks (badge with the count of warnings and errors), Outline, Front matter, History (saved versions of the draft; opening one shows a side-by-side comparison with the current text and a Restore button).
 - **Status bar:** words · reading time · image count · an "Offline" note when there is no connection · sync status when signed in (Syncing… / Synced / Offline, will sync / Sync paused) · save status (Saving… / Saved in this browser / Not saved) · target platform.
 
 ## 3. Checks panel and rules — `03_editor_checks_panel.png`, `10_checker_rules.png`
+
 A **Rules** button at the top opens the Checker rules dialog (tabs Portability, Standards, Your rules; switches, severities and limits; Export, Import and Reset to defaults; a note on changing rules per draft from its front matter). Below it, one card per issue, sorted by line: severity icon, `L<line>` and a one-sentence message; issues from a standard or from the writer's own rules carry a small `standard · rule-id` or `yours · rule-id` tag. Clicking a card switches to the editor and jumps to that line. Rules are listed in `SYSTEM_SPEC.md` §4.1 and §4.2.
 
 ## 4. Outline — `04_editor_outline_panel.png`
+
 The **History** panel (the clock button beside Checks, Outline and Front matter) is shown in `12_history_compare.png`: a list of saved versions and, once one is opened, a side-by-side comparison with the current draft.
 
 Indented heading list; clicking jumps to the heading's line.
 
 ## 5. Front matter — `04_editor_frontmatter_panel.png`
+
 Fields: title, slug, date, cover image URL, description, tags (comma separated). Writes the YAML block at the top of the document. "Add front matter" creates it and "Remove front matter" deletes it. **(planned)** Canonical URL and a draft toggle.
 
 ## 6. AI writer dialog — `05_ai_writer_dialog.png`
+
 - **Connection:** provider Select (OpenAI, Anthropic, Google Gemini, custom/OpenAI-compatible), base URL (custom only), model ID, API key, "Use this connection" and "Disconnect". The key stays in memory until the draft closes or the page reloads, and requests go directly to the provider.
 - **Tab "Title, description & tags":** the current draft (editable, or uploaded) → "Suggest metadata" → editable suggested fields → apply to the draft's front matter.
 - **Tab "Write a topic":** topic and notes → "Generate draft" streams Markdown → Stop / Open as new draft (never overwrites the current draft).
 - Errors are shown inline (auth, quota, network/CORS).
 
 ## 7. Small screens — `06_mobile_editor_view.png`, `07_mobile_preview_view.png`
+
 - **Below 768px** the studio is a single pane: the view toggle offers Editor and Preview only, and the panel buttons move to a bottom navigation bar.
 - **Below 1280px** the drafts list opens as a left sheet and Checks, Outline and Front matter open as a right sheet, sharing the same panel components as the desktop sidebars.
 - **At 1280px and above** the drafts sidebar and the panel column are docked. The drafts sidebar defaults to 288px and can be dragged (or resized with the arrow keys, Home and End; double-click resets) between 240px and 480px; the width is remembered. The Checks panel starts open only from 1536px; below that it stays closed until its button is clicked.
 
 ## Interactions
+
 - Autosave 400ms after typing. Unsaved edits are flushed immediately when switching drafts, leaving the studio, hiding the tab or closing the page. A failed save shows "Not saved" and one toast.
 - Drag-drop `.md` / `.markdown` / `.mdown` / `.txt` files to import them as new drafts; dropping images compresses them and inserts `![name](./images/name.jpg)`.
 - Pasting rich HTML converts it to Markdown, with a toast that explains how to undo.

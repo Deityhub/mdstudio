@@ -3,6 +3,7 @@ import { getDb } from "../db";
 import { getEnv } from "../env";
 import { getMailer } from "../mail";
 import { canonicalEmail } from "./email";
+import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
 import { authorizeUrl, githubSignIn, pkcePair, randomState } from "./github";
 import {
   OAUTH_COOKIE,
@@ -125,6 +126,71 @@ export async function verifyHandler(request: Request) {
       "cache-control": "no-store",
     },
   });
+}
+
+/** Lets the response go out before slow work (sending mail) finishes, where the platform allows. */
+async function afterResponse(request: Request, work: Promise<unknown>) {
+  const safe = work.catch((error) => console.error("Background work failed", error));
+  const waitUntil = (request as { waitUntil?: (p: Promise<unknown>) => void }).waitUntil;
+  if (waitUntil) waitUntil.call(request, safe);
+  else await safe;
+}
+
+/**
+ * "I forgot my password": emails a reset link when the address has an account, and says the same
+ * thing either way, so it cannot be used to find out who has one. Limited per address (5 an hour)
+ * and, for each inbox, 3 an hour (silently, for the same reason); the CAPTCHA applies when set.
+ */
+export async function forgotHandler(request: Request) {
+  if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+  const mailer = await getMailer(request);
+  if (!mailer) return json({ error: "email_unavailable" }, 503);
+  const db = await getDb(request);
+  const ip = ipOf(request);
+  if (ip !== "unknown") {
+    const t = await hit(db, `forgot:ip:${ip}`, limit(request, "FORGOT_LIMIT", 5), HOUR);
+    if (!t.allowed) return tooMany(t.retryAfter);
+  }
+  const input = (await body(request)) as { email?: unknown; turnstileToken?: unknown } | null;
+  const secret = getEnv(request, "TURNSTILE_SECRET");
+  if (secret && !(await verifyTurnstile(secret, input?.turnstileToken, ip)))
+    return json({ error: "captcha_failed" }, 400);
+  if (typeof input?.email !== "string") return json({ error: "invalid" }, 400);
+
+  const key = canonicalEmail(input.email);
+  const same = { ok: true };
+  if (!key) return json(same);
+  const room = await hit(db, `forgot:email:${key}`, limit(request, "FORGOT_EMAIL_LIMIT", 3), HOUR);
+  if (!room.allowed) return json(same); // enough links already sent to that inbox
+  const user = await findForReset(db, input.email);
+  if (user)
+    await afterResponse(
+      request,
+      issueReset(db, user).then((token) =>
+        mailer(resetMail(siteOrigin(request), token, user.email)),
+      ),
+    );
+  return json(same);
+}
+
+/** The reset page's form: a valid link plus a new password. Signs every session out. */
+export async function resetHandler(request: Request) {
+  if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+  const db = await getDb(request);
+  const ip = ipOf(request);
+  if (ip !== "unknown") {
+    const t = await hit(db, `reset:ip:${ip}`, limit(request, "RESET_LIMIT", 10), HOUR);
+    if (!t.allowed) return tooMany(t.retryAfter);
+  }
+  const input = (await body(request)) as { token?: unknown; password?: unknown } | null;
+  if (typeof input?.token !== "string" || typeof input.password !== "string")
+    return json({ error: "invalid" }, 400);
+  const result = await resetPassword(db, input.token, input.password);
+  if (!result.ok) return json({ error: result.error }, 400);
+  // Someone locked out by failed attempts can get back in with the new password.
+  const key = canonicalEmail(result.email);
+  if (key) await clearLimit(db, `login:email:${key}`);
+  return json({ ok: true });
 }
 
 /**

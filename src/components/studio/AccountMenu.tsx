@@ -29,6 +29,7 @@ import { documentStore } from "@/lib/storage/documentStore";
 import { completeSignOut, prepareSignOut } from "@/lib/sync/hooks";
 import { ChooseCloudDrafts, SignOutDialog, type SignOutPrompt, VerifyEmail } from "./CloudDialogs";
 import { ManageImages } from "./ManageImages";
+import { ForgotPassword } from "./ForgotPassword";
 import { Turnstile } from "./Turnstile";
 
 /** Optional account: signed out is the default and the editor never needs it. */
@@ -44,6 +45,7 @@ export function AccountMenu() {
   const [manageImages, setManageImages] = useState(false);
   const [prompt, setPrompt] = useState<SignOutPrompt | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [forgot, setForgot] = useState(false);
   const [captcha, setCaptcha] = useState("");
   const [captchaRun, setCaptchaRun] = useState(0);
   const asked = useConfirmEmailAsked();
@@ -166,6 +168,7 @@ export function AccountMenu() {
         onClick={() => {
           setError("");
           setReveal(false);
+          setForgot(false);
           setOpen(true);
         }}
       >
@@ -174,83 +177,109 @@ export function AccountMenu() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{mode === "login" ? "Sign in" : "Create an account"}</DialogTitle>
+            <DialogTitle>
+              {forgot ? "Reset your password" : mode === "login" ? "Sign in" : "Create an account"}
+            </DialogTitle>
             <DialogDescription>
               Optional. Your drafts stay in this browser either way.
             </DialogDescription>
           </DialogHeader>
-          <Tabs
-            value={mode}
-            onValueChange={(v) => {
-              setMode(v as "login" | "signup");
-              setError("");
-            }}
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Create account</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <form
-            className="grid gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void submit(e.currentTarget);
-            }}
-          >
-            <div className="grid gap-1.5">
-              <Label htmlFor="account-email">Email</Label>
-              <Input id="account-email" name="email" type="email" autoComplete="email" required />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="account-password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="account-password"
-                  name="password"
-                  type={reveal ? "text" : "password"}
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  minLength={mode === "signup" ? 10 : undefined}
-                  className="pr-10"
-                  required
-                />
+          {forgot ? (
+            <ForgotPassword turnstile={account.turnstile} onBack={() => setForgot(false)} />
+          ) : (
+            <>
+              <Tabs
+                value={mode}
+                onValueChange={(v) => {
+                  setMode(v as "login" | "signup");
+                  setError("");
+                }}
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Sign in</TabsTrigger>
+                  <TabsTrigger value="signup">Create account</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <form
+                className="grid gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submit(e.currentTarget);
+                }}
+              >
+                <div className="grid gap-1.5">
+                  <Label htmlFor="account-email">Email</Label>
+                  <Input
+                    id="account-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="account-password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="account-password"
+                      name="password"
+                      type={reveal ? "text" : "password"}
+                      autoComplete={mode === "login" ? "current-password" : "new-password"}
+                      minLength={mode === "signup" ? 10 : undefined}
+                      className="pr-10"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute inset-y-0 right-0 h-full w-10 text-muted-foreground"
+                      aria-label={reveal ? "Hide password" : "Show password"}
+                      aria-pressed={reveal}
+                      onClick={() => setReveal((r) => !r)}
+                    >
+                      {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {mode === "signup" && (
+                    <span className="text-xs text-muted-foreground">At least 10 characters.</span>
+                  )}
+                  {mode === "login" && account.email && (
+                    <button
+                      type="button"
+                      className="justify-self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                      onClick={() => {
+                        setError("");
+                        setForgot(true);
+                      }}
+                    >
+                      Forgot your password?
+                    </button>
+                  )}
+                </div>
+                {error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {error}
+                  </p>
+                )}
+                {mode === "signup" && account.turnstile && (
+                  <Turnstile key={captchaRun} siteKey={account.turnstile} onToken={setCaptcha} />
+                )}
                 <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute inset-y-0 right-0 h-full w-10 text-muted-foreground"
-                  aria-label={reveal ? "Hide password" : "Show password"}
-                  aria-pressed={reveal}
-                  onClick={() => setReveal((r) => !r)}
+                  type="submit"
+                  disabled={busy || (mode === "signup" && !!account.turnstile && !captcha)}
                 >
-                  {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {mode === "login" ? "Sign in" : "Create account"}
                 </Button>
-              </div>
-              {mode === "signup" && (
-                <span className="text-xs text-muted-foreground">At least 10 characters.</span>
+              </form>
+              {account.github && (
+                <Button variant="outline" asChild>
+                  <a href="/api/auth/github">
+                    <Github className="h-4 w-4" /> Continue with GitHub
+                  </a>
+                </Button>
               )}
-            </div>
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            {mode === "signup" && account.turnstile && (
-              <Turnstile key={captchaRun} siteKey={account.turnstile} onToken={setCaptcha} />
-            )}
-            <Button
-              type="submit"
-              disabled={busy || (mode === "signup" && !!account.turnstile && !captcha)}
-            >
-              {mode === "login" ? "Sign in" : "Create account"}
-            </Button>
-          </form>
-          {account.github && (
-            <Button variant="outline" asChild>
-              <a href="/api/auth/github">
-                <Github className="h-4 w-4" /> Continue with GitHub
-              </a>
-            </Button>
+            </>
           )}
         </DialogContent>
       </Dialog>

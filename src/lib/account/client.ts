@@ -24,6 +24,7 @@ const MESSAGES: Record<string, string> = {
   invalid_credentials: "That email and password don't match.",
   forbidden: "The request was refused. Reload the page and try again.",
   github_failed: "GitHub sign-in didn't complete. Try again.",
+  invalid_token: "That reset link is invalid or has expired. Ask for a new one.",
   rate_limited: "Too many attempts. Wait a little and try again.",
   captcha_failed: "The security check didn't pass. Try again.",
   verify_failed: "That confirmation link is invalid or has expired. Ask for a new one.",
@@ -128,6 +129,46 @@ export async function requestVerification(
     };
     if (!res.ok) return { error: authMessage(body.error ?? "") };
     return { sent: body.sent === true, ...(body.alreadyVerified && { alreadyVerified: true }) };
+  } catch {
+    return { error: "Can't reach the server. Check your connection and try again." };
+  }
+}
+
+/** Emails a reset link when the address has an account; the answer is the same either way. */
+export async function requestPasswordReset(
+  email: string,
+  turnstileToken?: string,
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const res = await fetch("/api/auth/forgot", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, ...(turnstileToken && { turnstileToken }) }),
+    });
+    const body = (await res.json()) as { error?: string; retryAfter?: number };
+    if (res.ok) return { ok: true };
+    const wait = body.retryAfter ? ` Try again in ${Math.ceil(body.retryAfter / 60)} min.` : "";
+    return { error: authMessage(body.error ?? "") + (body.error === "rate_limited" ? wait : "") };
+  } catch {
+    return { error: "Can't reach the server. Check your connection and try again." };
+  }
+}
+
+/** Sets the new password with the link's token. Every session of the account is signed out. */
+export async function submitPasswordReset(
+  token: string,
+  password: string,
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const res = await fetch("/api/auth/reset", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token, password }),
+    });
+    const body = (await res.json()) as { error?: string; retryAfter?: number };
+    if (res.ok) return { ok: true };
+    const wait = body.retryAfter ? ` Try again in ${Math.ceil(body.retryAfter / 60)} min.` : "";
+    return { error: authMessage(body.error ?? "") + (body.error === "rate_limited" ? wait : "") };
   } catch {
     return { error: "Can't reach the server. Check your connection and try again." };
   }
