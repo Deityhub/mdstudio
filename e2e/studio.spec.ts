@@ -238,6 +238,10 @@ test("draft options live in a menu, and the rename field stays put while hoverin
 
 /** The first autosave keeps whatever the draft starts with; wait for it so typing can't race it. */
 async function openHistory(page: Page) {
+  // the example is not saved until it is changed, and the first version is taken when it is
+  await editor(page).click();
+  await page.keyboard.press("ControlOrMeta+Home");
+  await page.keyboard.type(" ");
   await page.getByRole("button", { name: "History", exact: true }).click();
   await expect(page.getByRole("button", { name: /words/ }).first()).toBeVisible();
 }

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { startDraft } from "./draft";
 
 const email = () => `writer-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
 const password = "a long enough password";
@@ -46,7 +47,7 @@ test("refuses a taken email, a wrong password and a cross-site request", async (
 
 test("the account dialog creates an account, signs out and signs back in", async ({ page }) => {
   const address = email();
-  await page.goto("/editor");
+  await startDraft(page);
   await page.getByRole("button", { name: "Sign in" }).click();
   // GitHub sign-in is only offered when the server has OAuth credentials.
   await expect(page.getByRole("link", { name: /Continue with GitHub/ })).toHaveCount(0);

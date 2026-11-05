@@ -267,7 +267,8 @@ export function AccountMenu() {
                 )}
                 <Button
                   type="submit"
-                  disabled={busy || (mode === "signup" && !!account.turnstile && !captcha)}
+                  loading={busy}
+                  disabled={mode === "signup" && !!account.turnstile && !captcha}
                 >
                   {mode === "login" ? "Sign in" : "Create account"}
                 </Button>

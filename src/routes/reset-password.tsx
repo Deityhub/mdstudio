@@ -115,7 +115,7 @@ function ResetPassword() {
                 {error}
               </p>
             )}
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" loading={busy}>
               Change password
             </Button>
           </form>

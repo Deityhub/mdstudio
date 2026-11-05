@@ -80,7 +80,9 @@ import {
   documentStore,
   docTitle,
   indexedDbStore,
-  SAMPLE,
+  emptyDocument,
+  NEW_DOC_ID,
+  sampleDocument,
   type MdDocument,
 } from "@/lib/storage/documentStore";
 import { compressImage, kb, safeImageName } from "@/lib/editor/images";
@@ -170,6 +172,9 @@ function readFile(file: File) {
 
 export function Studio({ docId }: { docId: string }) {
   const navigate = useNavigate();
+  // effects use it without depending on it: its identity changes with every route change
+  const go = useRef(navigate);
+  go.current = navigate;
   // The studio is a fixed app shell: only the panes inside it scroll, never the page.
   useEffect(() => {
     document.documentElement.classList.add("studio-open");
@@ -303,9 +308,43 @@ export function Studio({ docId }: { docId: string }) {
       }),
     [],
   );
+  // The example (first visit) or a blank draft shown when nothing is stored (docId "new"). It lives
+  // in memory only: it is saved when the writer first changes it, and dropped if drafts of their own turn up (signing in).
+  const example = useRef<{ doc: MdDocument } | null>(null);
+  // the id of a draft this studio just saved as its own and navigated to, so it is not reloaded
+  const adopted = useRef<string | null>(null);
   useEffect(() => {
     if (!accountLoaded) return;
     setMissing(false);
+    if (adopted.current === docId) {
+      adopted.current = null;
+      refreshList();
+      return;
+    }
+    if (docId === NEW_DOC_ID) {
+      // drop the draft that was open (a deleted one, say) so the editor never mounts with its text
+      // and then reports the swap to the blank one as an edit
+      setDoc(null);
+      Promise.all([
+        documentStore.list(),
+        cloudOwners(indexedDbStore),
+        documentStore.hadDraft(),
+      ]).then(([all, owners, had]) => {
+        const own = all.find((x) => isVisible(owners, x.id, account?.id));
+        if (own) {
+          example.current = null;
+          go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
+          return;
+        }
+        // the example is for a first visit; after that, nothing is shown that they did not write
+        const sample = had ? emptyDocument() : sampleDocument();
+        example.current = { doc: sample };
+        setDoc(sample);
+      });
+      refreshList();
+      return;
+    }
+    example.current = null;
     Promise.all([documentStore.get(docId), cloudOwners(indexedDbStore)]).then(([d, owners]) => {
       if (d && isVisible(owners, d.id, account?.id)) setDoc(d);
       else {
@@ -315,6 +354,22 @@ export function Studio({ docId }: { docId: string }) {
     });
     refreshList();
   }, [docId, refreshList, accountLoaded, account?.id]);
+  // Drafts arriving while the example is open (a sign-in pulling the cloud) replace it. The list in
+  // memory only says "look": the store decides, because a stale list can still name a draft that
+  // was just deleted.
+  useEffect(() => {
+    if (docId !== NEW_DOC_ID || !docs[0] || !doc || example.current?.doc !== doc) return;
+    let live = true;
+    Promise.all([documentStore.list(), cloudOwners(indexedDbStore)]).then(([all, owners]) => {
+      const own = all.find((x) => isVisible(owners, x.id, visibleTo.current));
+      if (!live || !own || example.current?.doc !== doc) return;
+      example.current = null;
+      go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
+    });
+    return () => {
+      live = false;
+    };
+  }, [docs, docId, doc]);
 
   // autosave: debounced, but any unsaved draft is flushed before it can be lost
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -329,6 +384,13 @@ export function Studio({ docId }: { docId: string }) {
     const seq = ++saveSeq.current;
     return documentStore
       .save(d)
+      .then(() => {
+        // the example just became a draft: carry on in it, under its own address
+        if (example.current?.doc.id !== d.id) return;
+        example.current = null;
+        adopted.current = d.id;
+        go.current({ to: "/editor/$docId", params: { docId: d.id }, replace: true });
+      })
       .then(() =>
         historyStore
           .maybeSnapshot(d, Date.now())
@@ -353,6 +415,8 @@ export function Studio({ docId }: { docId: string }) {
   }, [refreshList]);
   useEffect(() => {
     if (!doc) return;
+    // the example is not saved until it has been changed
+    if (example.current?.doc === doc) return;
     pending.current = doc;
     setSaveState("saving");
     const t = setTimeout(flush, 400);
@@ -891,12 +955,21 @@ export function Studio({ docId }: { docId: string }) {
   const [toDelete, setToDelete] = useState<MdDocument | null>(null);
   const remove = async (d: MdDocument) => {
     setToDelete(null);
+    // an edit still waiting for its autosave must not write the draft back after it is deleted
+    if (d.id === docId) pending.current = null;
     await documentStore.remove(d.id);
     historyStore.clear(d.id).catch(console.error);
     const rest = docs.filter((x) => x.id !== d.id);
+    // the list must forget it at once: anything that reads it while the page moves on (the
+    // example waiting for drafts to arrive) would otherwise send us back to the deleted draft
+    setDocs(rest);
     if (d.id === docId) {
-      if (rest[0]) navigate({ to: "/editor/$docId", params: { docId: rest[0].id } });
-      else newDoc(SAMPLE);
+      // leave the deleted address for good (replace), so Back cannot return to a missing draft
+      go.current({
+        to: "/editor/$docId",
+        params: { docId: rest[0]?.id ?? NEW_DOC_ID },
+        replace: true,
+      });
     } else refreshList();
   };
 
@@ -925,8 +998,12 @@ export function Studio({ docId }: { docId: string }) {
     await documentStore.folders.remove(name);
     if (inside.some((d) => d.id === docId)) {
       const rest = docs.filter((d) => d.folder !== name);
-      if (rest[0]) navigate({ to: "/editor/$docId", params: { docId: rest[0].id } });
-      else newDoc(SAMPLE);
+      setDocs(rest);
+      go.current({
+        to: "/editor/$docId",
+        params: { docId: rest[0]?.id ?? NEW_DOC_ID },
+        replace: true,
+      });
     } else refreshList();
   };
 

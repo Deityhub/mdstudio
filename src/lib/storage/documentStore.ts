@@ -87,6 +87,8 @@ export const indexedDbStore: KeyValueStore = {
 };
 
 const PREFIX = "doc:";
+/** Set once a draft has been saved here, so the example is only ever for a first visit. */
+const HAD_DRAFT_KEY = "meta:had-draft";
 
 /** What the library and header show: the user's name for the draft, else what the text says. */
 export const docTitle = (d: { name?: string | undefined; content: string }) =>
@@ -97,6 +99,7 @@ const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensiti
 
 export function createDocumentStore(kv: KeyValueStore) {
   const listeners = new Set<() => void>();
+  let hadDraftKnown = false;
   const notify = (quiet?: boolean) => {
     if (!quiet) for (const l of listeners) l();
   };
@@ -135,10 +138,18 @@ export function createDocumentStore(kv: KeyValueStore) {
       const docs = (await kv.values<MdDocument>(PREFIX)).filter((d) => !!d);
       return docs.sort((a, b) => b.updatedAt - a.updatedAt);
     },
+    /** True once any draft has been saved on this machine, even if it was deleted since. */
+    async hadDraft() {
+      return hadDraftKnown || (await kv.get<boolean>(HAD_DRAFT_KEY)) === true;
+    },
     get: (id: string) => kv.get<MdDocument>(PREFIX + id),
     /** `quiet` is for sync's own writes, which must not trigger another sync. */
     async save(doc: MdDocument, opts: { quiet?: boolean } = {}) {
       await kv.set(PREFIX + doc.id, doc);
+      if (!hadDraftKnown) {
+        await kv.set(HAD_DRAFT_KEY, true);
+        hadDraftKnown = true;
+      }
       notify(opts.quiet);
       return doc;
     },
@@ -213,3 +224,26 @@ Here's a footnote reference.[^1]
 
 [^1]: Footnotes are supported on GitHub and most blog platforms.
 `;
+
+/** The address of the example draft: shown when nothing is stored, and saved only once edited. */
+export const NEW_DOC_ID = "new";
+
+/** The example text as a draft that exists only in memory until the writer changes it. */
+export const sampleDocument = (now = Date.now()): MdDocument => ({
+  id: crypto.randomUUID().slice(0, 8),
+  title: deriveTitle(SAMPLE),
+  content: SAMPLE,
+  images: {},
+  createdAt: now,
+  updatedAt: now,
+});
+
+/** A blank draft that exists only in memory until the writer types: the editor with nothing stored. */
+export const emptyDocument = (now = Date.now()): MdDocument => ({
+  id: crypto.randomUUID().slice(0, 8),
+  title: "Untitled",
+  content: "",
+  images: {},
+  createdAt: now,
+  updatedAt: now,
+});

@@ -1,11 +1,12 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { startDraft } from "./draft";
 
 const password = "a long enough password";
 const editor = (page: Page) => page.locator(".cm-content");
 const nav = (page: Page) => page.getByRole("navigation", { name: "Drafts" });
 
 async function account(page: Page, mode: "Create account" | "Sign in", address: string) {
-  await page.goto("/editor");
+  await startDraft(page);
   await expect(editor(page)).toBeVisible();
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   if (mode === "Create account") await page.getByRole("tab", { name: "Create account" }).click();
@@ -171,5 +172,30 @@ test("signing out takes cloud drafts off the device and signing in brings them b
   await a.getByRole("button", { name: "Sign in", exact: true }).click();
   await skipPicker(a);
   await expect(nav(a).getByText("Cloudy")).toBeVisible({ timeout: 20_000 });
+  for (const c of contexts) await c.close();
+});
+
+test("signing in on a machine with no drafts replaces the example with the cloud's drafts", async ({
+  browser,
+}) => {
+  const address = `example-${Date.now()}@example.com`;
+  const { a, b, contexts } = await twoBrowsers(browser);
+  await account(a, "Create account", address);
+  await skipPicker(a);
+  await replaceText(a, "# Waiting\n\nFrom the cloud");
+  await toCloud(a, "Waiting");
+  await onServer(a, "# Waiting\n\nFrom the cloud");
+
+  // B has only the example, which was never stored
+  await b.goto("/editor");
+  await expect(b).toHaveURL(/\/editor\/new$/);
+  await expect(editor(b)).toContainText("Writing portable Markdown");
+  await b.getByRole("button", { name: "Sign in", exact: true }).click();
+  await b.getByLabel("Email").fill(address);
+  await b.getByLabel("Password", { exact: true }).fill(password);
+  await b.getByRole("button", { name: "Sign in", exact: true }).last().click();
+  await expect(editor(b)).toContainText("From the cloud", { timeout: 30_000 });
+  await expect(editor(b)).not.toContainText("Writing portable Markdown");
+  await expect(b).not.toHaveURL(/\/editor\/new$/);
   for (const c of contexts) await c.close();
 });

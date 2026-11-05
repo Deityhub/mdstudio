@@ -209,6 +209,15 @@
   body {
     font-family: var(--font-sans);
   }
+  /* Tailwind resets buttons to the arrow; anything that can be pressed should show a hand. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([data-disabled]),
+  [role="switch"]:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
   h1,
   h2,
   h3 {

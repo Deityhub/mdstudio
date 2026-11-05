@@ -30,6 +30,7 @@ export function ChooseCloudDrafts({
   const cloud = useCloud();
   const [drafts, setDrafts] = useState<MdDocument[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
   const room = Math.max(0, cloud.limit - cloud.linked.size);
 
   useEffect(() => {
@@ -84,13 +85,19 @@ export function ChooseCloudDrafts({
           ))}
         </ul>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" pending={saving} onClick={() => onOpenChange(false)}>
             Not now
           </Button>
           <Button
+            loading={saving}
             disabled={picked.size === 0}
             onClick={async () => {
-              await addToCloud(userId, [...picked]);
+              setSaving(true);
+              try {
+                await addToCloud(userId, [...picked]);
+              } finally {
+                setSaving(false);
+              }
               onOpenChange(false);
               toast.success(
                 `${picked.size} draft${picked.size === 1 ? "" : "s"} will be stored in your cloud`,
@@ -188,6 +195,7 @@ export function VerifyEmail({
   email: string;
 }) {
   const [sending, setSending] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState("");
   const [sent, setSent] = useState(false);
 
@@ -238,14 +246,26 @@ export function VerifyEmail({
         <DialogFooter>
           <Button
             variant="ghost"
+            loading={checking}
+            pending={sending}
             onClick={async () => {
-              await accountStore.refresh();
+              setChecking(true);
+              try {
+                await accountStore.refresh();
+              } finally {
+                setChecking(false);
+              }
               onOpenChange(false);
             }}
           >
             I've confirmed it
           </Button>
-          <Button variant="outline" disabled={sending} onClick={() => void send(true)}>
+          <Button
+            variant="outline"
+            loading={sending}
+            pending={checking}
+            onClick={() => void send(true)}
+          >
             Send it again
           </Button>
         </DialogFooter>

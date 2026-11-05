@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { startDraft } from "./draft";
 import { SITE, asVisitor, linkIn, mailTo, password, sentTo, signUp, unique } from "./mail-server";
 
 // These specs run against the server that confirms email addresses (see playwright.config.ts).
@@ -96,7 +97,7 @@ test("in the app: nothing is sent at sign-up, the first try at the cloud sends t
 }) => {
   const email = `ui-${unique()}@example.com`;
   await page.setExtraHTTPHeaders(asVisitor());
-  await page.goto("/editor");
+  await startDraft(page);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("tab", { name: "Create account" }).click();
   await page.getByLabel("Email").fill(email);
