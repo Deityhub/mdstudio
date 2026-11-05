@@ -29,7 +29,14 @@ export default defineConfig({
     {
       command: "node .output/server/index.mjs",
       url: `http://localhost:${PORT}`,
-      env: { PORT: String(PORT), NODE_ENV: "production", DATA_DIR: data() },
+      env: {
+        PORT: String(PORT),
+        NODE_ENV: "production",
+        DATA_DIR: data(),
+        // keep a version at every sync and only the last 3, so the specs can see both rules at work
+        MAX_REVISIONS: "3",
+        REVISION_INTERVAL_MINUTES: "0",
+      },
       reuseExistingServer: !env["CI"],
     },
     {

@@ -33,6 +33,10 @@ GitHub account with the same email.
 
 ## Cloud limits
 
+Cloud history: `MAX_REVISIONS` versions kept per cloud draft (default 10; `0` switches server history off) and
+`REVISION_INTERVAL_MINUTES` between automatic versions (default 5). They are stored compressed. The browser's
+own History keeps 50 and is separate.
+
 Each account may keep `MAX_CLOUD_DOCS` drafts in the cloud (default 5; `0` switches cloud storage off).
 Hosted images are on by default in Docker, and you pay for the disk. `MAX_ASSETS` (default 10) and `MAX_ASSET_BYTES` (default 10 MB) per account, 1 MB each. In Docker the
 files live under `/data/uploads` on the volume; on Cloudflare they live in the R2 bucket bound as `IMAGES`

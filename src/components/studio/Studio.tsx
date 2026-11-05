@@ -15,6 +15,7 @@ import { AccountMenu } from "@/components/studio/AccountMenu";
 import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { addToCloud, removeFromCloud, syncLabel, useCloud, useSync } from "@/lib/sync/hooks";
+import { type CloudRevision, fetchCloudRevision, listCloudRevisions } from "@/lib/sync/revisions";
 import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -405,6 +406,22 @@ export function Studio({ docId }: { docId: string }) {
   const cloudDrafts = useCloud();
 
   const historyOpen = (compact ? mobilePanel : panel) === "history";
+  // The versions the cloud keeps for this draft: read while History is open, and again after each
+  // sync, since that is when the server may have kept another one.
+  const [cloudRevs, setCloudRevs] = useState<{ items: CloudRevision[]; max: number } | null>(null);
+  const inCloud = !!doc && cloudOn && cloudDrafts.linked.has(doc.id);
+  useEffect(() => {
+    if (!historyOpen || !inCloud || !doc || !account) return setCloudRevs(null);
+    let live = true;
+    void listCloudRevisions(account.id, doc.id).then(
+      (r) => live && setCloudRevs(r ? { items: r.revisions, max: r.max } : null),
+    );
+    return () => {
+      live = false;
+    };
+    // keyed on the draft's id and the sync time, not on the objects that change on every keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyOpen, inCloud, doc?.id, account?.id, syncStatus.at]);
   useEffect(() => {
     if (!historyOpen || !doc?.id) return;
     let live = true;
@@ -1058,6 +1075,14 @@ export function Studio({ docId }: { docId: string }) {
           content={content}
           onSave={saveVersion}
           onRestore={restoreVersion}
+          {...(cloudRevs &&
+            doc &&
+            account && {
+              cloud: {
+                ...cloudRevs,
+                onOpen: (r: CloudRevision) => fetchCloudRevision(account.id, doc.id, r),
+              },
+            })}
         />
       )}
       {activePanel === "meta" && (

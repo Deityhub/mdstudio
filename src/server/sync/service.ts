@@ -16,6 +16,12 @@ import {
   remoteId,
 } from "@/lib/sync/protocol";
 import type { Db } from "../db";
+import {
+  DEFAULT_REVISIONS,
+  type RevisionConfig,
+  deleteRevisions,
+  recordRevision,
+} from "../revisions/service";
 
 export type { PushItem, PushResult, ServerDoc } from "@/lib/sync/protocol";
 
@@ -59,6 +65,7 @@ async function pushOne(
   it: PushItem,
   now: number,
   limit: number,
+  revisions: RevisionConfig,
 ): Promise<PushResult> {
   const name = it.name ?? null;
   const folder = it.folder ?? null;
@@ -121,6 +128,21 @@ async function pushOne(
     .where(and(eq(documents.id, it.id), eq(documents.version, existing.version)))
     .returning({ id: documents.id });
   if (changed.length === 0) return conflictOrRejected();
+  if (deleted) {
+    // A deleted draft takes its history with it, so the text does not linger.
+    await deleteRevisions(db, it.id);
+  } else if (!wasDeleted) {
+    // Keep the text this push replaced. A stale base means a later edit from another device took
+    // over the server's text, which nobody else has, so that one is always kept.
+    await recordRevision(
+      db,
+      userId,
+      { id: it.id, version: existing.version, title: existing.title, content: existing.content },
+      revisions,
+      existing.version !== it.baseVersion ? "replaced" : "auto",
+      now,
+    ).catch((error) => console.error("Couldn't keep a version of a draft", error));
+  }
   return { id: it.id, status: "ok", version: existing.version + 1, updatedAt };
 }
 
@@ -130,9 +152,10 @@ export async function pushDocs(
   items: PushItem[],
   now = Date.now(),
   limit = DEFAULT_CLOUD_LIMIT,
+  revisions: RevisionConfig = DEFAULT_REVISIONS,
 ) {
   const results: PushResult[] = [];
-  for (const it of items) results.push(await pushOne(db, userId, it, now, limit));
+  for (const it of items) results.push(await pushOne(db, userId, it, now, limit, revisions));
   return results;
 }
 

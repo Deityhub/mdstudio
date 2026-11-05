@@ -96,7 +96,15 @@ export const documentRevisions = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
     title: text("title").notNull(),
+    // The text, or its gzip as base64 when `encoding` says so (compressed only when smaller).
     content: text("content").notNull(),
+    encoding: text("encoding").notNull().default("plain"),
+    // Size of the text itself, so a list can show it without unpacking anything.
+    size: integer("size").notNull().default(0),
+    // Hash of the text, so an unchanged text is never kept twice in a row.
+    hash: text("hash").notNull().default(""),
+    // "auto" for the periodic version, "replaced" for text a newer edit from another device took over.
+    reason: text("reason").notNull().default("auto"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("idx_revisions_doc_version").on(t.documentId, t.version)],
