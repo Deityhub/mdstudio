@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0 (2026-11-05)
+
+### Features
+
+- keep the drafts and panel buttons in focus mode and open them as panels
+- show the release next to the logo and move focus mode into the toolbar
+- keep a compressed version history of cloud drafts on the server
+- password reset by emailed link
+- send mail through a chain of providers with Resend and Mailtrap
+- sign-up limits, one account per inbox, and email confirmation before the cloud
+- host images for cloud drafts on self-hosted installs, and warn when a plain export has local images
+- opt-in cloud drafts with a 5-draft limit, last-edit-wins sync and sign-out cleanup
+- server push and pull API for document sync
+- GitHub sign-in and an account dialog in the studio
+- password sign-up, login and sliding cookie sessions with a 5-day cap
+- open the D1 or SQLite database from the server and report it on /api/health (#48)
+
 ## 0.2.0 (2026-11-03)
 
 ### Features
