@@ -119,8 +119,17 @@ jobs:
       # Optional features are switched on by their secrets (GitHub sign-in, email confirmation,
       # the sign-up CAPTCHA). Only the ones that are set are sent to the Worker, so a missing one
       # is skipped instead of failing the release.
-      - id: worker-secrets
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+      # Sent after the deploy, with the built config so wrangler knows the Worker's name (the
+      # action's own `secrets:` input does not read it).
+      - name: Upload Worker secrets
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
           GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
@@ -129,25 +138,8 @@ jobs:
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: |
-          names=""
-          for name in GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET RESEND_API_KEY MAILTRAP_API_TOKEN MAIL_FROM TURNSTILE_SECRET TURNSTILE_SITE_KEY; do
-            if [ -n "${!name}" ]; then names+="$name"$'\n'; fi
-          done
-          { echo "names<<EOF"; printf '%s' "$names"; echo "EOF"; } >> "$GITHUB_OUTPUT"
-      - uses: cloudflare/wrangler-action@v4
-        env:
-          GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
-          GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
-          MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
-          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
-          secrets: ${{ steps.worker-secrets.outputs.names }}
+          json=$(bun -e 'const n="GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET RESEND_API_KEY MAILTRAP_API_TOKEN MAIL_FROM TURNSTILE_SECRET TURNSTILE_SITE_KEY".split(" ");console.log(JSON.stringify(Object.fromEntries(n.filter(k=>process.env[k]).map(k=>[k,process.env[k]]))))')
+          [ "$json" = "{}" ] || echo "$json" | bunx wrangler secret bulk --config .output/server/wrangler.json
       # Tell Bing and other IndexNow engines the site changed. Never blocks a release.
       - run: bun scripts/indexnow.ts
         continue-on-error: true
