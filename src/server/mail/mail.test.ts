@@ -25,6 +25,15 @@ describe("resendMailer", () => {
     });
   });
 
+  it("sends the HTML version too when the message has one", async () => {
+    const fetchFn = vi.fn(
+      async () => new Response("{}", { status: 200 }),
+    ) as unknown as typeof fetch;
+    await resendMailer("re_key", "a@b.co", fetchFn)({ ...mail, html: "<p>Open</p>" });
+    const [, init] = (fetchFn as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(JSON.parse(init.body)).toMatchObject({ text: "Open the link", html: "<p>Open</p>" });
+  });
+
   it("throws when Resend refuses, without echoing the key", async () => {
     const fetchFn = (async () => new Response("bad", { status: 403 })) as typeof fetch;
     await expect(resendMailer("re_secret", "a@b.co", fetchFn)(mail)).rejects.toMatchObject({
@@ -57,5 +66,13 @@ describe("node transports", () => {
       return spy.mock.calls[0]![0];
     })();
     expect(sent).toMatchObject({ from: "from@x.co", to: "ada@example.com", subject: "Verify" });
+  });
+
+  it("smtpMailer sends the HTML version alongside the text", async () => {
+    const sendMail = vi.fn(async () => ({}));
+    await smtpMailer({ sendMail } as never, "from@x.co")({ ...mail, html: "<p>Open</p>" });
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Open the link", html: "<p>Open</p>" }),
+    );
   });
 });

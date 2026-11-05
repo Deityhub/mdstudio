@@ -9,11 +9,17 @@ export function parseFrom(from: string): { email: string; name?: string } {
 /** Sends through Mailtrap's transactional (Email Sending) API. */
 export const mailtrapMailer =
   (token: string, from: string, fetchFn: typeof fetch = fetch): Mailer =>
-  async ({ to, subject, text }) => {
+  async ({ to, subject, text, html }) => {
     const res = await fetchFn("https://send.api.mailtrap.io/api/send", {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: parseFrom(from), to: [{ email: to }], subject, text }),
+      body: JSON.stringify({
+        from: parseFrom(from),
+        to: [{ email: to }],
+        subject,
+        text,
+        ...(html ? { html } : {}),
+      }),
     });
     if (!res.ok)
       throw new ProviderError(`Mailtrap refused the message (${res.status})`, res.status);

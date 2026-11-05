@@ -1,4 +1,5 @@
-export type Mail = { to: string; subject: string; text: string };
+/** `text` is always sent; `html` is the designed version, for clients that show it. */
+export type Mail = { to: string; subject: string; text: string; html?: string };
 export type Mailer = (mail: Mail) => Promise<void>;
 
 /**
