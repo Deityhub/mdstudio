@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VersionTag } from "@/components/VersionTag";
 import { AccountMenu } from "@/components/studio/AccountMenu";
 import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
@@ -29,26 +30,17 @@ import {
   MonitorDown,
   Download,
   Copy,
-  FilePlus,
-  Trash2,
-  CopyPlus,
   Columns2,
   PanelLeft,
   FileText,
   Eye,
-  Maximize2,
-  Minimize2,
   AlertTriangle,
   Info,
   CircleAlert,
   CheckCircle2,
-  Check,
-  X,
   ListTree,
   Tags,
-  Pencil,
   History,
-  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -205,6 +197,16 @@ export function Studio({ docId }: { docId: string }) {
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
   const [mobileLibrary, setMobileLibrary] = useState(false);
+  // the panel only exists on phones and in focus mode; leaving both closes it for good
+  useEffect(() => {
+    if (!compact && !focus) setMobileLibrary(false);
+  }, [compact, focus]);
+  // Panels open beside the editor, except on phones and in focus mode, where they open as a panel
+  // from the right so the writing area never shrinks. Leaving both closes the panel for good.
+  const overlay = compact || focus;
+  useEffect(() => {
+    if (!overlay) setMobilePanel(null);
+  }, [overlay]);
   const [mobilePanel, setMobilePanel] = useState<Panel>(null);
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1280px)");
@@ -405,7 +407,7 @@ export function Studio({ docId }: { docId: string }) {
   });
   const cloudDrafts = useCloud();
 
-  const historyOpen = (compact ? mobilePanel : panel) === "history";
+  const historyOpen = (overlay ? mobilePanel : panel) === "history";
   // The versions the cloud keeps for this draft: read while History is open, and again after each
   // sync, since that is when the server may have kept another one.
   const [cloudRevs, setCloudRevs] = useState<{ items: CloudRevision[]; max: number } | null>(null);
@@ -984,7 +986,7 @@ export function Studio({ docId }: { docId: string }) {
   const errCount = issues.filter((i) => i.severity !== "info").length;
   const showLibrary = library && !focus && !compact;
   const showPanel = panel && !focus && !compact;
-  const activePanel = compact ? mobilePanel : panel;
+  const activePanel = overlay ? mobilePanel : panel;
   const goToLine = (line: number) => {
     setView("editor");
     setMobilePanel(null);
@@ -1003,7 +1005,7 @@ export function Studio({ docId }: { docId: string }) {
       variant={activePanel === p ? "secondary" : "ghost"}
       size="icon"
       className="relative h-10 w-10 shrink-0"
-      onClick={() => (compact ? setMobilePanel(p) : setPanel(panel === p ? null : p))}
+      onClick={() => (overlay ? setMobilePanel(p) : setPanel(panel === p ? null : p))}
       aria-label={label}
       title={label}
     >
@@ -1104,12 +1106,14 @@ export function Studio({ docId }: { docId: string }) {
               variant="ghost"
               size="icon"
               className="h-10 w-10 shrink-0"
-              onClick={() => (compact ? setMobileLibrary(true) : setLibrary((v) => !v))}
+              // Where the sidebar is not shown (phones, focus mode) the drafts open as a panel from the left
+              onClick={() => (compact || focus ? setMobileLibrary(true) : setLibrary((v) => !v))}
               aria-label="Toggle drafts"
             >
               <PanelLeft className="h-4 w-4" />
             </Button>
             <Logo textClassName="text-base sm:text-lg" markClassName="h-6 w-6" />
+            <VersionTag className="hidden sm:inline-block" />
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}
             </span>
@@ -1119,7 +1123,7 @@ export function Studio({ docId }: { docId: string }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-10 px-2 sm:px-3"
+                className="h-8 px-2 sm:px-3"
                 aria-label="Install mdstudio"
                 onClick={() => install()}
               >
@@ -1133,7 +1137,7 @@ export function Studio({ docId }: { docId: string }) {
               onCreate={newDoc}
               onApply={(metadata) => {
                 setContent(joinFrontMatter({ ...fm.data, ...metadata }, fm.body));
-                if (compact) setMobilePanel("meta");
+                if (overlay) setMobilePanel("meta");
                 else setPanel("meta");
                 toast.success("AI suggestions applied to front matter");
               }}
@@ -1143,7 +1147,7 @@ export function Studio({ docId }: { docId: string }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 px-2 sm:px-3"
+                  className="h-8 px-2 sm:px-3"
                   aria-label="Import Markdown"
                 >
                   <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
@@ -1175,7 +1179,7 @@ export function Studio({ docId }: { docId: string }) {
                 <Button
                   variant="default"
                   size="sm"
-                  className="h-10 px-2 sm:px-3"
+                  className="h-8 px-2 sm:px-3"
                   aria-label="Export"
                 >
                   <Download className="h-4 w-4" />
@@ -1271,15 +1275,6 @@ export function Studio({ docId }: { docId: string }) {
             </DropdownMenu>
             <ThemeToggle className="hidden sm:inline-flex" />
             <AccountMenu />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden sm:inline-flex"
-              onClick={() => setFocus((f) => !f)}
-              aria-label="Focus mode"
-            >
-              {focus ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
           </div>
           <input
             ref={fileInput}
@@ -1343,7 +1338,7 @@ export function Studio({ docId }: { docId: string }) {
                   </Button>
                 ))}
               </div>
-              {!focus && <div className="hidden md:flex xl:hidden">{panelButtons}</div>}
+              <div className="hidden md:flex xl:hidden">{panelButtons}</div>
             </div>
           </div>
         </header>
@@ -1404,6 +1399,8 @@ export function Studio({ docId }: { docId: string }) {
                 onOpenImage={openImage}
                 onOpenTable={() => setTableDialog(true)}
                 onOpenShortcuts={() => setShortcuts(true)}
+                focus={focus}
+                onToggleFocus={() => setFocus((f) => !f)}
               />
             )}
             <div className="flex min-h-0 flex-1">
@@ -1488,7 +1485,7 @@ export function Studio({ docId }: { docId: string }) {
           </main>
 
           {/* Side panel */}
-          {!focus && !compact && (
+          {!compact && (
             <div className="flex shrink-0 border-l border-border">
               {showPanel && (
                 <aside className="flex w-72 flex-col overflow-hidden">
@@ -1502,14 +1499,12 @@ export function Studio({ docId }: { docId: string }) {
             </div>
           )}
         </div>
-        {!focus && (
-          <nav
-            aria-label="Document panels"
-            className="flex shrink-0 items-center justify-around border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
-          >
-            {panelButtons}
-          </nav>
-        )}
+        <nav
+          aria-label="Document panels"
+          className="flex shrink-0 items-center justify-around border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
+        >
+          {panelButtons}
+        </nav>
         <Dialog open={toDelete !== null} onOpenChange={(open) => !open && setToDelete(null)}>
           <DialogContent>
             <DialogHeader>
@@ -1562,18 +1557,24 @@ export function Studio({ docId }: { docId: string }) {
           }}
           returnFocus={() => editor.current?.focus()}
         />
-        <Sheet open={compact && mobileLibrary} onOpenChange={setMobileLibrary}>
+        <Sheet open={(compact || focus) && mobileLibrary} onOpenChange={setMobileLibrary}>
           <SheetContent
             side="left"
             className="flex h-dvh w-[min(90vw,360px)] flex-col gap-0 p-0"
             aria-describedby={undefined}
+            // in focus mode, closing the list puts the cursor back where the writing is
+            onCloseAutoFocus={(e) => {
+              if (!focus) return;
+              e.preventDefault();
+              editor.current?.focus();
+            }}
           >
             <SheetTitle className="border-b border-border px-4 py-4">Your drafts</SheetTitle>
             {libraryContent}
           </SheetContent>
         </Sheet>
         <Sheet
-          open={compact && mobilePanel !== null}
+          open={overlay && mobilePanel !== null}
           onOpenChange={(open) => {
             if (!open) setMobilePanel(null);
           }}
@@ -1582,6 +1583,12 @@ export function Studio({ docId }: { docId: string }) {
             side="right"
             className="flex h-dvh w-[min(92vw,380px)] flex-col gap-0 p-0"
             aria-describedby={undefined}
+            // in focus mode, closing a panel puts the cursor back where the writing is
+            onCloseAutoFocus={(e) => {
+              if (!focus) return;
+              e.preventDefault();
+              editor.current?.focus();
+            }}
           >
             <SheetTitle className="border-b border-border px-4 py-4 capitalize">
               {mobilePanel === "meta" ? "Front matter" : mobilePanel}

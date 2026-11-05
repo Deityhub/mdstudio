@@ -38,6 +38,8 @@ import {
   OctagonAlert,
   Plus,
   Quote,
+  Maximize2,
+  Minimize2,
   Redo2,
   Sigma,
   SquareCode,
@@ -92,6 +94,9 @@ type Props = {
   onOpenImage: () => void;
   onOpenTable: () => void;
   onOpenShortcuts: () => void;
+  /** Focus mode hides the side panels; the toggle sits right after undo and redo. */
+  focus: boolean;
+  onToggleFocus: () => void;
 };
 
 type Tool = {
@@ -226,7 +231,17 @@ function ToolMenu({
 }
 
 export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToolbar(
-  { editor, ctx, profile, onOpenLink, onOpenImage, onOpenTable, onOpenShortcuts },
+  {
+    editor,
+    ctx,
+    profile,
+    onOpenLink,
+    onOpenImage,
+    onOpenTable,
+    onOpenShortcuts,
+    focus,
+    onToggleFocus,
+  },
   ref,
 ) {
   const bar = useRef<HTMLDivElement>(null);
@@ -251,6 +266,12 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
     [
       { icon: Undo2, label: "Undo (Ctrl/⌘+Z)", run: () => editor.current?.undo() },
       { icon: Redo2, label: "Redo (Ctrl/⌘+Shift+Z)", run: () => editor.current?.redo() },
+      {
+        icon: focus ? Minimize2 : Maximize2,
+        label: "Focus mode",
+        run: onToggleFocus,
+        active: focus,
+      },
     ],
     [
       { icon: Bold, label: "Bold (Ctrl/⌘+B)", run: run("bold"), active: ctx.bold },
