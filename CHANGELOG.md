@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 (2026-11-05)
+
+### Features
+
+- show the example only on a first visit, blank editor after, and busy states for buttons
+
+### Fixes
+
+- retry a confirmation email that failed to send, and design the account emails
+- upload Worker secrets with the built config
+
 ## 0.3.0 (2026-11-05)
 
 ### Features
