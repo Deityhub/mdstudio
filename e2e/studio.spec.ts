@@ -1059,3 +1059,31 @@ test("export: a plain .md that points at local images warns, the self-contained 
   await page.getByRole("menuitem", { name: "Download self-contained .md" }).click();
   await self;
 });
+
+test("the editor header shows the release next to the logo", async ({ page }) => {
+  await open(page);
+  const { version } = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+  await expect(page.getByLabel(`Version ${version}`)).toHaveText(`v${version}`);
+});
+
+test("focus mode is a toolbar button right after redo, not in the header", async ({ page }) => {
+  await open(page);
+  await expect(page.getByRole("banner").getByRole("button", { name: "Focus mode" })).toHaveCount(0);
+
+  const toolbar = page.getByRole("toolbar");
+  const buttons = toolbar.getByRole("button");
+  await expect(buttons.nth(0)).toHaveAccessibleName(/^Undo/);
+  await expect(buttons.nth(1)).toHaveAccessibleName(/^Redo/);
+  const focus = buttons.nth(2);
+  await expect(focus).toHaveAccessibleName("Focus mode");
+  await expect(focus).toHaveAttribute("aria-pressed", "false");
+
+  const drafts = page.getByRole("navigation", { name: "Drafts" });
+  await expect(drafts).toBeVisible();
+  await focus.click();
+  await expect(focus).toHaveAttribute("aria-pressed", "true");
+  await expect(drafts).toBeHidden();
+  await focus.click();
+  await expect(focus).toHaveAttribute("aria-pressed", "false");
+  await expect(drafts).toBeVisible();
+});

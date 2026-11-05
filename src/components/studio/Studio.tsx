@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { VersionTag } from "@/components/VersionTag";
 import { AccountMenu } from "@/components/studio/AccountMenu";
 import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
@@ -29,26 +30,17 @@ import {
   MonitorDown,
   Download,
   Copy,
-  FilePlus,
-  Trash2,
-  CopyPlus,
   Columns2,
   PanelLeft,
   FileText,
   Eye,
-  Maximize2,
-  Minimize2,
   AlertTriangle,
   Info,
   CircleAlert,
   CheckCircle2,
-  Check,
-  X,
   ListTree,
   Tags,
-  Pencil,
   History,
-  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1110,6 +1102,7 @@ export function Studio({ docId }: { docId: string }) {
               <PanelLeft className="h-4 w-4" />
             </Button>
             <Logo textClassName="text-base sm:text-lg" markClassName="h-6 w-6" />
+            <VersionTag className="hidden sm:inline-block" />
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}
             </span>
@@ -1119,7 +1112,7 @@ export function Studio({ docId }: { docId: string }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-10 px-2 sm:px-3"
+                className="h-8 px-2 sm:px-3"
                 aria-label="Install mdstudio"
                 onClick={() => install()}
               >
@@ -1143,7 +1136,7 @@ export function Studio({ docId }: { docId: string }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 px-2 sm:px-3"
+                  className="h-8 px-2 sm:px-3"
                   aria-label="Import Markdown"
                 >
                   <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
@@ -1175,7 +1168,7 @@ export function Studio({ docId }: { docId: string }) {
                 <Button
                   variant="default"
                   size="sm"
-                  className="h-10 px-2 sm:px-3"
+                  className="h-8 px-2 sm:px-3"
                   aria-label="Export"
                 >
                   <Download className="h-4 w-4" />
@@ -1271,15 +1264,6 @@ export function Studio({ docId }: { docId: string }) {
             </DropdownMenu>
             <ThemeToggle className="hidden sm:inline-flex" />
             <AccountMenu />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden sm:inline-flex"
-              onClick={() => setFocus((f) => !f)}
-              aria-label="Focus mode"
-            >
-              {focus ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
           </div>
           <input
             ref={fileInput}
@@ -1404,6 +1388,8 @@ export function Studio({ docId }: { docId: string }) {
                 onOpenImage={openImage}
                 onOpenTable={() => setTableDialog(true)}
                 onOpenShortcuts={() => setShortcuts(true)}
+                focus={focus}
+                onToggleFocus={() => setFocus((f) => !f)}
               />
             )}
             <div className="flex min-h-0 flex-1">
