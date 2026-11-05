@@ -7,7 +7,7 @@ export type LogoVariant = "full" | "mark" | "wordmark";
 /** The two-pages mark (source page and rendered page). Colors follow the theme tokens. */
 export function LogoMark({ className }: { className?: string | undefined }) {
   return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" className={cn("h-7 w-7 shrink-0", className)}>
+    <svg viewBox="0 0 64 64" aria-hidden="true" className={cn("size-7 shrink-0", className)}>
       <rect
         x="6"
         y="10"

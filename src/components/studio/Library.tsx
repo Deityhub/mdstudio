@@ -130,7 +130,7 @@ function FolderCombobox({
                 i === active ? "bg-accent text-accent-foreground" : "hover:bg-accent",
               )}
             >
-              <Folder className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              <Folder className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="truncate">{o}</span>
             </li>
           ))}
@@ -277,20 +277,20 @@ export function Library({
             type="submit"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="size-8 shrink-0"
             aria-label="Save name"
           >
-            <Check className="h-4 w-4" />
+            <Check className="size-4" />
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="size-8 shrink-0"
             aria-label="Cancel rename"
             onClick={() => setRenaming(null)}
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </Button>
         </form>
       ) : (
@@ -306,7 +306,7 @@ export function Library({
               <span className="truncate">{d.title}</span>
               {cloud?.ids.has(d.id) && (
                 <Cloud
-                  className="h-3 w-3 shrink-0 text-muted-foreground"
+                  className="size-3 shrink-0 text-muted-foreground"
                   aria-label="Stored in your cloud"
                 />
               )}
@@ -323,7 +323,7 @@ export function Library({
                 className="mr-1 h-10 w-10 shrink-0 xl:opacity-0 xl:focus-visible:opacity-100 xl:group-hover:opacity-100 data-[state=open]:opacity-100"
                 aria-label={`Options for ${d.title}`}
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -341,7 +341,7 @@ export function Library({
                   setRenaming(d.id);
                 }}
               >
-                <Pencil className="h-3.5 w-3.5" /> Rename
+                <Pencil className="size-3.5" /> Rename
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => {
@@ -350,35 +350,35 @@ export function Library({
                   setMoving(d);
                 }}
               >
-                <FolderInput className="h-3.5 w-3.5" /> Move to folder…
+                <FolderInput className="size-3.5" /> Move to folder…
               </DropdownMenuItem>
               {cloud &&
                 (cloud.ids.has(d.id) ? (
                   <DropdownMenuItem onSelect={() => cloud.onRemove(d)}>
-                    <CloudOff className="h-3.5 w-3.5" /> Remove from cloud
+                    <CloudOff className="size-3.5" /> Remove from cloud
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem
                     disabled={cloud.ids.size >= cloud.limit}
                     onSelect={() => cloud.onAdd(d)}
                   >
-                    <Cloud className="h-3.5 w-3.5" />{" "}
+                    <Cloud className="size-3.5" />{" "}
                     {cloud.ids.size >= cloud.limit ? "Cloud is full" : "Save to cloud"}
                   </DropdownMenuItem>
                 ))}
               {cloud?.onHostImages && cloud.ids.has(d.id) && Object.keys(d.images).length > 0 && (
                 <DropdownMenuItem onSelect={() => cloud.onHostImages?.(d)}>
-                  <ImageUp className="h-3.5 w-3.5" /> Host images ({Object.keys(d.images).length})
+                  <ImageUp className="size-3.5" /> Host images ({Object.keys(d.images).length})
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onSelect={() => onDuplicate(d)}>
-                <CopyPlus className="h-3.5 w-3.5" /> Duplicate
+                <CopyPlus className="size-3.5" /> Duplicate
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onSelect={() => onDelete(d)}
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete
+                <Trash2 className="size-3.5" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -397,30 +397,30 @@ export function Library({
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10"
+            className="size-10"
             onClick={() => {
               setNewFolder("");
               setCreating(true);
             }}
             aria-label="New folder"
           >
-            <FolderPlus className="h-4 w-4" />
+            <FolderPlus className="size-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10"
+            className="size-10"
             onClick={onNew}
             aria-label="New draft"
           >
-            <FilePlus className="h-4 w-4" />
+            <FilePlus className="size-4" />
           </Button>
         </div>
       </div>
       <div className="space-y-2 px-3 pb-2">
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
           <Input
@@ -495,20 +495,20 @@ export function Library({
               type="submit"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0"
+              className="size-8 shrink-0"
               aria-label="Create folder"
             >
-              <Check className="h-4 w-4" />
+              <Check className="size-4" />
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0"
+              className="size-8 shrink-0"
               aria-label="Cancel new folder"
               onClick={() => setCreating(false)}
             >
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </Button>
           </form>
         )}
@@ -562,20 +562,20 @@ export function Library({
                       type="submit"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 shrink-0"
+                      className="size-8 shrink-0"
                       aria-label="Save folder name"
                     >
-                      <Check className="h-4 w-4" />
+                      <Check className="size-4" />
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 shrink-0"
+                      className="size-8 shrink-0"
                       aria-label="Cancel folder rename"
                       onClick={() => setRenamingFolder(null)}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="size-4" />
                     </Button>
                   </form>
                 ) : (
@@ -588,14 +588,14 @@ export function Library({
                       className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm font-medium disabled:cursor-default"
                     >
                       {open ? (
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                        <ChevronDown className="size-3.5 shrink-0" />
                       ) : (
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                        <ChevronRight className="size-3.5 shrink-0" />
                       )}
                       {open ? (
-                        <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
                       ) : (
-                        <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <Folder className="size-4 shrink-0 text-muted-foreground" />
                       )}
                       <span className="truncate">{folder}</span>
                     </button>
@@ -608,7 +608,7 @@ export function Library({
                           className="mr-1 h-8 w-8 shrink-0 xl:opacity-0 xl:focus-visible:opacity-100 xl:group-hover/folder:opacity-100 data-[state=open]:opacity-100"
                           aria-label={`Options for folder ${folder}`}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <MoreHorizontal className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
@@ -626,7 +626,7 @@ export function Library({
                             setRenamingFolder(folder);
                           }}
                         >
-                          <Pencil className="h-3.5 w-3.5" /> Rename folder
+                          <Pencil className="size-3.5" /> Rename folder
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -636,7 +636,7 @@ export function Library({
                             else setFolderToDelete(folder);
                           }}
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete folder
+                          <Trash2 className="size-3.5" /> Delete folder
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

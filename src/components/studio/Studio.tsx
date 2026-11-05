@@ -1081,12 +1081,12 @@ export function Studio({ docId }: { docId: string }) {
       key={p}
       variant={activePanel === p ? "secondary" : "ghost"}
       size="icon"
-      className="relative h-10 w-10 shrink-0"
+      className="relative size-10 shrink-0"
       onClick={() => (overlay ? setMobilePanel(p) : setPanel(panel === p ? null : p))}
       aria-label={label}
       title={label}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="size-4" />
       {p === "checks" && errCount > 0 && (
         <span className="absolute right-0 top-0 rounded-full bg-warning px-1 text-[10px] text-foreground">
           {errCount}
@@ -1182,14 +1182,14 @@ export function Studio({ docId }: { docId: string }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0"
+              className="size-10 shrink-0"
               // Where the sidebar is not shown (phones, focus mode) the drafts open as a panel from the left
               onClick={() => (compact || focus ? setMobileLibrary(true) : setLibrary((v) => !v))}
               aria-label="Toggle drafts"
             >
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeft className="size-4" />
             </Button>
-            <Logo textClassName="text-base sm:text-lg" markClassName="h-6 w-6" />
+            <Logo textClassName="text-base sm:text-lg" markClassName="size-6" />
             <VersionTag className="hidden sm:inline-block" />
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}
@@ -1204,8 +1204,7 @@ export function Studio({ docId }: { docId: string }) {
                 aria-label="Install mdstudio"
                 onClick={() => install()}
               >
-                <MonitorDown className="h-4 w-4" />{" "}
-                <span className="hidden xl:inline">Install</span>
+                <MonitorDown className="size-4" /> <span className="hidden xl:inline">Install</span>
               </Button>
             )}
             <AiWriter
@@ -1227,12 +1226,12 @@ export function Studio({ docId }: { docId: string }) {
                   className="h-8 px-2 sm:px-3"
                   aria-label="Import Markdown"
                 >
-                  <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
+                  <Upload className="size-4" /> <span className="hidden sm:inline">Import</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
-                  <FileUp className="h-4 w-4" />
+                  <FileUp className="size-4" />
                   <div className="flex flex-col">
                     <span>Files or a ZIP…</span>
                     <span className="text-xs text-muted-foreground">
@@ -1241,7 +1240,7 @@ export function Studio({ docId }: { docId: string }) {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => folderInput.current?.click()}>
-                  <FolderUp className="h-4 w-4" />
+                  <FolderUp className="size-4" />
                   <div className="flex flex-col">
                     <span>A folder…</span>
                     <span className="text-xs text-muted-foreground">
@@ -1259,7 +1258,7 @@ export function Studio({ docId }: { docId: string }) {
                   className="h-8 px-2 sm:px-3"
                   aria-label="Export"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="size-4" />
                   <span className="hidden sm:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -1271,7 +1270,7 @@ export function Studio({ docId }: { docId: string }) {
                     download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8");
                   }}
                 >
-                  <Download className="h-4 w-4" /> Download .md
+                  <Download className="size-4" /> Download .md
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -1279,7 +1278,7 @@ export function Studio({ docId }: { docId: string }) {
                     void copy(out(), "Markdown");
                   }}
                 >
-                  <Copy className="h-4 w-4" /> Copy Markdown
+                  <Copy className="size-4" /> Copy Markdown
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={!hasLocalImages}
@@ -1287,7 +1286,7 @@ export function Studio({ docId }: { docId: string }) {
                     download(`${fileBase()}.md`, out(true), "text/markdown;charset=utf-8")
                   }
                 >
-                  <ImageIcon className="h-4 w-4" />
+                  <ImageIcon className="size-4" />
                   <div className="flex flex-col">
                     <span>Download self-contained .md</span>
                     <span className="text-xs text-muted-foreground">Images embedded as base64</span>
@@ -1297,7 +1296,7 @@ export function Studio({ docId }: { docId: string }) {
                   disabled={!hasLocalImages}
                   onClick={() => copy(out(true), "Self-contained Markdown")}
                 >
-                  <Copy className="h-4 w-4" /> Copy self-contained Markdown
+                  <Copy className="size-4" /> Copy self-contained Markdown
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>HTML</DropdownMenuLabel>
@@ -1309,7 +1308,7 @@ export function Studio({ docId }: { docId: string }) {
                     })
                   }
                 >
-                  <Copy className="h-4 w-4" /> Copy rendered HTML
+                  <Copy className="size-4" /> Copy rendered HTML
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() =>
@@ -1322,12 +1321,12 @@ export function Studio({ docId }: { docId: string }) {
                     )
                   }
                 >
-                  <Download className="h-4 w-4" /> Download standalone .html
+                  <Download className="size-4" /> Download standalone .html
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>All drafts</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => exportAsync(exportAll)}>
-                  <Archive className="h-4 w-4" />
+                  <Archive className="size-4" />
                   <div className="flex flex-col">
                     <span>Download all drafts (.zip)</span>
                     <span className="text-xs text-muted-foreground">
@@ -1379,7 +1378,7 @@ export function Studio({ docId }: { docId: string }) {
           <div className="col-span-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <Select value={profile} onValueChange={(v) => chooseProfile(v as Profile)}>
               <SelectTrigger
-                className="h-10 w-full min-w-0 sm:max-w-[200px] [&_.text-xs]:hidden"
+                className="h-10 w-full min-w-0 sm:max-w-50 [&_.text-xs]:hidden"
                 aria-label="Target platform"
               >
                 <SelectValue />
@@ -1405,13 +1404,13 @@ export function Studio({ docId }: { docId: string }) {
                     key={v}
                     variant={effectiveView === v ? "secondary" : "ghost"}
                     size="icon"
-                    className={cn("h-10 w-10 shrink-0", v === "split" && "hidden md:inline-flex")}
+                    className={cn("size-10 shrink-0", v === "split" && "hidden md:inline-flex")}
                     onClick={() => setView(v)}
                     aria-label={`${v} view`}
                     aria-pressed={effectiveView === v}
                     title={`${v} view`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="size-4" />
                   </Button>
                 ))}
               </div>
@@ -1693,7 +1692,7 @@ function ChecksPanel({
 }) {
   const rules = (
     <Button variant="outline" size="sm" className="w-full" onClick={onOpenRules}>
-      <SlidersHorizontal className="h-4 w-4" /> Rules
+      <SlidersHorizontal className="size-4" /> Rules
     </Button>
   );
   if (!issues.length)
@@ -1701,7 +1700,7 @@ function ChecksPanel({
       <div className="space-y-3">
         {rules}
         <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <CheckCircle2 className="h-8 w-8 text-primary" />
+          <CheckCircle2 className="size-8 text-primary" />
           <p className="text-sm font-medium">Portable</p>
           <p className="text-xs text-muted-foreground">
             Nothing here should render differently on your target platform.
@@ -1724,7 +1723,7 @@ function ChecksPanel({
               >
                 <Icon
                   className={cn(
-                    "mt-0.5 h-4 w-4 shrink-0",
+                    "mt-0.5 size-4 shrink-0",
                     i.severity === "error"
                       ? "text-destructive"
                       : i.severity === "warning"
@@ -1732,7 +1731,7 @@ function ChecksPanel({
                         : "text-info",
                   )}
                 />
-                <span className="text-sm leading-snug">
+                <span className="text-sm/snug">
                   <span className="mr-1 font-mono text-xs text-muted-foreground">L{i.line}</span>
                   {i.message}
                   {i.group && (

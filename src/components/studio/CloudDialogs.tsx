@@ -74,7 +74,7 @@ export function ChooseCloudDrafts({
               <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-primary"
+                  className="size-4 accent-primary"
                   checked={picked.has(d.id)}
                   disabled={!picked.has(d.id) && picked.size >= room}
                   onChange={() => toggle(d.id)}
@@ -104,7 +104,7 @@ export function ChooseCloudDrafts({
               );
             }}
           >
-            <Cloud className="h-4 w-4" /> Save to cloud
+            <Cloud className="size-4" /> Save to cloud
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -71,7 +71,7 @@ export function ManageImages({
                   <img
                     src={a.url}
                     alt=""
-                    className="h-12 w-12 shrink-0 rounded object-cover"
+                    className="size-12 shrink-0 rounded object-cover"
                     loading="lazy"
                   />
                   <div className="min-w-0 flex-1">
@@ -116,7 +116,7 @@ export function ManageImages({
                             .catch(() => toast.error("Couldn't copy the link"))
                         }
                       >
-                        <Copy className="h-4 w-4" />
+                        <Copy className="size-4" />
                       </Button>
                       <Button
                         size="icon"
@@ -124,7 +124,7 @@ export function ManageImages({
                         aria-label={`Delete ${a.fileName}`}
                         onClick={() => setConfirming(a.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="size-4" />
                       </Button>
                     </>
                   )}

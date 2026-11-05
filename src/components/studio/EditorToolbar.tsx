@@ -153,7 +153,7 @@ function Flag({ hint }: { hint: string | null }) {
   if (!hint) return null;
   return (
     <span className="ml-auto flex shrink-0 items-center pl-2">
-      <TriangleAlert aria-hidden className="h-3.5 w-3.5 text-warning" />
+      <TriangleAlert aria-hidden className="size-3.5 text-warning" />
       <span className="sr-only">. {hint}</span>
     </span>
   );
@@ -196,16 +196,16 @@ function ToolMenu({
             <Button
               variant={active ? "secondary" : "ghost"}
               size="icon"
-              className="relative h-10 w-10 shrink-0 md:h-9 md:w-9"
+              className="relative size-10 md:size-9 shrink-0"
               onMouseDown={(e) => e.preventDefault()}
               aria-label={hint ? `${label}. ${hint}` : label}
               aria-pressed={active}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="size-4" />
               {hint && (
                 <span
                   aria-hidden
-                  className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-warning"
+                  className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-warning"
                 />
               )}
             </Button>
@@ -324,7 +324,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
       {([0, 1, 2, 3, 4, 5, 6] as const).map((n) => (
         <DropdownMenuItem key={n} onClick={run(`h${n}`)}>
           <span className="flex w-4 justify-center">
-            {ctx.heading === n && <Check className="h-4 w-4" />}
+            {ctx.heading === n && <Check className="size-4" />}
           </span>
           {n === 0 ? "Paragraph" : `Heading ${n}`}
         </DropdownMenuItem>
@@ -351,7 +351,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
       {[{ id: "", label: "No language" }, ...CODE_LANGUAGES].map((l) => (
         <DropdownMenuItem key={l.id} onClick={insert((snap) => codeBlock(snap, l.id))}>
           <span className="flex w-4 justify-center">
-            {ctx.codeLang === l.id && <Check className="h-4 w-4" />}
+            {ctx.codeLang === l.id && <Check className="size-4" />}
           </span>
           {l.label}
         </DropdownMenuItem>
@@ -391,9 +391,9 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
     return (
       <WithHint key={label} hint={hint}>
         <DropdownMenuItem onClick={onClick}>
-          <Icon className="mr-2 h-4 w-4 shrink-0" />
+          <Icon className="mr-2 size-4 shrink-0" />
           <span className="flex-1">{label}</span>
-          {checked && <Check className="ml-2 h-4 w-4 shrink-0" />}
+          {checked && <Check className="ml-2 size-4 shrink-0" />}
           <Flag hint={hint} />
         </DropdownMenuItem>
       </WithHint>
@@ -406,7 +406,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
       <DropdownMenuSub>
         <WithHint hint={hint}>
           <DropdownMenuSubTrigger>
-            <Icon className="mr-2 h-4 w-4 shrink-0" />
+            <Icon className="mr-2 size-4 shrink-0" />
             <span className="flex flex-1 items-center">
               {label}
               <Flag hint={hint} />
@@ -422,10 +422,10 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
     <ToolMenu icon={Plus} label="Insert" active={ctx.alert !== null} hint={null} editor={editor}>
       <DropdownMenuLabel>Lists</DropdownMenuLabel>
       <DropdownMenuItem onClick={run("outdent")}>
-        <IndentDecrease className="mr-2 h-4 w-4" /> Outdent (Shift+Tab)
+        <IndentDecrease className="mr-2 size-4" /> Outdent (Shift+Tab)
       </DropdownMenuItem>
       <DropdownMenuItem onClick={run("indent")}>
-        <IndentIncrease className="mr-2 h-4 w-4" /> Indent (Tab)
+        <IndentIncrease className="mr-2 size-4" /> Indent (Tab)
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuLabel>Insert</DropdownMenuLabel>
@@ -474,7 +474,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
       ])}
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={onOpenShortcuts}>
-        <Keyboard className="mr-2 h-4 w-4" /> Keyboard shortcuts
+        <Keyboard className="mr-2 size-4" /> Keyboard shortcuts
       </DropdownMenuItem>
     </ToolMenu>
   );
@@ -504,17 +504,17 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
                   <Button
                     variant={t.active ? "secondary" : "ghost"}
                     size="icon"
-                    className="relative h-10 w-10 shrink-0 md:h-9 md:w-9"
+                    className="relative size-10 md:size-9 shrink-0"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={t.run}
                     aria-label={hint ? `${t.label}. ${hint}` : t.label}
                     aria-pressed={t.active}
                   >
-                    <t.icon className="h-4 w-4" />
+                    <t.icon className="size-4" />
                     {hint && (
                       <span
                         aria-hidden
-                        className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-warning"
+                        className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-warning"
                       />
                     )}
                   </Button>

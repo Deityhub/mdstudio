@@ -102,13 +102,13 @@ export function AiWriter({
           setOpen(true);
         }}
       >
-        <Sparkles className="h-4 w-4" /> <span className="hidden md:inline">AI writer</span>
+        <Sparkles className="size-4" /> <span className="hidden md:inline">AI writer</span>
         <span className="sr-only md:hidden">AI writer</span>
       </Button>
       <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] min-w-0 max-w-3xl overflow-y-auto overscroll-contain p-4 sm:max-h-[90dvh] sm:p-6 [&_input]:text-base [&_textarea]:text-base [&_input]:sm:text-sm [&_textarea]:sm:text-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" /> AI writer
+            <Sparkles className="size-5 text-primary" /> AI writer
           </DialogTitle>
           <DialogDescription>Your provider · Your API key</DialogDescription>
         </DialogHeader>
@@ -190,7 +190,7 @@ export function AiWriter({
               }
               onClick={() => setConnected(true)}
             >
-              <Check className="h-4 w-4" />{" "}
+              <Check className="size-4" />{" "}
               {connected ? "Connection configured" : "Use this connection"}
             </Button>
             {connected && (
@@ -250,7 +250,7 @@ export function AiWriter({
                   disabled={busy}
                   onClick={() => upload.current?.click()}
                 >
-                  <Upload className="h-4 w-4" /> Import .md
+                  <Upload className="size-4" /> Import .md
                 </Button>
               </div>
             </div>
@@ -317,14 +317,14 @@ export function AiWriter({
           </p>
           {busy ? (
             <Button variant="outline" onClick={() => abort.current?.abort()}>
-              <Square className="h-4 w-4" /> Stop
+              <Square className="size-4" /> Stop
             </Button>
           ) : (
             <Button
               onClick={generate}
               disabled={!connected || (mode === "metadata" ? !draft.trim() : !topic.trim())}
             >
-              <Sparkles className="h-4 w-4" />{" "}
+              <Sparkles className="size-4" />{" "}
               {mode === "metadata" ? "Suggest metadata" : "Generate draft"}
             </Button>
           )}
@@ -337,11 +337,11 @@ export function AiWriter({
         {reasoning && (
           <details className="text-xs text-muted-foreground">
             <summary>AI thinking</summary>
-            <p className="mt-2 whitespace-pre-wrap break-words">{reasoning}</p>
+            <p className="mt-2 whitespace-pre-wrap wrap-break-word">{reasoning}</p>
           </details>
         )}
         {error && (
-          <p role="alert" className="break-words text-sm text-destructive">
+          <p role="alert" className="wrap-break-word text-sm text-destructive">
             {error}
           </p>
         )}
@@ -385,7 +385,7 @@ export function AiWriter({
                 close(false);
               }}
             >
-              <Check className="h-4 w-4" /> Apply to current draft
+              <Check className="size-4" /> Apply to current draft
             </Button>
           </div>
         )}
@@ -407,7 +407,7 @@ export function AiWriter({
                 }
               }}
             >
-              <FilePlus className="h-4 w-4" /> Open as new draft
+              <FilePlus className="size-4" /> Open as new draft
             </Button>
           </div>
         )}
