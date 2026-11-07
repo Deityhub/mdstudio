@@ -20,6 +20,7 @@ import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
+import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
 import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
@@ -90,6 +91,11 @@ const GuidesIndexRoute = GuidesIndexRouteImport.update({
 const GuidesSlugRoute = GuidesSlugRouteImport.update({
   id: '/guides/$slug',
   path: '/guides/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SSlugRoute = SSlugRouteImport.update({
+  id: '/s/$slug',
+  path: '/s/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
+  '/s/$slug': typeof SSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
+  '/s/$slug': typeof SSlugRoute
   '/editor': typeof EditorIndexRoute
   '/guides': typeof GuidesIndexRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
+  '/s/$slug': typeof SSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
   '/api/assets/$id': typeof ApiAssetsIdRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
+    | '/s/$slug'
     | '/editor/'
     | '/guides/'
     | '/api/assets/$id'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
+    | '/s/$slug'
     | '/editor'
     | '/guides'
     | '/api/assets/$id'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
+    | '/s/$slug'
     | '/editor/'
     | '/guides/'
     | '/api/assets/$id'
@@ -362,6 +374,7 @@ export interface RootRouteChildren {
   ApiShareRoute: typeof ApiShareRouteWithChildren
   EditorDocIdRoute: typeof EditorDocIdRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
+  SSlugRoute: typeof SSlugRoute
   EditorIndexRoute: typeof EditorIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
   ApiAuthForgotRoute: typeof ApiAuthForgotRoute
@@ -454,6 +467,13 @@ declare module '@tanstack/react-router' {
       path: '/guides/$slug'
       fullPath: '/guides/$slug'
       preLoaderRoute: typeof GuidesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$slug': {
+      id: '/s/$slug'
+      path: '/s/$slug'
+      fullPath: '/s/$slug'
+      preLoaderRoute: typeof SSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assets/$id': {
@@ -644,6 +664,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiShareRoute: ApiShareRouteWithChildren,
   EditorDocIdRoute: EditorDocIdRoute,
   GuidesSlugRoute: GuidesSlugRoute,
+  SSlugRoute: SSlugRoute,
   EditorIndexRoute: EditorIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,
   ApiAuthForgotRoute: ApiAuthForgotRoute,
