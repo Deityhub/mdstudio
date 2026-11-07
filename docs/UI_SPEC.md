@@ -17,6 +17,10 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 
 Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.
 
+## 1c. Shared page `/s/$slug`
+
+A public, read-only page for one published copy of a draft. The site header, a one-line notice ("A copy shared with mdstudio on <date>. Available until <date>. Report this page"), the text in `.md-preview` (single column, up to `max-w-3xl`, readable at 360px with no sideways scroll) and the site footer. Math and Mermaid diagrams are drawn in the browser after load, in the colors of the theme in use. An unknown, expired or revoked link is the site's 404 page.
+
 ## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`, `13_library.png`, `11_export_menu.png`
 
 **First visit and empty library.** `/editor` opens the first draft on the machine (or in the signed-in account). With none, it opens `/editor/new`, held in memory only and saved, under its own address, when the writer first types. On a first visit that is the example text; once this browser has ever stored a draft (a flag kept beside the drafts), it is a completely blank editor, so deleting the last draft, or reloading after it, never brings the example back. Until something is typed nothing is stored, so signing in with drafts in the cloud replaces either with those drafts. "New draft" always starts empty.
