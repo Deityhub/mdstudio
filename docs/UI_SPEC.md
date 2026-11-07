@@ -17,7 +17,14 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 
 Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.
 
-## 1c. Shared page `/s/$slug`
+## 1c. Sharing from the editor
+
+For a draft in the cloud (verified accounts only), the draft's menu has **Share…** and the header has a **Share** button (an icon on small screens). A small globe next to the cloud icon marks drafts that have a live link. The Share dialog (`ShareDialog.tsx`) has two states:
+
+- **Not shared:** a "Link lasts" choice (1 to 7 days, 4 by default), a note that the page shows the text as it is in the cloud when published and that later edits stay private until an update, a note about images stored only on this device when the draft has any, and **Publish**.
+- **Shared:** the public link in a read-only field with **Copy**, the publish and expiry dates, "Link lasts" (changing it sets the expiry that many days from now), a warning "Your draft has changes that are not published" when the draft differs from the published copy, **Publish update** (enabled only then) and **Stop sharing**. Publishing saves the draft and runs a sync first, so the copy is the latest text. Buttons show the loading state while a request runs; errors (not in the cloud yet, too many changes, offline) appear in the dialog.
+
+## 1d. Shared page `/s/$slug`
 
 A public, read-only page for one published copy of a draft. The site header, a one-line notice ("A copy shared with mdstudio on <date>. Available until <date>. Report this page"), the text in `.md-preview` (single column, up to `max-w-3xl`, readable at 360px with no sideways scroll) and the site footer. Math and Mermaid diagrams are drawn in the browser after load, in the colors of the theme in use. An unknown, expired or revoked link is the site's 404 page.
 
