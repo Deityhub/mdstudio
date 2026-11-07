@@ -1,6 +1,6 @@
 // Shared by the /api/auth/* route files so each stays a one-liner.
 import { getDb } from "../db";
-import { getEnv } from "../env";
+import { getEnv, siteOrigin } from "../env";
 import { getMailer } from "../mail";
 import { canonicalEmail } from "./email";
 import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
@@ -51,10 +51,6 @@ const tooMany = (retryAfter: number) =>
     { error: "rate_limited", retryAfter },
     { status: 429, headers: { "retry-after": String(retryAfter), "cache-control": "no-store" } },
   );
-
-/** Public address for links in emails: PUBLIC_URL when a proxy hides it. */
-const siteOrigin = (request: Request) =>
-  getEnv(request, "PUBLIC_URL")?.replace(/\/$/, "") ?? new URL(request.url).origin;
 
 export async function signupHandler(request: Request) {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);

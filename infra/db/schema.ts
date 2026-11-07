@@ -1,6 +1,6 @@
 // Single SQLite schema shared by Cloudflare D1 and self-hosted better-sqlite3.
 // Authoritative table list: docs/SYSTEM_SPEC.md section 6. Timestamps are Unix milliseconds.
-import { index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, unique, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -129,17 +129,28 @@ export const assets = sqliteTable(
   (t) => [unique().on(t.userId, t.sha256)],
 );
 
-export const shareLinks = sqliteTable("share_links", {
-  id: text("id").primaryKey(),
-  documentId: text("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
-  revisionId: text("revision_id").references(() => documentRevisions.id, {
-    onDelete: "set null",
-  }),
-  slug: text("slug").notNull().unique(),
-  isPublic: integer("is_public").notNull().default(1),
-  viewCount: integer("view_count").notNull().default(0),
-  expiresAt: integer("expires_at"),
-  createdAt: integer("created_at").notNull(),
-});
+// A public, read-only page for one cloud draft. It holds its own published copy (title and
+// content), which changes only when the writer publishes an update; the draft itself can move on.
+// One link per draft, and every link expires (expires_at is always set by the server code).
+export const shareLinks = sqliteTable(
+  "share_links",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    revisionId: text("revision_id").references(() => documentRevisions.id, {
+      onDelete: "set null",
+    }),
+    slug: text("slug").notNull().unique(),
+    isPublic: integer("is_public").notNull().default(1),
+    viewCount: integer("view_count").notNull().default(0),
+    expiresAt: integer("expires_at"),
+    createdAt: integer("created_at").notNull(),
+    title: text("title").notNull().default(""),
+    content: text("content").notNull().default(""),
+    publishedAt: integer("published_at").notNull().default(0),
+    updatedAt: integer("updated_at").notNull().default(0),
+  },
+  (t) => [uniqueIndex("share_links_document_unique").on(t.documentId)],
+);

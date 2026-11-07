@@ -15,6 +15,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AFileRouteImport } from './routes/a.$file'
 import { Route as ApiAssetsRouteImport } from './routes/api/assets'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiShareRouteImport } from './routes/api/share'
 import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
@@ -28,6 +29,7 @@ import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthResetRouteImport } from './routes/api/auth/reset'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
+import { Route as ApiShareIdRouteImport } from './routes/api/share.$id'
 import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
 import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
@@ -63,6 +65,11 @@ const ApiAssetsRoute = ApiAssetsRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShareRoute = ApiShareRouteImport.update({
+  id: '/api/share',
+  path: '/api/share',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditorIndexRoute = EditorIndexRouteImport.update({
@@ -130,6 +137,11 @@ const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
   path: '/api/auth/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiShareIdRoute = ApiShareIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiShareRoute,
+} as any)
 const ApiSyncPullRoute = ApiSyncPullRouteImport.update({
   id: '/api/sync/pull',
   path: '/api/sync/pull',
@@ -169,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
@@ -182,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/share/$id': typeof ApiShareIdRoute
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
@@ -196,6 +210,7 @@ export interface FileRoutesByTo {
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor': typeof EditorIndexRoute
@@ -209,6 +224,7 @@ export interface FileRoutesByTo {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/share/$id': typeof ApiShareIdRoute
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
@@ -224,6 +240,7 @@ export interface FileRoutesById {
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/editor/': typeof EditorIndexRoute
@@ -237,6 +254,7 @@ export interface FileRoutesById {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/share/$id': typeof ApiShareIdRoute
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
@@ -253,6 +271,7 @@ export interface FileRouteTypes {
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
+    | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor/'
@@ -266,6 +285,7 @@ export interface FileRouteTypes {
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
@@ -280,6 +300,7 @@ export interface FileRouteTypes {
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
+    | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor'
@@ -293,6 +314,7 @@ export interface FileRouteTypes {
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
@@ -307,6 +329,7 @@ export interface FileRouteTypes {
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
+    | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/editor/'
@@ -320,6 +343,7 @@ export interface FileRouteTypes {
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
@@ -335,6 +359,7 @@ export interface RootRouteChildren {
   AFileRoute: typeof AFileRoute
   ApiAssetsRoute: typeof ApiAssetsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiShareRoute: typeof ApiShareRouteWithChildren
   EditorDocIdRoute: typeof EditorDocIdRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   EditorIndexRoute: typeof EditorIndexRoute
@@ -394,6 +419,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/share': {
+      id: '/api/share'
+      path: '/api/share'
+      fullPath: '/api/share'
+      preLoaderRoute: typeof ApiShareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/editor/': {
@@ -487,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/share/$id': {
+      id: '/api/share/$id'
+      path: '/$id'
+      fullPath: '/api/share/$id'
+      preLoaderRoute: typeof ApiShareIdRouteImport
+      parentRoute: typeof ApiShareRoute
+    }
     '/api/sync/pull': {
       id: '/api/sync/pull'
       path: '/api/sync/pull'
@@ -544,6 +583,18 @@ const ApiAssetsRouteWithChildren = ApiAssetsRoute._addFileChildren(
   ApiAssetsRouteChildren,
 )
 
+interface ApiShareRouteChildren {
+  ApiShareIdRoute: typeof ApiShareIdRoute
+}
+
+const ApiShareRouteChildren: ApiShareRouteChildren = {
+  ApiShareIdRoute: ApiShareIdRoute,
+}
+
+const ApiShareRouteWithChildren = ApiShareRoute._addFileChildren(
+  ApiShareRouteChildren,
+)
+
 interface ApiAuthGithubRouteChildren {
   ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
 }
@@ -590,6 +641,7 @@ const rootRouteChildren: RootRouteChildren = {
   AFileRoute: AFileRoute,
   ApiAssetsRoute: ApiAssetsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
+  ApiShareRoute: ApiShareRouteWithChildren,
   EditorDocIdRoute: EditorDocIdRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   EditorIndexRoute: EditorIndexRoute,
