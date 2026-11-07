@@ -15,7 +15,16 @@ import { VersionTag } from "@/components/VersionTag";
 import { AccountMenu } from "@/components/studio/AccountMenu";
 import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
-import { addToCloud, removeFromCloud, syncLabel, useCloud, useSync } from "@/lib/sync/hooks";
+import { ShareDialog } from "@/components/studio/ShareDialog";
+import { clearShares, refreshShares, useShares } from "@/lib/share/hooks";
+import {
+  addToCloud,
+  removeFromCloud,
+  syncLabel,
+  syncNow,
+  useCloud,
+  useSync,
+} from "@/lib/sync/hooks";
 import { type CloudRevision, fetchCloudRevision, listCloudRevisions } from "@/lib/sync/revisions";
 import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
@@ -26,6 +35,7 @@ import {
   Archive,
   SlidersHorizontal,
   FolderUp,
+  Share2,
   FileUp,
   MonitorDown,
   Download,
@@ -470,6 +480,12 @@ export function Studio({ docId }: { docId: string }) {
     },
   });
   const cloudDrafts = useCloud();
+  // The account's share links follow each sync round, since a draft leaving the cloud takes its
+  // link down and a link can run out.
+  useEffect(() => {
+    if (cloudOn && account?.id) void refreshShares();
+    else clearShares();
+  }, [cloudOn, account?.id, syncStatus.at]);
 
   const historyOpen = (overlay ? mobilePanel : panel) === "history";
   // The versions the cloud keeps for this draft: read while History is open, and again after each
@@ -953,6 +969,10 @@ export function Studio({ docId }: { docId: string }) {
     refreshList();
   };
   const [toDelete, setToDelete] = useState<MdDocument | null>(null);
+  // the draft whose share dialog is open
+  const [shareTarget, setShareTarget] = useState<MdDocument | null>(null);
+  const shares = useShares();
+  const sharedIds = useMemo(() => new Set(shares.byDraft.keys()), [shares.byDraft]);
   const remove = async (d: MdDocument) => {
     setToDelete(null);
     // an edit still waiting for its autosave must not write the draft back after it is deleted
@@ -1116,6 +1136,7 @@ export function Studio({ docId }: { docId: string }) {
           onAdd: (d: MdDocument) =>
             cloudOn ? void addToCloud(account.id, [d.id]) : askToConfirmEmail(),
           onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
+          ...(cloudOn && { onShare: (d: MdDocument) => setShareTarget(d), shared: sharedIds }),
           ...(hostingOn && cloudOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
         },
       })}
@@ -1349,6 +1370,18 @@ export function Studio({ docId }: { docId: string }) {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+            {cloudOn && doc && cloudDrafts.linked.has(doc.id) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 sm:px-3"
+                aria-label="Share"
+                onClick={() => setShareTarget(doc)}
+              >
+                <Share2 className="size-4" />
+                <span className="hidden sm:inline">Share</span>
+              </Button>
+            )}
             <ThemeToggle className="hidden sm:inline-flex" />
             <AccountMenu />
           </div>
@@ -1581,6 +1614,16 @@ export function Studio({ docId }: { docId: string }) {
         >
           {panelButtons}
         </nav>
+        <ShareDialog
+          draft={shareTarget && doc && shareTarget.id === doc.id ? doc : shareTarget}
+          open={shareTarget !== null}
+          onOpenChange={(open) => !open && setShareTarget(null)}
+          beforePublish={async () => {
+            // the published copy is what the cloud has, so bring it up to date first
+            await flush();
+            if (account) await syncNow(account.id);
+          }}
+        />
         <Dialog open={toDelete !== null} onOpenChange={(open) => !open && setToDelete(null)}>
           <DialogContent>
             <DialogHeader>

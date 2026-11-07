@@ -1,0 +1,5 @@
+/** SHA-256 of the text in hex: the same value the server keeps for a published copy. */
+export async function contentHash(text: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}

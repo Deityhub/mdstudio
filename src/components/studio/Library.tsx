@@ -12,12 +12,14 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
+  Globe,
   ImageUp,
   MoreHorizontal,
   Pencil,
   Search,
   Trash2,
   X,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -177,6 +179,9 @@ export function Library({
     limit: number;
     onAdd: (d: MdDocument) => void;
     onRemove: (d: MdDocument) => void;
+    /** Opens the share dialog for a cloud draft; `shared` holds the ids that have a live link. */
+    onShare?: (d: MdDocument) => void;
+    shared?: ReadonlySet<string>;
     /** Present when this server hosts images: moves a draft's local images to hosting. */
     onHostImages?: (d: MdDocument) => void;
   };
@@ -310,6 +315,9 @@ export function Library({
                   aria-label="Stored in your cloud"
                 />
               )}
+              {cloud?.shared?.has(d.id) && (
+                <Globe className="size-3 shrink-0 text-primary" aria-label="Shared publicly" />
+              )}
             </div>
             <div className="truncate text-xs text-muted-foreground">
               {snippets.get(d.id) || new Date(d.updatedAt).toLocaleDateString()}
@@ -366,6 +374,11 @@ export function Library({
                     {cloud.ids.size >= cloud.limit ? "Cloud is full" : "Save to cloud"}
                   </DropdownMenuItem>
                 ))}
+              {cloud?.onShare && cloud.ids.has(d.id) && (
+                <DropdownMenuItem onSelect={() => cloud.onShare?.(d)}>
+                  <Share2 className="size-3.5" /> Share…
+                </DropdownMenuItem>
+              )}
               {cloud?.onHostImages && cloud.ids.has(d.id) && Object.keys(d.images).length > 0 && (
                 <DropdownMenuItem onSelect={() => cloud.onHostImages?.(d)}>
                   <ImageUp className="size-3.5" /> Host images ({Object.keys(d.images).length})
