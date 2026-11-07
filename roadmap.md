@@ -67,8 +67,8 @@
 
 ## Milestone 4: Sharing & Multi-Platform Publishing (Target: Q4 2026)
 
-- [ ] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML.
-- [ ] **Link Management:** Configurable expiration dates and one-click link revocation.
+- [ ] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML. Scope: the published copy of a cloud draft, for review before publishing elsewhere (mdstudio is an editor to publish from, not a blogging platform). Server API and expiry rules done; public page and editor UI next. Deferred: edit and comment access, links private to named people (future paid feature).
+- [ ] **Link Management:** Every link expires (1 to 7 days, 4 by default), can be extended or shortened, and can be revoked in one click. Server done; editor UI next.
 - [ ] **GitHub Publishing:** Direct commit and pull-request creation to user GitHub repositories using OAuth or personal access tokens.
 - [ ] **Blogging Integrations:** One-click publishing to dev.to and Hashnode via API integrations.
 

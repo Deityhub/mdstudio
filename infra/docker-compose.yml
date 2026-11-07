@@ -20,6 +20,9 @@ services:
       # Versions kept per cloud draft, and minutes between automatic ones.
       MAX_REVISIONS: ${MAX_REVISIONS:-10}
       REVISION_INTERVAL_MINUTES: ${REVISION_INTERVAL_MINUTES:-5}
+      # Share links: the longest a public link lasts, and how long a new one lasts by default (days).
+      SHARE_MAX_DAYS: ${SHARE_MAX_DAYS:-7}
+      SHARE_DEFAULT_DAYS: ${SHARE_DEFAULT_DAYS:-4}
       # Email confirmation (optional): a sender and one way to send. Limits and proxy: see infra/README.md.
       MAIL_FROM: ${MAIL_FROM:-}
       SMTP_URL: ${SMTP_URL:-}

@@ -37,6 +37,10 @@ Cloud history: `MAX_REVISIONS` versions kept per cloud draft (default 10; `0` sw
 `REVISION_INTERVAL_MINUTES` between automatic versions (default 5). They are stored compressed. The browser's
 own History keeps 50 and is separate.
 
+Share links: a verified account can publish a cloud draft as a public, read-only page at `/s/<slug>`. Every link
+expires: `SHARE_MAX_DAYS` is the longest (default 7) and `SHARE_DEFAULT_DAYS` the default (4, never above the maximum).
+The page keeps its own copy of the text until the writer publishes an update.
+
 Each account may keep `MAX_CLOUD_DOCS` drafts in the cloud (default 5; `0` switches cloud storage off).
 Hosted images are on by default in Docker, and you pay for the disk. `MAX_ASSETS` (default 10) and `MAX_ASSET_BYTES` (default 10 MB) per account, 1 MB each. In Docker the
 files live under `/data/uploads` on the volume; on Cloudflare they live in the R2 bucket bound as `IMAGES`
