@@ -75,6 +75,28 @@ export const githubConnections = sqliteTable("github_connections", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+/** Where a cloud draft was last published on GitHub, one row per kind (file or gist). */
+export const githubPublications = sqliteTable(
+  "github_publications",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id").notNull(),
+    kind: text("kind").notNull(),
+    repo: text("repo"),
+    branch: text("branch"),
+    path: text("path"),
+    gistId: text("gist_id"),
+    /** The file's blob id at the last commit made from this draft, to notice later changes on GitHub. */
+    fileSha: text("file_sha"),
+    commitSha: text("commit_sha"),
+    url: text("url").notNull(),
+    contentHash: text("content_hash").notNull(),
+    publishedAt: integer("published_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("github_publications_document_kind").on(t.documentId, t.kind)],
+);
+
 export const documents = sqliteTable(
   "documents",
   {

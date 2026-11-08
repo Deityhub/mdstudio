@@ -2,7 +2,16 @@
 // disconnecting. The callback address is shared with signing in (see githubCallbackHandler).
 import { authorizeUrl, pkcePair, randomState } from "../auth/github";
 import { withVerifiedUser } from "../auth/guard";
-import { CONNECT_COOKIE, connectCookie, readCookie, readToken, sameOrigin } from "../auth/http";
+import {
+  CONNECT_COOKIE,
+  connectCookie,
+  noStoreJson as json,
+  readCookie,
+  readJson,
+  readToken,
+  sameOrigin,
+  tooManyResponse as tooMany,
+} from "../auth/http";
 import { hit } from "../auth/limits";
 import { redirectUri } from "../auth/routes";
 import { userForToken } from "../auth/service";
@@ -18,10 +27,16 @@ import {
   disconnectGithub,
 } from "./connect";
 import { importTokenKey } from "./crypto";
+import {
+  type PublishError,
+  getPublications,
+  listBranches,
+  listRepos,
+  publishFile,
+  publishGist,
+} from "./publish";
 
 const HOUR = 3_600_000;
-const json = (body: unknown, status = 200) =>
-  Response.json(body, { status, headers: { "cache-control": "no-store" } });
 
 /** The OAuth app and the key that seals tokens; null unless this server has both. */
 async function setup(request: Request) {
@@ -107,4 +122,69 @@ export const disconnectHandler = (request: Request) =>
     if (!cfg) return json({ error: "feature_unavailable" }, 403);
     await disconnectGithub(db, cfg.key, cfg.app, cfg.urls, user.id);
     return json({ ok: true });
+  });
+
+// ---- repositories, branches and publishing ------------------------------------------------------
+
+const STATUS: Record<PublishError, number> = {
+  not_found: 404,
+  invalid: 400,
+  not_connected: 409,
+  repo_not_found: 404,
+  branch_not_found: 404,
+  no_access: 403,
+  exists: 409,
+  conflict: 409,
+  too_large: 413,
+  github_failed: 502,
+};
+const fail = (error: PublishError) => json({ error }, STATUS[error]);
+const unavailable = () => json({ error: "feature_unavailable" }, 403);
+
+/** Reading GitHub's lists costs a request each, so it is limited per account. */
+const READS_PER_HOUR = 120;
+/** Publishing is limited per account, so a script cannot churn commits. */
+const PUBLISHES_PER_HOUR = 30;
+
+export const reposHandler = (request: Request) =>
+  withVerifiedUser(request, async (user, db) => {
+    const cfg = await setup(request);
+    if (!cfg) return unavailable();
+    const t = await hit(db, `ghread:${user.id}`, READS_PER_HOUR, HOUR);
+    if (!t.allowed) return tooMany(t.retryAfter);
+    const r = await listRepos(db, cfg.key, cfg.urls, user.id);
+    return r.ok ? json({ repos: r.repos }) : fail(r.error);
+  });
+
+export const branchesHandler = (request: Request, owner: string, name: string) =>
+  withVerifiedUser(request, async (user, db) => {
+    const cfg = await setup(request);
+    if (!cfg) return unavailable();
+    const t = await hit(db, `ghread:${user.id}`, READS_PER_HOUR, HOUR);
+    if (!t.allowed) return tooMany(t.retryAfter);
+    const r = await listBranches(db, cfg.key, cfg.urls, user.id, `${owner}/${name}`);
+    return r.ok ? json({ branches: r.branches, defaultBranch: r.defaultBranch }) : fail(r.error);
+  });
+
+/** What was last published from a draft (a file and/or a gist). Reads only our own database. */
+export const publicationsHandler = (request: Request, localId: string) =>
+  withVerifiedUser(request, async (user, db) =>
+    json({ publications: await getPublications(db, user.id, localId) }),
+  );
+
+/** `{ target: "file", ... }` commits (or opens a pull request); `{ target: "gist", ... }` makes a gist. */
+export const publishHandler = (request: Request) =>
+  withVerifiedUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    const cfg = await setup(request);
+    if (!cfg) return unavailable();
+    const body = await readJson(request);
+    if (!body || (body["target"] !== "file" && body["target"] !== "gist")) return fail("invalid");
+    const t = await hit(db, `ghpublish:${user.id}`, PUBLISHES_PER_HOUR, HOUR);
+    if (!t.allowed) return tooMany(t.retryAfter);
+    const r =
+      body["target"] === "file"
+        ? await publishFile(db, cfg.key, cfg.urls, user.id, body as never)
+        : await publishGist(db, cfg.key, cfg.urls, user.id, body as never);
+    return r.ok ? json({ result: r.result }) : fail(r.error);
   });

@@ -32,12 +32,15 @@ import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
 import { Route as ApiGithubConnectRouteImport } from './routes/api/github.connect'
 import { Route as ApiGithubConnectionRouteImport } from './routes/api/github.connection'
+import { Route as ApiGithubPublishRouteImport } from './routes/api/github.publish'
+import { Route as ApiGithubReposRouteImport } from './routes/api/github.repos'
 import { Route as ApiShareIdRouteImport } from './routes/api/share.$id'
 import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
 import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
+import { Route as ApiGithubPublicationsIdRouteImport } from './routes/api/github.publications.$id'
 import { Route as ApiSSlugCommentsRouteImport } from './routes/api/s.$slug.comments'
 import { Route as ApiShareIdCommentsRouteImport } from './routes/api/share.$id.comments'
 import { Route as ApiShareIdPeopleRouteImport } from './routes/api/share.$id.people'
@@ -45,6 +48,7 @@ import { Route as ApiDocumentsIdRevisionsRevisionIdRouteImport } from './routes/
 import { Route as ApiSSlugCommentsCommentIdRouteImport } from './routes/api/s.$slug.comments.$commentId'
 import { Route as ApiShareIdCommentsCommentIdRouteImport } from './routes/api/share.$id.comments.$commentId'
 import { Route as ApiShareIdPeoplePersonIdRouteImport } from './routes/api/share.$id.people.$personId'
+import { Route as ApiGithubReposOwnerRepoBranchesRouteImport } from './routes/api/github.repos.$owner.$repo.branches'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -161,6 +165,16 @@ const ApiGithubConnectionRoute = ApiGithubConnectionRouteImport.update({
   path: '/api/github/connection',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGithubPublishRoute = ApiGithubPublishRouteImport.update({
+  id: '/api/github/publish',
+  path: '/api/github/publish',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubReposRoute = ApiGithubReposRouteImport.update({
+  id: '/api/github/repos',
+  path: '/api/github/repos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiShareIdRoute = ApiShareIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -189,6 +203,11 @@ const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
 const ApiDocumentsIdRevisionsRoute = ApiDocumentsIdRevisionsRouteImport.update({
   id: '/api/documents/$id/revisions',
   path: '/api/documents/$id/revisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubPublicationsIdRoute = ApiGithubPublicationsIdRouteImport.update({
+  id: '/api/github/publications/$id',
+  path: '/api/github/publications/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSSlugCommentsRoute = ApiSSlugCommentsRouteImport.update({
@@ -230,6 +249,12 @@ const ApiShareIdPeoplePersonIdRoute =
     path: '/$personId',
     getParentRoute: () => ApiShareIdPeopleRoute,
   } as any)
+const ApiGithubReposOwnerRepoBranchesRoute =
+  ApiGithubReposOwnerRepoBranchesRouteImport.update({
+    id: '/$owner/$repo/branches',
+    path: '/$owner/$repo/branches',
+    getParentRoute: () => ApiGithubReposRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -255,12 +280,15 @@ export interface FileRoutesByFullPath {
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/github/connect': typeof ApiGithubConnectRoute
   '/api/github/connection': typeof ApiGithubConnectionRoute
+  '/api/github/publish': typeof ApiGithubPublishRoute
+  '/api/github/repos': typeof ApiGithubReposRouteWithChildren
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
   '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
@@ -268,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
+  '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -293,12 +322,15 @@ export interface FileRoutesByTo {
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/github/connect': typeof ApiGithubConnectRoute
   '/api/github/connection': typeof ApiGithubConnectionRoute
+  '/api/github/publish': typeof ApiGithubPublishRoute
+  '/api/github/repos': typeof ApiGithubReposRouteWithChildren
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
   '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
@@ -306,6 +338,7 @@ export interface FileRoutesByTo {
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
+  '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -332,12 +365,15 @@ export interface FileRoutesById {
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
   '/api/github/connect': typeof ApiGithubConnectRoute
   '/api/github/connection': typeof ApiGithubConnectionRoute
+  '/api/github/publish': typeof ApiGithubPublishRoute
+  '/api/github/repos': typeof ApiGithubReposRouteWithChildren
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
   '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
@@ -345,6 +381,7 @@ export interface FileRoutesById {
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
+  '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -372,12 +409,15 @@ export interface FileRouteTypes {
     | '/api/auth/verify'
     | '/api/github/connect'
     | '/api/github/connection'
+    | '/api/github/publish'
+    | '/api/github/repos'
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
+    | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
     | '/api/share/$id/comments'
     | '/api/share/$id/people'
@@ -385,6 +425,7 @@ export interface FileRouteTypes {
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
+    | '/api/github/repos/$owner/$repo/branches'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -410,12 +451,15 @@ export interface FileRouteTypes {
     | '/api/auth/verify'
     | '/api/github/connect'
     | '/api/github/connection'
+    | '/api/github/publish'
+    | '/api/github/repos'
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
+    | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
     | '/api/share/$id/comments'
     | '/api/share/$id/people'
@@ -423,6 +467,7 @@ export interface FileRouteTypes {
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
+    | '/api/github/repos/$owner/$repo/branches'
   id:
     | '__root__'
     | '/'
@@ -448,12 +493,15 @@ export interface FileRouteTypes {
     | '/api/auth/verify'
     | '/api/github/connect'
     | '/api/github/connection'
+    | '/api/github/publish'
+    | '/api/github/repos'
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
+    | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
     | '/api/share/$id/comments'
     | '/api/share/$id/people'
@@ -461,6 +509,7 @@ export interface FileRouteTypes {
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
+    | '/api/github/repos/$owner/$repo/branches'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -486,9 +535,12 @@ export interface RootRouteChildren {
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
   ApiGithubConnectRoute: typeof ApiGithubConnectRoute
   ApiGithubConnectionRoute: typeof ApiGithubConnectionRoute
+  ApiGithubPublishRoute: typeof ApiGithubPublishRoute
+  ApiGithubReposRoute: typeof ApiGithubReposRouteWithChildren
   ApiSyncPullRoute: typeof ApiSyncPullRoute
   ApiSyncPushRoute: typeof ApiSyncPushRoute
   ApiDocumentsIdRevisionsRoute: typeof ApiDocumentsIdRevisionsRouteWithChildren
+  ApiGithubPublicationsIdRoute: typeof ApiGithubPublicationsIdRoute
   ApiSSlugCommentsRoute: typeof ApiSSlugCommentsRouteWithChildren
 }
 
@@ -655,6 +707,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGithubConnectionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/github/publish': {
+      id: '/api/github/publish'
+      path: '/api/github/publish'
+      fullPath: '/api/github/publish'
+      preLoaderRoute: typeof ApiGithubPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/repos': {
+      id: '/api/github/repos'
+      path: '/api/github/repos'
+      fullPath: '/api/github/repos'
+      preLoaderRoute: typeof ApiGithubReposRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/share/$id': {
       id: '/api/share/$id'
       path: '/$id'
@@ -695,6 +761,13 @@ declare module '@tanstack/react-router' {
       path: '/api/documents/$id/revisions'
       fullPath: '/api/documents/$id/revisions'
       preLoaderRoute: typeof ApiDocumentsIdRevisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/publications/$id': {
+      id: '/api/github/publications/$id'
+      path: '/api/github/publications/$id'
+      fullPath: '/api/github/publications/$id'
+      preLoaderRoute: typeof ApiGithubPublicationsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/s/$slug/comments': {
@@ -745,6 +818,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/share/$id/people/$personId'
       preLoaderRoute: typeof ApiShareIdPeoplePersonIdRouteImport
       parentRoute: typeof ApiShareIdPeopleRoute
+    }
+    '/api/github/repos/$owner/$repo/branches': {
+      id: '/api/github/repos/$owner/$repo/branches'
+      path: '/$owner/$repo/branches'
+      fullPath: '/api/github/repos/$owner/$repo/branches'
+      preLoaderRoute: typeof ApiGithubReposOwnerRepoBranchesRouteImport
+      parentRoute: typeof ApiGithubReposRoute
     }
   }
 }
@@ -833,6 +913,18 @@ const ApiAuthVerifyRouteWithChildren = ApiAuthVerifyRoute._addFileChildren(
   ApiAuthVerifyRouteChildren,
 )
 
+interface ApiGithubReposRouteChildren {
+  ApiGithubReposOwnerRepoBranchesRoute: typeof ApiGithubReposOwnerRepoBranchesRoute
+}
+
+const ApiGithubReposRouteChildren: ApiGithubReposRouteChildren = {
+  ApiGithubReposOwnerRepoBranchesRoute: ApiGithubReposOwnerRepoBranchesRoute,
+}
+
+const ApiGithubReposRouteWithChildren = ApiGithubReposRoute._addFileChildren(
+  ApiGithubReposRouteChildren,
+)
+
 interface ApiDocumentsIdRevisionsRouteChildren {
   ApiDocumentsIdRevisionsRevisionIdRoute: typeof ApiDocumentsIdRevisionsRevisionIdRoute
 }
@@ -882,9 +974,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
   ApiGithubConnectRoute: ApiGithubConnectRoute,
   ApiGithubConnectionRoute: ApiGithubConnectionRoute,
+  ApiGithubPublishRoute: ApiGithubPublishRoute,
+  ApiGithubReposRoute: ApiGithubReposRouteWithChildren,
   ApiSyncPullRoute: ApiSyncPullRoute,
   ApiSyncPushRoute: ApiSyncPushRoute,
   ApiDocumentsIdRevisionsRoute: ApiDocumentsIdRevisionsRouteWithChildren,
+  ApiGithubPublicationsIdRoute: ApiGithubPublicationsIdRoute,
   ApiSSlugCommentsRoute: ApiSSlugCommentsRouteWithChildren,
 }
 export const routeTree = rootRouteImport

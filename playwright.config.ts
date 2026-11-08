@@ -13,7 +13,7 @@ const PORT = 4173;
 const MAIL_PORT = 4381;
 env["E2E_MAIL_DIR"] ??= mkdtempSync(join(tmpdir(), "mdstudio-e2e-mail-"));
 env["E2E_MAIL_URL"] ??= `http://localhost:${MAIL_PORT}`;
-// A fake GitHub for the mail server to connect to (see e2e/fake-github.mjs).
+// A fake GitHub for the mail server to connect to (see e2e/fake-github.ts).
 const GITHUB_PORT = 4382;
 env["E2E_GITHUB_URL"] ??= `http://localhost:${GITHUB_PORT}`;
 
@@ -30,7 +30,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
   webServer: [
     {
-      command: "node e2e/fake-github.mjs",
+      command: "bun e2e/fake-github.ts",
       url: `http://localhost:${GITHUB_PORT}/__state`,
       env: { PORT: String(GITHUB_PORT) },
       reuseExistingServer: false,
