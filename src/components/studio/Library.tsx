@@ -12,6 +12,7 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
+  Github,
   Globe,
   Lock,
   ImageUp,
@@ -182,6 +183,8 @@ export function Library({
     onRemove: (d: MdDocument) => void;
     /** Opens the share dialog for a cloud draft; `shared` holds the ids that have a live link. */
     onShare?: (d: MdDocument) => void;
+    /** Opens the dialog that publishes a cloud draft to GitHub (only where the server can). */
+    onPublish?: (d: MdDocument) => void;
     shared?: ReadonlySet<string>;
     /** Those of `shared` that only named people can open. */
     sharedPrivately?: ReadonlySet<string>;
@@ -386,6 +389,11 @@ export function Library({
               {cloud?.onShare && cloud.ids.has(d.id) && (
                 <DropdownMenuItem onSelect={() => cloud.onShare?.(d)}>
                   <Share2 className="size-3.5" /> Share…
+                </DropdownMenuItem>
+              )}
+              {cloud?.onPublish && cloud.ids.has(d.id) && (
+                <DropdownMenuItem onSelect={() => cloud.onPublish?.(d)}>
+                  <Github className="size-3.5" /> Publish to GitHub…
                 </DropdownMenuItem>
               )}
               {cloud?.onHostImages && cloud.ids.has(d.id) && Object.keys(d.images).length > 0 && (

@@ -48,6 +48,11 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 </p>
 
 <p align="center">
+  <img src="docs/ui-screenshots/16_shared_page_comments.png" alt="A shared page with comments beside the words they are about" width="440">
+  <img src="docs/ui-screenshots/20_publish_github.png" alt="Publishing a draft to a GitHub repository" width="440">
+</p>
+
+<p align="center">
   <img src="docs/ui-screenshots/09_editor_dark.png" alt="mdstudio in dark mode" width="440">
   <img src="docs/ui-screenshots/07_mobile_preview_view.png" alt="mdstudio on a phone" width="170">
 </p>

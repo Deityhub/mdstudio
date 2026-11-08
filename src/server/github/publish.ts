@@ -357,12 +357,19 @@ export async function publishFile(
       if (moved.status !== 200) return { ok: false, error: "github_failed" };
       result.url = `${urls.web}/${c.repo}/blob/${c.branch}/${c.path}`;
     } else {
-      branch = publishBranch(draft.title, now);
-      const created = await call("POST", `/repos/${c.repo}/git/refs`, {
-        ref: `refs/heads/${branch}`,
-        sha: commitSha,
-      });
-      if (created.status !== 201) return { ok: false, error: "github_failed" };
+      // a branch of that name may be taken (two publishes in one minute), so number the next ones
+      const wanted = publishBranch(draft.title, now);
+      let created: Reply | undefined;
+      for (let n = 1; n <= 5 && created?.status !== 201; n++) {
+        branch = n === 1 ? wanted : `${wanted}-${n}`;
+        created = await call("POST", `/repos/${c.repo}/git/refs`, {
+          ref: `refs/heads/${branch}`,
+          sha: commitSha,
+        });
+        if (created.status !== 201 && created.status !== 422)
+          return { ok: false, error: "github_failed" };
+      }
+      if (created?.status !== 201) return { ok: false, error: "github_failed" };
       const pull = await call("POST", `/repos/${c.repo}/pulls`, {
         title: message,
         head: branch,

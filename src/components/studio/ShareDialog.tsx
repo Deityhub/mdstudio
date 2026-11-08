@@ -20,15 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { askToConfirmEmail } from "@/lib/account/verify-prompt";
-import { accountStore } from "@/lib/account/store";
+import { handleAccountError } from "@/lib/account/errors";
 import { type SharePerson, ShareError, peopleApi, shareApi } from "@/lib/share/api";
 import { contentHash } from "@/lib/share/hash";
 import { refreshShares, setShare, useShares } from "@/lib/share/hooks";
 import { shareDate } from "@/lib/share/page";
 import { MAX_SHARE_PEOPLE, type ShareAccess } from "@/lib/share/protocol";
 import type { MdDocument } from "@/lib/storage/documentStore";
-import { AuthExpiredError, UnverifiedError } from "@/lib/sync/api";
 
 const DAY = 86_400_000;
 const daysLabel = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
@@ -157,13 +155,7 @@ export function ShareDialog({
     try {
       return await work();
     } catch (error) {
-      if (error instanceof UnverifiedError) {
-        onOpenChange(false);
-        askToConfirmEmail();
-      } else if (error instanceof AuthExpiredError) {
-        onOpenChange(false);
-        void accountStore.refresh();
-      } else setProblem(explain(error, about));
+      if (!handleAccountError(error, () => onOpenChange(false))) setProblem(explain(error, about));
       return undefined;
     } finally {
       setBusy(null);

@@ -10,6 +10,7 @@ export type AccountState = Account & {
 let state: AccountState = {
   user: null,
   github: false,
+  githubPublish: false,
   images: false,
   email: false,
   turnstile: null,

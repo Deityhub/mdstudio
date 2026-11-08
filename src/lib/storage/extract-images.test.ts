@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dataUriParts, extractDataImages, imageExt, pointImagesAt } from "./archive";
+import { dataUriParts, extractDataImages, imageExt, pointImagesAt, usedImages } from "./archive";
 
 const png = "data:image/png;base64,iVBORw0KGgo=";
 const jpg = "data:image/jpeg;base64,/9j/4AAQ";
@@ -64,5 +64,16 @@ describe("pointImagesAt", () => {
     expect(out.content).toBe(
       "![a](images/pic.png) ![b](images/pic.png) ![c](images/two.jpg) ![d](https://x/y.png) ![e](gone.png)",
     );
+  });
+});
+
+describe("usedImages", () => {
+  it("is the part of the draft's image store that the text uses", () => {
+    const store = { "pic.png": png, "two.jpg": jpg, "unused.png": png };
+    expect(usedImages("![a](images/pic.png) ![b](../x/two.jpg)", store)).toEqual({
+      "pic.png": png,
+      "two.jpg": jpg,
+    });
+    expect(usedImages("no images", store)).toEqual({});
   });
 });
