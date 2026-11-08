@@ -15,6 +15,7 @@ import { VersionTag } from "@/components/VersionTag";
 import { AccountMenu } from "@/components/studio/AccountMenu";
 import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
+import { ReviewComments } from "@/components/studio/ReviewComments";
 import { ShareDialog } from "@/components/studio/ShareDialog";
 import { clearShares, refreshShares, useShares } from "@/lib/share/hooks";
 import {
@@ -51,6 +52,7 @@ import {
   ListTree,
   Tags,
   History,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -167,7 +169,7 @@ type SaveState = "saved" | "saving" | "error";
 const MarkdownEditor = lazy(() => import("./MarkdownEditor"));
 
 type View = "split" | "editor" | "preview";
-type Panel = "checks" | "outline" | "meta" | "history" | null;
+type Panel = "checks" | "outline" | "meta" | "history" | "comments" | null;
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -973,6 +975,10 @@ export function Studio({ docId }: { docId: string }) {
   const [shareTarget, setShareTarget] = useState<MdDocument | null>(null);
   const shares = useShares();
   const sharedIds = useMemo(() => new Set(shares.byDraft.keys()), [shares.byDraft]);
+  const privateIds = useMemo(
+    () => new Set([...shares.byDraft].filter(([, s]) => s.access === "people").map(([id]) => id)),
+    [shares.byDraft],
+  );
   const remove = async (d: MdDocument) => {
     setToDelete(null);
     // an edit still waiting for its autosave must not write the draft back after it is deleted
@@ -1089,12 +1095,15 @@ export function Studio({ docId }: { docId: string }) {
     setMobilePanel(null);
     setTimeout(() => editor.current?.goToLine(line), 100);
   };
+  const ownShare = doc ? shares.byDraft.get(doc.id) : undefined;
   const panelButtons = (
     [
       ["checks", errCount ? AlertTriangle : CheckCircle2, "Checks"],
       ["outline", ListTree, "Outline"],
       ["meta", Tags, "Front matter"],
       ["history", History, "History"],
+      // only a draft with a link has anything to hear back about
+      ...(ownShare ? ([["comments", MessageSquare, "Comments"]] as const) : []),
     ] as const
   ).map(([p, Icon, label]) => (
     <Button
@@ -1136,7 +1145,11 @@ export function Studio({ docId }: { docId: string }) {
           onAdd: (d: MdDocument) =>
             cloudOn ? void addToCloud(account.id, [d.id]) : askToConfirmEmail(),
           onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
-          ...(cloudOn && { onShare: (d: MdDocument) => setShareTarget(d), shared: sharedIds }),
+          ...(cloudOn && {
+            onShare: (d: MdDocument) => setShareTarget(d),
+            shared: sharedIds,
+            sharedPrivately: privateIds,
+          }),
           ...(hostingOn && cloudOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
         },
       })}
@@ -1183,6 +1196,14 @@ export function Studio({ docId }: { docId: string }) {
                 onOpen: (r: CloudRevision) => fetchCloudRevision(account.id, doc.id, r),
               },
             })}
+        />
+      )}
+      {activePanel === "comments" && doc && (
+        <ReviewComments
+          draftId={doc.id}
+          share={ownShare}
+          refreshKey={syncStatus.at}
+          onGo={goToLine}
         />
       )}
       {activePanel === "meta" && (

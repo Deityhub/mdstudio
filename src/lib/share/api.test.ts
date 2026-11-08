@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthExpiredError, UnverifiedError } from "@/lib/sync/api";
-import { ShareError, commentsApi, shareApi } from "./api";
+import { ShareError, commentsApi, ownerApi, peopleApi, shareApi } from "./api";
 
 const reply = (body: unknown, status = 200) => Response.json(body, { status });
 const mockFetch = (r: Response | (() => Response)) => {
@@ -28,6 +28,22 @@ describe("shareApi", () => {
     const bodies = fn.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
     expect(bodies).toEqual([{ id: "d1" }, { id: "d1", days: 3 }]);
     expect((fn.mock.calls[0]![1] as RequestInit).method).toBe("POST");
+  });
+
+  it("sends who may open the link and whether readers comment when publishing", async () => {
+    const fn = mockFetch(reply({ share, created: true }));
+    await shareApi.publish("d1", 3, { access: "people", comments: true });
+    const body = JSON.parse((fn.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body).toEqual({ id: "d1", days: 3, access: "people", comments: true });
+  });
+
+  it("changes settings with one request, sending only what changed", async () => {
+    const fn = mockFetch(reply({ share }));
+    await shareApi.update("d1", { access: "people" });
+    await shareApi.update("d1", { comments: false });
+    const bodies = fn.mock.calls.map((c) => JSON.parse((c[1] as RequestInit).body as string));
+    expect(bodies).toEqual([{ access: "people" }, { comments: false }]);
+    expect((fn.mock.calls[0]![1] as RequestInit).method).toBe("PATCH");
   });
 
   it("changes the expiry and revokes with the draft's id in the address", async () => {
@@ -105,5 +121,50 @@ describe("commentsApi", () => {
     await expect(commentsApi.add("abc", { body: "x", line: 1 })).rejects.toMatchObject({
       code: "forbidden",
     });
+  });
+});
+
+describe("peopleApi", () => {
+  const people = [{ id: "p1", email: "bea@x.co" }];
+
+  it("lists, adds and removes the people a link is shared with", async () => {
+    let fn = mockFetch(reply({ people }));
+    expect(await peopleApi.list("d 1")).toEqual(people);
+    expect(fn.mock.calls[0]![0]).toBe("/api/share/d%201/people");
+    fn = mockFetch(reply({ people, emailed: true }));
+    expect(await peopleApi.add("d1", "bea@x.co")).toEqual({ people, emailed: true });
+    expect(JSON.parse((fn.mock.calls[0]![1] as RequestInit).body as string)).toEqual({
+      email: "bea@x.co",
+    });
+    fn = mockFetch(reply({ ok: true }));
+    await peopleApi.remove("d1", "p/1");
+    expect(fn.mock.calls[0]![0]).toBe("/api/share/d1/people/p%2F1");
+    expect((fn.mock.calls[0]![1] as RequestInit).method).toBe("DELETE");
+  });
+
+  it("names a full list, a bad address and a feature that is off", async () => {
+    mockFetch(reply({ error: "limit_reached" }, 409));
+    await expect(peopleApi.add("d1", "a@x.co")).rejects.toMatchObject({ code: "limit_reached" });
+    mockFetch(reply({ error: "invalid" }, 400));
+    await expect(peopleApi.add("d1", "nope")).rejects.toMatchObject({ code: "invalid" });
+    mockFetch(reply({ error: "feature_unavailable" }, 403));
+    await expect(peopleApi.add("d1", "a@x.co")).rejects.toMatchObject({ code: "forbidden" });
+  });
+});
+
+describe("ownerApi", () => {
+  it("reads every comment on a link by the draft's id, and resolves or deletes one", async () => {
+    let fn = mockFetch(reply({ comments: [] }));
+    expect(await ownerApi.comments("d 1")).toEqual([]);
+    expect(fn.mock.calls[0]![0]).toBe("/api/share/d%201/comments");
+    fn = mockFetch(reply({ ok: true }));
+    await ownerApi.resolve("d1", "c1", true);
+    expect(fn.mock.calls[0]![0]).toBe("/api/share/d1/comments/c1");
+    expect((fn.mock.calls[0]![1] as RequestInit).method).toBe("PATCH");
+    expect(JSON.parse((fn.mock.calls[0]![1] as RequestInit).body as string)).toEqual({
+      resolved: true,
+    });
+    await ownerApi.remove("d1", "c1");
+    expect((fn.mock.calls[1]![1] as RequestInit).method).toBe("DELETE");
   });
 });
