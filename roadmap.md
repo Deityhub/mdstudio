@@ -69,7 +69,7 @@
 
 - [x] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML. Scope: the published copy of a cloud draft, for review before publishing elsewhere (mdstudio is an editor to publish from, not a blogging platform). Done: server API, public page and editor controls.
 - [x] **Link Management:** Every link expires (1 to 7 days, 4 by default), can be extended or shortened, and can be revoked in one click.
-- [ ] **Review Links:** Signed-in, verified readers can comment on a published copy, and a link can be limited to named people (free for now, behind one entitlement check so a paid plan can gate it). Server done (comments, people, invitations and notification emails); the private-link and comments views on `/s/:slug` and the editor controls are next.
+- [ ] **Review Links:** Signed-in, verified readers can comment on a published copy, and a link can be limited to named people (free for now, behind one entitlement check so a paid plan can gate it). Server and the `/s/:slug` page done (private-link sign-in, comments, replies, outdated marks); the editor controls (settings, invitations, the owner's comments panel) are next.
 - [ ] **GitHub Publishing:** Direct commit and pull-request creation to user GitHub repositories using OAuth or personal access tokens.
 - [ ] **Blogging Integrations:** One-click publishing to dev.to and Hashnode via API integrations.
 
