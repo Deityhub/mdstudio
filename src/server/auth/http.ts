@@ -21,6 +21,13 @@ export const oauthCookie = (value: string, protocol: string, maxAgeMs: number) =
     protocol === "https:" ? "; Secure" : ""
   }`;
 
+/** The same, for connecting a GitHub account to publish: state, verifier and the access asked for. */
+export const CONNECT_COOKIE = "mdstudio_gh_connect";
+export const connectCookie = (value: string, protocol: string, maxAgeMs: number) =>
+  `${CONNECT_COOKIE}=${value}; Path=/api/auth/github; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(maxAgeMs / 1000)}${
+    protocol === "https:" ? "; Secure" : ""
+  }`;
+
 /** Cookies are SameSite=Lax; this also refuses a cross-site POST that carries an Origin header. */
 export function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");

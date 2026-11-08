@@ -28,12 +28,14 @@ export const authorizeUrl = (
   redirectUri: string,
   state: string,
   challenge: string,
+  /** `scope` and the GitHub address to ask, for connecting (see ../github/) and for tests. */
+  opts: { scope?: string; web?: string } = {},
 ) =>
-  "https://github.com/login/oauth/authorize?" +
+  `${opts.web ?? "https://github.com"}/login/oauth/authorize?` +
   new URLSearchParams({
     client_id: cfg.clientId,
     redirect_uri: redirectUri,
-    scope: "read:user user:email",
+    scope: opts.scope ?? "read:user user:email",
     state,
     code_challenge: challenge,
     code_challenge_method: "S256",
