@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { imageFile, imagePath, publishBranch, validBranch, validPath, validRepo } from "./protocol";
+import {
+  defaultPath,
+  imageFile,
+  imagePath,
+  publishBranch,
+  validBranch,
+  validPath,
+  validRepo,
+} from "./protocol";
 
 describe("validRepo", () => {
   it("is owner/name with GitHub's characters", () => {
@@ -78,5 +86,13 @@ describe("publishBranch", () => {
     expect(publishBranch("My First Post!", at)).toBe("mdstudio/my-first-post-20261112-0805");
     expect(publishBranch("***", at)).toBe("mdstudio/untitled-20261112-0805");
     expect(validBranch(publishBranch("Ünïcode ✨ title", at))).toBe(true);
+  });
+});
+
+describe("defaultPath", () => {
+  it("is the title as a file name, the way the ZIP export names it", () => {
+    expect(defaultPath("My First Post!")).toBe("my-first-post.md");
+    expect(defaultPath("")).toBe("untitled.md");
+    expect(validPath(defaultPath("Ünïcode ✨ title"))).not.toBeNull();
   });
 });

@@ -17,7 +17,7 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 
 Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.
 
-## 1c. Sharing from the editor
+## 1c. Sharing from the editor — `14_share_dialog.png`, `15_comments_panel.png`
 
 For a draft in the cloud (verified accounts only), the draft's menu has **Share…** and the header has a **Share** button (an icon on small screens). A small globe next to the cloud icon marks drafts that have a live link (a lock when only named people can open it). The Share dialog (`ShareDialog.tsx`) has two states:
 
@@ -26,13 +26,25 @@ For a draft in the cloud (verified accounts only), the draft's menu has **Share�
 
 A draft in the cloud also gets a **Comments** panel (speech-bubble button beside History; a bottom sheet on phones). Nothing is requested in the background: the link list is read when the Share dialog is opened (and the Comments panel needs it), and the comments are read when the panel is opened and after the writer changes one. It lists what reviewers wrote, open ones first, each with the author's display name, the date, the line it is about (**Line N: the words selected**, click to jump there), the text, a note when it was written on an earlier published copy, and, aligned to the right, **Resolve** / **Reopen** and **Delete** with its icon (replies sit under their comment). When there are none it says so, or that comments are off for this link.
 
-## 1d. Shared page `/s/$slug`
+## 1d. Shared page `/s/$slug` — `16_shared_page_comments.png`, `17_shared_page_phone.png`, `18_private_link_gate.png`
 
 A public, read-only page for one published copy of a draft. The site header, a one-line notice ("A copy shared with mdstudio on <date>. Available until <date>. Report this page"), the text in `.md-preview` (single column, up to `max-w-3xl`, readable at 360px with no sideways scroll) and the site footer. Math and Mermaid diagrams are drawn in the browser after load, in the colors of the theme in use. An unknown, expired or revoked link is the site's 404 page.
 
 **Private links.** A signed-out reader of a link limited to named people sees a lock, "This document is private" and a **Sign in** button, and none of the text; the page is `noindex`, `no-store`. The small sign-in dialog (`ReaderSignIn`: sign in or create an account, with a show/hide password button and the sign-up CAPTCHA when the server has one) leaves them on the page, which reloads for them. Someone signed in who was not invited gets the 404 page. An open private page adds "Only the people the writer named can open this."
 
 **Comments** (when the writer turned them on), as in a document review. A reader selects words on the page and a **Comment** button appears beside the selection; pressing it opens a box in the column beside the page (a bottom sheet under 1024px) with the selected words quoted. The words stay highlighted, and each comment card sits level with its words, pushed down so cards never overlap. Clicking a highlight shows its comment and clicking a card scrolls to its words. **Hide comments** (a floating button, or the ✕ on the sheet) hides the column and **Comments (n)** shows it again, as does a click on any highlight. A signed-out reader is told "The writer is taking comments" with **Sign in to read and write comments**; a signed-in reader whose email is not confirmed is asked to confirm it. Cards show the author's name, the date, an "Earlier version" tag for comments written on an older copy, a "Resolved" tag, **Reply**, and **Delete** (with a confirmation) on the reader's own comments. A comment whose words or block are gone from the current copy stays in the column, marked as being on an earlier version, without a highlight. Text is shown as plain text. The locked private-link page keeps the footer at the bottom of the window.
+
+## 1e. Publishing to GitHub — `19_publish_connect.png`, `20_publish_github.png`
+
+For a draft in the cloud, on a server that can publish (`githubPublish` in `/api/auth/me`), the draft's menu has **Publish to GitHub…** and the header has a **Publish** button (the GitHub icon alone below the xl breakpoint). The dialog (`PublishDialog.tsx`) reads from the server only when it opens or a choice needs it: the connection, what was published before, and the repositories. Nothing is requested in the background.
+
+- **Not connected:** an explanation, **Also allow private repositories** (off by default: only public repositories and gists are reachable), a note that an organization may need to approve mdstudio, and **Connect GitHub**. It leaves for GitHub and returns to the editor, which reopens this dialog on the same draft.
+- **Connected:** "Connected as <login>", **Allow private repositories** (when they were not allowed) and **Disconnect**, then two tabs.
+  - **Repository:** a repository field (suggestions from the writer's repositories, or type any `owner/name`; picking or leaving the field reads its branches), **Branch** (the default one selected), **File path** (the title as a file name), **How** (commit to the branch, or open a pull request), an optional message, a note about how many local images will be added in an `images` folder beside the file, what was last published (date, repository, path) and "Your draft has changes that are not published", and the checks the GitHub profile finds (up to three lines; a local image the draft holds is not a problem). The button reads **Publish**, **Publish update** (same repository and path as last time) or **Open pull request**.
+  - **Gist:** file name, description and **Public gist** (a secret gist by default; fixed once the gist exists, which is then updated in place: **Update gist**). Images are not included.
+- **A file already there:** if the path holds a file this draft did not put there, or one changed on GitHub since, publishing stops with "<path> is already in <repo> on <branch>" and **Replace it**.
+- **Done:** "Published" with links to the file (or the pull request, or the gist) and the commit, and **Done**.
+- Errors appear in the dialog: not connected any more (it shows Connect again), repository or branch not found (with the private and organization hints), no write access, the branch moved meanwhile, images too large, GitHub unavailable, too many publishes.
 
 ## 2. Studio desktop `/editor/$docId` — `02_editor_split_view.png`, `13_library.png`, `11_export_menu.png`
 

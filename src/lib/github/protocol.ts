@@ -107,3 +107,6 @@ export function publishBranch(title: string, now: number) {
   const d = new Date(now).toISOString();
   return `mdstudio/${slug}-${d.slice(0, 10).replaceAll("-", "")}-${d.slice(11, 16).replace(":", "")}`;
 }
+
+/** Where a draft goes by default: its title as a file name, as the ZIP export names it. */
+export const defaultPath = (title: string) => `${slugify(title)}.md`;

@@ -10,6 +10,8 @@ export type AccountUser = {
 export type Account = {
   user: AccountUser | null;
   github: boolean;
+  /** True when this server can publish to GitHub (it has the OAuth app and the key for tokens). */
+  githubPublish: boolean;
   /** True when this server can host images (R2 or a disk volume). */
   images: boolean;
   /** True when this server confirms addresses by email, so the cloud needs a confirmed one. */
@@ -62,6 +64,7 @@ export async function fetchAccount(): Promise<Account> {
       user?: AccountUser | null;
       providers?: {
         github?: boolean;
+        githubPublish?: boolean;
         images?: boolean;
         email?: boolean;
         turnstile?: string | null;
@@ -71,13 +74,21 @@ export async function fetchAccount(): Promise<Account> {
     return {
       user: body.user ?? null,
       github: body.providers?.github === true,
+      githubPublish: body.providers?.githubPublish === true,
       images: body.providers?.images === true,
       email: body.providers?.email === true,
       turnstile: body.providers?.turnstile ?? null,
     };
   } catch {
     // Can't reach the server: assume nothing changed rather than hiding the account's drafts.
-    return { user: rememberedUser(), github: false, images: false, email: false, turnstile: null };
+    return {
+      user: rememberedUser(),
+      github: false,
+      githubPublish: false,
+      images: false,
+      email: false,
+      turnstile: null,
+    };
   }
 }
 

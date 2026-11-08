@@ -1,56 +1,10 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { SITE } from "./mail-server";
-import { account, type Account } from "./review-helpers";
+import { fileOn, GITHUB, png, publish, unique, writer } from "./github-helpers";
 
 // Publishing a cloud draft to GitHub through the API, against the fake GitHub (see
 // playwright.config.ts). The editor's own dialog is covered in the next unit.
 test.use({ baseURL: SITE });
-const GITHUB = process.env["E2E_GITHUB_URL"]!;
-const png = "data:image/png;base64,iVBORw0KGgo=";
-const unique = () => Math.random().toString(36).slice(2, 8);
-
-const fileOn = async (repo: string, branch: string, path: string) => {
-  const r = await fetch(`${GITHUB}/__file?${new URLSearchParams({ repo, branch, path })}`);
-  return r.ok ? ((await r.json()) as { content: string; encoding: string }) : null;
-};
-
-async function writer(
-  playwright: typeof import("@playwright/test").playwright,
-  browser: Browser,
-  name: string,
-  connect = true,
-) {
-  const acct: Account = await account(playwright, name);
-  const context = await browser.newContext({
-    baseURL: SITE,
-    storageState: await acct.request.storageState(),
-  });
-  const page = await context.newPage();
-  if (connect) {
-    await page.goto("/api/github/connect");
-    await expect(page.getByText("GitHub connected")).toBeVisible();
-  }
-  const id = `d${unique()}`;
-  const content = "# Notes\n\nA paragraph.\n\n![pic](images/pic.png)\n";
-  await acct.request.post("/api/sync/push", {
-    data: {
-      docs: [
-        {
-          id: `${acct.id}:${id}`,
-          baseVersion: 0,
-          title: "Notes",
-          content,
-          createdAt: Date.now(),
-          editedAt: Date.now(),
-        },
-      ],
-    },
-  });
-  return { acct, context, page, id, content };
-}
-const publish = (page: Page, body: Record<string, unknown>) =>
-  page.request.post("/api/github/publish", { data: body });
-
 test("a draft is committed with its images beside it, then updated in place", async ({
   playwright,
   browser,
@@ -160,7 +114,7 @@ test("it is refused without a connection, for someone else's draft, and cross-si
   playwright,
   browser,
 }) => {
-  const lone = await writer(playwright, browser, "gp-none", false);
+  const lone = await writer(playwright, browser, "gp-none", { connect: false });
   const body = {
     target: "file",
     id: lone.id,

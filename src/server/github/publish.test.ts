@@ -181,6 +181,18 @@ describe("publishFile, as a pull request", () => {
   });
 });
 
+describe("publishFile, branch names", () => {
+  it("adds a number when the pull request branch for that minute is taken", async () => {
+    ok(await publish({ mode: "pull_request" }));
+    ok(await publish({ mode: "pull_request", path: "posts/other.md" })); // same minute, same title
+    const heads = gh.repos.get("octo/blog")!.pulls.map((p) => p.head);
+    expect(heads).toEqual([
+      "mdstudio/launch-notes-20261112-0805",
+      "mdstudio/launch-notes-20261112-0805-2",
+    ]);
+  });
+});
+
 describe("publishFile, refusing", () => {
   it("only publishes the caller's own live cloud drafts", async () => {
     expect(await publish({ id: "nope" })).toEqual({ ok: false, error: "not_found" });

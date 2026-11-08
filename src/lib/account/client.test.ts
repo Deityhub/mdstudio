@@ -12,11 +12,12 @@ describe("account client", () => {
   it("reads the signed-in user and the available providers", async () => {
     reply({
       user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
-      providers: { github: true },
+      providers: { github: true, githubPublish: true },
     });
     expect(await fetchAccount()).toEqual({
       user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
       github: true,
+      githubPublish: true,
       images: false,
       email: false,
       turnstile: null,
@@ -34,6 +35,7 @@ describe("account client", () => {
     expect(await fetchAccount()).toEqual({
       user: null,
       github: false,
+      githubPublish: false,
       images: false,
       email: false,
       turnstile: null,

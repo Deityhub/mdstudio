@@ -123,6 +123,11 @@ export function pointImagesAt(content: string, images: Record<string, string>) {
   return { content: out, used: [...used] };
 }
 
+/** The part of a draft's image store that its text uses, for sending only those. */
+export function usedImages(content: string, images: Record<string, string>) {
+  return Object.fromEntries(pointImagesAt(content, images).used.map((n) => [n, images[n]!]));
+}
+
 /* ---------------- export ---------------- */
 
 const safeSegment = (s: string) =>
