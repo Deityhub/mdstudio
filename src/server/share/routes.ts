@@ -1,7 +1,12 @@
 import { type SitemapEntry } from "@/lib/site/seo";
 import { DEFAULT_SHARE_DAYS, MAX_SHARE_DAYS, shareUrl } from "@/lib/share/protocol";
 import { withVerifiedUser } from "../auth/guard";
-import { sameOrigin } from "../auth/http";
+import {
+  noStoreJson as json,
+  readJson as readBody,
+  sameOrigin,
+  tooManyResponse as tooMany,
+} from "../auth/http";
 import { hit } from "../auth/limits";
 import type { PublicUser } from "../auth/service";
 import { type Db, getDb } from "../db";
@@ -30,9 +35,6 @@ import {
   sitemapShares,
   updateShare,
 } from "./service";
-
-const json = (body: unknown, status = 200) =>
-  Response.json(body, { status, headers: { "cache-control": "no-store" } });
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -78,20 +80,6 @@ const STATUS = {
 } as const;
 const fail = (error: keyof typeof STATUS) =>
   json({ error: error === "unavailable" ? "feature_unavailable" : error }, STATUS[error]);
-
-const tooMany = (retryAfter: number) =>
-  Response.json(
-    { error: "too_many_requests" },
-    { status: 429, headers: { "retry-after": String(retryAfter), "cache-control": "no-store" } },
-  );
-
-const readBody = async (request: Request) => {
-  try {
-    return (await request.json()) as Record<string, unknown> | null;
-  } catch {
-    return null;
-  }
-};
 
 /** Mail is best effort: a missing provider or a failure never undoes what the writer did. */
 async function sendQuietly(

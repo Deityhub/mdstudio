@@ -16,6 +16,7 @@ import {
   remoteId,
 } from "@/lib/sync/protocol";
 import type { Db } from "../db";
+import { removePublicationsOf } from "../github/publish";
 import { removeShareOf } from "../share/service";
 import {
   DEFAULT_REVISIONS,
@@ -134,6 +135,8 @@ async function pushOne(
     await deleteRevisions(db, it.id);
     // and its public link, which would otherwise outlive the draft it was published from
     await removeShareOf(db, it.id);
+    // and what is remembered about publishing it on GitHub
+    await removePublicationsOf(db, it.id);
   } else if (!wasDeleted) {
     // Keep the text this push replaced. A stale base means a later edit from another device took
     // over the server's text, which nobody else has, so that one is always kept.

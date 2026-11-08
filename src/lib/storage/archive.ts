@@ -51,13 +51,25 @@ export function mapImageSrc(content: string, fn: (src: string) => string | undef
     });
 }
 
+const DATA_URI = /^data:([\w.+-]+\/[\w.+-]+);base64,([A-Za-z0-9+/=\s]+)$/;
+
+/** The type and base64 text of a data URI, or null for anything else. */
+export function dataUriParts(uri: string): { mime: string; base64: string } | null {
+  const m = DATA_URI.exec(uri);
+  return m ? { mime: m[1]!, base64: m[2]!.replace(/\s+/g, "") } : null;
+}
+
 /** Image bytes and type from a base64 data URI, or null for anything else. */
 export function dataUriToBytes(uri: string): { mime: string; bytes: Uint8Array } | null {
-  const m = uri.match(/^data:([\w.+-]+\/[\w.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
-  if (!m) return null;
-  const bin = atob(m[2]!.replace(/\s+/g, ""));
-  return { mime: m[1]!, bytes: Uint8Array.from(bin, (c) => c.charCodeAt(0)) };
+  const parts = dataUriParts(uri);
+  if (!parts) return null;
+  const bin = atob(parts.base64);
+  return { mime: parts.mime, bytes: Uint8Array.from(bin, (c) => c.charCodeAt(0)) };
 }
+
+/** The file extension for an image type this app handles, or undefined for anything else. */
+export const imageExt = (mime: string) =>
+  Object.entries(MIME_BY_EXT).find(([, m]) => m === mime)?.[0];
 
 function bytesToDataUri(bytes: Uint8Array, name: string): string {
   let bin = "";
@@ -75,6 +87,41 @@ const pathOfSrc = (src: string) => {
   }
 };
 const isLocal = (src: string) => !!src && !/^([a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(src);
+
+/**
+ * Takes images that are embedded in the text as data URIs out of it, for putting them in files:
+ * each becomes `images/inline-N.ext`, and the same image is one file however often it is used.
+ */
+export function extractDataImages(md: string) {
+  const files: { name: string; dataUri: string }[] = [];
+  const out = mapImageSrc(md, (src) => {
+    const parts = dataUriParts(src);
+    const ext = parts && imageExt(parts.mime);
+    if (!ext) return undefined;
+    let file = files.find((f) => f.dataUri === src);
+    if (!file) files.push((file = { name: `inline-${files.length + 1}.${ext}`, dataUri: src }));
+    return `images/${file.name}`;
+  });
+  return { md: out, files };
+}
+
+/**
+ * Points every local image the draft has (`images` by file name) at `images/<name>`, wherever the
+ * text spelled the path, and says which ones the text uses. For putting the text and its images
+ * in a folder together.
+ */
+export function pointImagesAt(content: string, images: Record<string, string>) {
+  const used = new Set<string>();
+  const out = mapImageSrc(content, (src) => {
+    if (!isLocal(src)) return undefined;
+    const here = pathOfSrc(src);
+    const name = basename(here);
+    if (!images[name]) return undefined;
+    used.add(name);
+    return here === `images/${name}` ? undefined : `images/${name}`;
+  });
+  return { content: out, used: [...used] };
+}
 
 /* ---------------- export ---------------- */
 

@@ -10,7 +10,7 @@ import {
   type ShareAccess,
   type ShareInfo,
 } from "@/lib/share/protocol";
-import { remoteId } from "@/lib/sync/protocol";
+import { LOCAL_ID, remoteId } from "@/lib/sync/protocol";
 import { canonicalEmail } from "../auth/email";
 import type { PublicUser } from "../auth/service";
 import { sha256Hex } from "../auth/tokens";
@@ -43,9 +43,6 @@ const slug = () => {
     .replaceAll("/", "_");
 };
 
-/** A draft id from the client: only ever turned into an id inside the caller's own namespace. */
-const LOCAL_ID = /^[A-Za-z0-9_-]{1,64}$/;
-
 const wholeDays = (days: number, config: ShareConfig) =>
   Number.isInteger(days) && days >= 1 && days <= config.maxDays;
 
@@ -73,7 +70,7 @@ export async function findOwnShare(db: Db, userId: string, localId: string) {
 }
 
 /** The caller's live cloud draft behind a local id, or null. */
-async function cloudDraft(db: Db, userId: string, localId: string) {
+export async function cloudDraft(db: Db, userId: string, localId: string) {
   if (!LOCAL_ID.test(localId)) return null;
   const [row] = await db
     .select()
