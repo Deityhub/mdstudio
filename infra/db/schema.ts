@@ -151,6 +151,49 @@ export const shareLinks = sqliteTable(
     content: text("content").notNull().default(""),
     publishedAt: integer("published_at").notNull().default(0),
     updatedAt: integer("updated_at").notNull().default(0),
+    // who may open it: "public" (anyone with the link) or "people" (the named people, signed in)
+    access: text("access").notNull().default("public"),
+    // whether signed-in readers may comment on the published copy
+    comments: integer("comments").notNull().default(0),
   },
   (t) => [uniqueIndex("share_links_document_unique").on(t.documentId)],
+);
+
+/** People invited to a private link, by the inbox their address stands for. */
+export const sharePeople = sqliteTable(
+  "share_people",
+  {
+    id: text("id").primaryKey(),
+    shareId: text("share_id")
+      .notNull()
+      .references(() => shareLinks.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    emailKey: text("email_key").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("share_people_inbox_unique").on(t.shareId, t.emailKey)],
+);
+
+/** A reviewer's comment on a block of a published copy (one level of replies via parent_id). */
+export const shareComments = sqliteTable(
+  "share_comments",
+  {
+    id: text("id").primaryKey(),
+    shareId: text("share_id")
+      .notNull()
+      .references(() => shareLinks.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    parentId: text("parent_id"),
+    // the published copy it was written on (share_links.published_at at the time), the block's
+    // source line and the start of its text, to find the block again after an update
+    version: integer("version").notNull(),
+    line: integer("line").notNull(),
+    snippet: text("snippet").notNull().default(""),
+    body: text("body").notNull(),
+    createdAt: integer("created_at").notNull(),
+    resolvedAt: integer("resolved_at"),
+  },
+  (t) => [index("idx_share_comments_share").on(t.shareId, t.createdAt)],
 );
