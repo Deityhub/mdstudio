@@ -207,6 +207,8 @@ export const peopleAddHandler = (request: Request, localId: string) =>
           share.slug,
           share.title,
           body["email"].trim().toLowerCase(),
+          user.displayName ?? "",
+          share.expiresAt ?? 0,
         ),
       );
     return json({ people: r.people, emailed });

@@ -57,9 +57,9 @@ function SharedPage() {
 
   if (data.kind === "sign_in")
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex min-h-screen flex-col bg-background">
         <SiteHeader />
-        <main className="mx-auto max-w-md px-4 py-16 text-center">
+        <main className="mx-auto w-full max-w-md flex-1 px-4 py-16 text-center">
           <Lock className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
           <h1 className="mt-4 font-display text-2xl font-semibold">This document is private</h1>
           <p className="mt-2 text-muted-foreground">
@@ -114,9 +114,11 @@ function Document({
   }, [html, theme]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 pb-16 pt-4 sm:px-6">
+      <main
+        className={`mx-auto w-full flex-1 px-4 pb-16 pt-4 sm:px-6 ${data.comments ? "max-w-6xl" : "max-w-3xl"}`}
+      >
         <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
           {data.kind === "private" && (
             <>
@@ -135,22 +137,28 @@ function Document({
             Report this page
           </a>
         </p>
-        <article className="mt-8">
-          {!/<h1[\s>]/.test(html) && <h1 className="sr-only">{title}</h1>}
-          <div
-            ref={body}
-            className="md-preview"
-            // sanitized by the same pipeline as the editor's preview
-            dangerouslySetInnerHTML={{ __html: html }}
+        <div
+          className={
+            data.comments ? "mt-8 lg:grid lg:grid-cols-[minmax(0,48rem)_20rem] lg:gap-8" : "mt-8"
+          }
+        >
+          <article>
+            {!/<h1[\s>]/.test(html) && <h1 className="sr-only">{title}</h1>}
+            <div
+              ref={body}
+              className="md-preview"
+              // sanitized by the same pipeline as the editor's preview
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          </article>
+          <ShareComments
+            slug={slug}
+            html={html}
+            body={body}
+            enabled={data.comments}
+            onSignedIn={() => data.kind === "private" && onSignedIn()}
           />
-        </article>
-        <ShareComments
-          slug={slug}
-          html={html}
-          body={body}
-          enabled={data.comments}
-          onSignedIn={() => data.kind === "private" && onSignedIn()}
-        />
+        </div>
       </main>
       <SiteFooter />
     </div>

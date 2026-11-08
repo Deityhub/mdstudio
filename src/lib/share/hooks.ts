@@ -11,6 +11,8 @@ type ShareState = {
   maxDays: number;
   /** Whether links limited to named people can be made here. */
   privateLinks: boolean;
+  /** Whether the list has been read since sign-in. Nothing reads it in the background. */
+  loaded: boolean;
 };
 
 const EMPTY: ShareState = {
@@ -18,6 +20,7 @@ const EMPTY: ShareState = {
   defaultDays: DEFAULT_SHARE_DAYS,
   maxDays: MAX_SHARE_DAYS,
   privateLinks: true,
+  loaded: false,
 };
 let state = EMPTY;
 const listeners = new Set<() => void>();
@@ -41,13 +44,25 @@ export const useShares = () =>
 export async function refreshShares() {
   try {
     const { shares, defaultDays, maxDays, privateLinks = true } = await shareApi.list();
-    set({ byDraft: new Map(shares.map((s) => [s.id, s])), defaultDays, maxDays, privateLinks });
+    set({
+      byDraft: new Map(shares.map((s) => [s.id, s])),
+      defaultDays,
+      maxDays,
+      privateLinks,
+      loaded: true,
+    });
   } catch (error) {
     if (error instanceof AuthExpiredError || error instanceof UnverifiedError)
       void accountStore.refresh();
-    else console.error("Couldn't load share links", error);
+    else {
+      console.error("Couldn't load share links", error);
+      if (!state.loaded) set({ ...state, loaded: true });
+    }
   }
 }
+
+/** Reads the links once, the first time something needs them; `refreshShares` reads them again. */
+export const ensureShares = () => (state.loaded ? Promise.resolve() : refreshShares());
 
 export const clearShares = () => {
   if (state !== EMPTY) set(EMPTY);
