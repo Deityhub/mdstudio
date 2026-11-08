@@ -6,6 +6,7 @@ import { canonicalEmail } from "./email";
 import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
 import { authorizeUrl, githubSignIn, pkcePair, randomState } from "./github";
 import {
+  CONNECT_COOKIE,
   OAUTH_COOKIE,
   clearCookie,
   oauthCookie,
@@ -220,6 +221,8 @@ export async function meHandler(request: Request) {
   const session = token ? await userForToken(await getDb(request), token) : null;
   const providers = {
     github: githubConfig(request) !== null,
+    // whether this server can publish to GitHub (needs the OAuth app and a key for the tokens)
+    githubPublish: await (await import("../github/routes")).publishingAvailable(request),
     images: await (await import("../assets/routes")).imagesAvailable(request),
     // whether this server confirms addresses by email, and the public key of the sign-up CAPTCHA
     email: (await getMailer(request)) !== null,
@@ -244,7 +247,7 @@ const githubConfig = (request: Request) => {
 };
 
 /** PUBLIC_URL overrides the origin for self-hosting behind a proxy that rewrites it. */
-const redirectUri = (request: Request) =>
+export const redirectUri = (request: Request) =>
   `${getEnv(request, "PUBLIC_URL")?.replace(/\/$/, "") ?? new URL(request.url).origin}/api/auth/github/callback`;
 
 const redirect = (to: string, ...cookies: string[]) => {
@@ -269,6 +272,11 @@ export async function githubCallbackHandler(request: Request) {
   const clear = oauthCookie("", protocol(request), 0);
   const fail = (code: string) => redirect(`/editor?auth_error=${code}`, clear);
   const params = new URL(request.url).searchParams;
+  // a callback for connecting GitHub to publish shares this address with signing in; the cookie
+  // that holds this browser's state says which one it is
+  const connecting = readCookie(request, CONNECT_COOKIE);
+  if (connecting && connecting.split(".")[0] === params.get("state"))
+    return (await import("../github/routes")).connectCallbackHandler(request);
   const [state, verifier] = readCookie(request, OAUTH_COOKIE)?.split(".") ?? [];
   const code = params.get("code");
   // The state in the URL must be the one this browser was given, or the callback was forged.

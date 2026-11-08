@@ -61,6 +61,20 @@ export const oauthAccounts = sqliteTable(
   (t) => [unique().on(t.provider, t.providerUserId)],
 );
 
+/** A writer's GitHub connection for publishing. The token is sealed (see src/server/github/crypto.ts). */
+export const githubConnections = sqliteTable("github_connections", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  githubUserId: text("github_user_id").notNull(),
+  login: text("login").notNull(),
+  /** The scopes GitHub granted, space separated. */
+  scope: text("scope").notNull(),
+  tokenSealed: text("token_sealed").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const documents = sqliteTable(
   "documents",
   {

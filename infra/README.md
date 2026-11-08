@@ -31,6 +31,10 @@ Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) 
 both, the button is not shown. An existing password account is never linked automatically to a
 GitHub account with the same email.
 
+To let writers publish to their GitHub repositories, also set `GH_TOKEN_KEY` to 32 random bytes in
+base64 (`openssl rand -base64 32`). It seals the GitHub tokens kept in the database; keep it stable,
+since a new key means writers connect again. The same OAuth app and callback are used.
+
 ## Cloud limits
 
 Cloud history: `MAX_REVISIONS` versions kept per cloud draft (default 10; `0` switches server history off) and

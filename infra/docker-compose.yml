@@ -14,6 +14,7 @@ services:
       # Optional GitHub sign-in (see infra/README.md). Both are needed to switch it on.
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GH_TOKEN_KEY: ${GH_TOKEN_KEY:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
       # Drafts one account may keep in the cloud.
       MAX_CLOUD_DOCS: ${MAX_CLOUD_DOCS:-5}

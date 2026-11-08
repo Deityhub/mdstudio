@@ -132,13 +132,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           GITHUB_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
           GITHUB_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          GH_TOKEN_KEY: ${{ secrets.GH_TOKEN_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
           TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: |
-          json=$(bun -e 'const n="GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET RESEND_API_KEY MAILTRAP_API_TOKEN MAIL_FROM TURNSTILE_SECRET TURNSTILE_SITE_KEY".split(" ");console.log(JSON.stringify(Object.fromEntries(n.filter(k=>process.env[k]).map(k=>[k,process.env[k]]))))')
+          json=$(bun -e 'const n="GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET GH_TOKEN_KEY RESEND_API_KEY MAILTRAP_API_TOKEN MAIL_FROM TURNSTILE_SECRET TURNSTILE_SITE_KEY".split(" ");console.log(JSON.stringify(Object.fromEntries(n.filter(k=>process.env[k]).map(k=>[k,process.env[k]]))))')
           [ "$json" = "{}" ] || echo "$json" | bunx wrangler secret bulk --config .output/server/wrangler.json
       # Tell Bing and other IndexNow engines the site changed. Never blocks a release.
       - run: bun scripts/indexnow.ts

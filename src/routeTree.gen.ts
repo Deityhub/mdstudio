@@ -30,6 +30,8 @@ import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthResetRouteImport } from './routes/api/auth/reset'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
+import { Route as ApiGithubConnectRouteImport } from './routes/api/github.connect'
+import { Route as ApiGithubConnectionRouteImport } from './routes/api/github.connection'
 import { Route as ApiShareIdRouteImport } from './routes/api/share.$id'
 import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
 import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
@@ -149,6 +151,16 @@ const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
   path: '/api/auth/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGithubConnectRoute = ApiGithubConnectRouteImport.update({
+  id: '/api/github/connect',
+  path: '/api/github/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubConnectionRoute = ApiGithubConnectionRouteImport.update({
+  id: '/api/github/connection',
+  path: '/api/github/connection',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiShareIdRoute = ApiShareIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -241,6 +253,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/github/connect': typeof ApiGithubConnectRoute
+  '/api/github/connection': typeof ApiGithubConnectionRoute
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
@@ -277,6 +291,8 @@ export interface FileRoutesByTo {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/github/connect': typeof ApiGithubConnectRoute
+  '/api/github/connection': typeof ApiGithubConnectionRoute
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
@@ -314,6 +330,8 @@ export interface FileRoutesById {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/github/connect': typeof ApiGithubConnectRoute
+  '/api/github/connection': typeof ApiGithubConnectionRoute
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
@@ -352,6 +370,8 @@ export interface FileRouteTypes {
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/github/connect'
+    | '/api/github/connection'
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
@@ -388,6 +408,8 @@ export interface FileRouteTypes {
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/github/connect'
+    | '/api/github/connection'
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
@@ -424,6 +446,8 @@ export interface FileRouteTypes {
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/github/connect'
+    | '/api/github/connection'
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
@@ -460,6 +484,8 @@ export interface RootRouteChildren {
   ApiAuthResetRoute: typeof ApiAuthResetRoute
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
+  ApiGithubConnectRoute: typeof ApiGithubConnectRoute
+  ApiGithubConnectionRoute: typeof ApiGithubConnectionRoute
   ApiSyncPullRoute: typeof ApiSyncPullRoute
   ApiSyncPushRoute: typeof ApiSyncPushRoute
   ApiDocumentsIdRevisionsRoute: typeof ApiDocumentsIdRevisionsRouteWithChildren
@@ -613,6 +639,20 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/verify'
       fullPath: '/api/auth/verify'
       preLoaderRoute: typeof ApiAuthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/connect': {
+      id: '/api/github/connect'
+      path: '/api/github/connect'
+      fullPath: '/api/github/connect'
+      preLoaderRoute: typeof ApiGithubConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/connection': {
+      id: '/api/github/connection'
+      path: '/api/github/connection'
+      fullPath: '/api/github/connection'
+      preLoaderRoute: typeof ApiGithubConnectionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/share/$id': {
@@ -840,6 +880,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthResetRoute: ApiAuthResetRoute,
   ApiAuthSignupRoute: ApiAuthSignupRoute,
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
+  ApiGithubConnectRoute: ApiGithubConnectRoute,
+  ApiGithubConnectionRoute: ApiGithubConnectionRoute,
   ApiSyncPullRoute: ApiSyncPullRoute,
   ApiSyncPushRoute: ApiSyncPushRoute,
   ApiDocumentsIdRevisionsRoute: ApiDocumentsIdRevisionsRouteWithChildren,
