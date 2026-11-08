@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthExpiredError, UnverifiedError } from "@/lib/sync/api";
-import { ShareError, shareApi } from "./api";
+import { ShareError, commentsApi, shareApi } from "./api";
 
 const reply = (body: unknown, status = 200) => Response.json(body, { status });
 const mockFetch = (r: Response | (() => Response)) => {
@@ -57,5 +57,53 @@ describe("shareApi", () => {
     await expect(shareApi.list()).rejects.toBeInstanceOf(AuthExpiredError);
     mockFetch(reply({ error: "email_unverified" }, 403));
     await expect(shareApi.list()).rejects.toBeInstanceOf(UnverifiedError);
+  });
+});
+
+describe("commentsApi", () => {
+  const comment = {
+    id: "c1",
+    parentId: null,
+    author: "Bea",
+    mine: true,
+    line: 3,
+    snippet: "s",
+    body: "hi",
+    outdated: false,
+    resolved: false,
+    createdAt: 1,
+  };
+
+  it("reads the comments of a link by its address", async () => {
+    const fn = mockFetch(reply({ comments: [comment] }));
+    expect(await commentsApi.list("abc DEF/1")).toEqual([comment]);
+    expect(fn.mock.calls[0]![0]).toBe("/api/s/abc%20DEF%2F1/comments");
+  });
+
+  it("writes one, with the block it belongs to", async () => {
+    const fn = mockFetch(reply({ comment }));
+    await commentsApi.add("abc", { body: "hi", line: 3, snippet: "s", parentId: "p" });
+    expect(JSON.parse((fn.mock.calls[0]![1] as RequestInit).body as string)).toEqual({
+      body: "hi",
+      line: 3,
+      snippet: "s",
+      parentId: "p",
+    });
+    expect((fn.mock.calls[0]![1] as RequestInit).method).toBe("POST");
+  });
+
+  it("removes one, and names a full thread and a forbidden write", async () => {
+    const fn = mockFetch(reply({ ok: true }));
+    await commentsApi.remove("abc", "c1");
+    expect(fn.mock.calls[0]![0]).toBe("/api/s/abc/comments/c1");
+    expect((fn.mock.calls[0]![1] as RequestInit).method).toBe("DELETE");
+    mockFetch(reply({ error: "limit_reached" }, 409));
+    await expect(commentsApi.add("abc", { body: "x", line: 1 })).rejects.toMatchObject({
+      code: "limit_reached",
+    });
+    mockFetch(reply({ error: "forbidden" }, 403));
+    await expect(commentsApi.add("abc", { body: "x", line: 1 })).rejects.toMatchObject({
+      code: "forbidden",
+    });
   });
 });

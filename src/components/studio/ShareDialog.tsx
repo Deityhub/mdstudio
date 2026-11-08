@@ -37,6 +37,8 @@ const explain = (error: unknown) =>
         not_found: "This draft hasn't reached your cloud yet. Wait for it to sync, then try again.",
         invalid: "That length isn't allowed.",
         too_many: "You've changed links a lot in the last hour. Try again a little later.",
+        forbidden: "That isn't available on this server.",
+        limit_reached: "That limit has been reached.",
         failed: "Couldn't reach the server. Check your connection and try again.",
       }[error.code]
     : "Something went wrong. Try again.";

@@ -1,10 +1,11 @@
 import { HttpError, call } from "@/lib/sync/api";
-import type { ShareInfo } from "./protocol";
+import type { ShareComment, ShareInfo } from "./protocol";
 
 export type SharedLink = ShareInfo & { url: string };
 export type ShareList = { shares: SharedLink[]; defaultDays: number; maxDays: number };
 
-export type ShareErrorCode = "not_found" | "invalid" | "too_many" | "failed";
+export type ShareErrorCode =
+  "not_found" | "invalid" | "too_many" | "forbidden" | "limit_reached" | "failed";
 
 /** What went wrong with a share request, in terms the dialog can explain. */
 export class ShareError extends Error {
@@ -28,6 +29,8 @@ async function send<T>(path: string, init?: RequestInit) {
     if (error.status === 404) throw new ShareError("not_found");
     if (error.status === 400) throw new ShareError("invalid");
     if (error.status === 429) throw new ShareError("too_many");
+    if (error.status === 403) throw new ShareError("forbidden");
+    if (error.status === 409) throw new ShareError("limit_reached");
     throw new ShareError("failed");
   }
 }
@@ -44,4 +47,28 @@ export const shareApi = {
     send<{ share: SharedLink }>(`/api/share/${encodeURIComponent(id)}`, json("PATCH", { days })),
   revoke: (id: string) =>
     send<{ ok: true }>(`/api/share/${encodeURIComponent(id)}`, { method: "DELETE" }),
+};
+
+export type CommentInput = { body: string; line: number; snippet?: string; parentId?: string };
+
+/** What a reader does with comments on a link they can open (by the link's address). */
+export const commentsApi = {
+  list: async (slug: string) =>
+    (
+      await send<{ comments: ShareComment[] }>(
+        `/api/s/${encodeURIComponent(slug)}/comments`,
+        undefined,
+      )
+    ).comments,
+  add: async (slug: string, input: CommentInput) =>
+    (
+      await send<{ comment: ShareComment }>(
+        `/api/s/${encodeURIComponent(slug)}/comments`,
+        json("POST", input),
+      )
+    ).comment,
+  remove: (slug: string, id: string) =>
+    send<{ ok: true }>(`/api/s/${encodeURIComponent(slug)}/comments/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 };
