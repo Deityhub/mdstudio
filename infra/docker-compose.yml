@@ -23,6 +23,8 @@ services:
       # Share links: the longest a public link lasts, and how long a new one lasts by default (days).
       SHARE_MAX_DAYS: ${SHARE_MAX_DAYS:-7}
       SHARE_DEFAULT_DAYS: ${SHARE_DEFAULT_DAYS:-4}
+      # Set to "off" to stop links being limited to named people.
+      PRIVATE_LINKS: ${PRIVATE_LINKS:-on}
       # Email confirmation (optional): a sender and one way to send. Limits and proxy: see infra/README.md.
       MAIL_FROM: ${MAIL_FROM:-}
       SMTP_URL: ${SMTP_URL:-}

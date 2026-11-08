@@ -120,7 +120,7 @@ describe("publishShare", () => {
 
   it("follows the configured default and maximum", async () => {
     await cloud();
-    const cfg = { defaultDays: 2, maxDays: 3 };
+    const cfg = { defaultDays: 2, maxDays: 3, privateLinks: true };
     const r = await publishShare(db, "a", "d1", undefined, cfg, t0);
     if (!r.ok) throw new Error(r.error);
     expect(r.share.expiresAt).toBe(t0 + 2 * DAY);
@@ -205,7 +205,7 @@ describe("listShares", () => {
     const list = await listShares(db, "a", t0 + 2 * DAY);
     expect(list.map((s) => s.id)).toEqual(["d1"]);
     expect(list[0]!.hash).toBe(await sha256Hex("# Launch notes\n\nFirst version"));
-    expect(await rows()).toHaveLength(1); // the expired one was cleared
+    expect(await rows()).toHaveLength(2); // an expired one is kept for a while, but not listed
     expect(await listShares(db, "b", t0)).toEqual([]);
   });
 });

@@ -36,7 +36,13 @@ import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
+import { Route as ApiSSlugCommentsRouteImport } from './routes/api/s.$slug.comments'
+import { Route as ApiShareIdCommentsRouteImport } from './routes/api/share.$id.comments'
+import { Route as ApiShareIdPeopleRouteImport } from './routes/api/share.$id.people'
 import { Route as ApiDocumentsIdRevisionsRevisionIdRouteImport } from './routes/api/documents.$id.revisions.$revisionId'
+import { Route as ApiSSlugCommentsCommentIdRouteImport } from './routes/api/s.$slug.comments.$commentId'
+import { Route as ApiShareIdCommentsCommentIdRouteImport } from './routes/api/share.$id.comments.$commentId'
+import { Route as ApiShareIdPeoplePersonIdRouteImport } from './routes/api/share.$id.people.$personId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -173,11 +179,44 @@ const ApiDocumentsIdRevisionsRoute = ApiDocumentsIdRevisionsRouteImport.update({
   path: '/api/documents/$id/revisions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSSlugCommentsRoute = ApiSSlugCommentsRouteImport.update({
+  id: '/api/s/$slug/comments',
+  path: '/api/s/$slug/comments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShareIdCommentsRoute = ApiShareIdCommentsRouteImport.update({
+  id: '/comments',
+  path: '/comments',
+  getParentRoute: () => ApiShareIdRoute,
+} as any)
+const ApiShareIdPeopleRoute = ApiShareIdPeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => ApiShareIdRoute,
+} as any)
 const ApiDocumentsIdRevisionsRevisionIdRoute =
   ApiDocumentsIdRevisionsRevisionIdRouteImport.update({
     id: '/$revisionId',
     path: '/$revisionId',
     getParentRoute: () => ApiDocumentsIdRevisionsRoute,
+  } as any)
+const ApiSSlugCommentsCommentIdRoute =
+  ApiSSlugCommentsCommentIdRouteImport.update({
+    id: '/$commentId',
+    path: '/$commentId',
+    getParentRoute: () => ApiSSlugCommentsRoute,
+  } as any)
+const ApiShareIdCommentsCommentIdRoute =
+  ApiShareIdCommentsCommentIdRouteImport.update({
+    id: '/$commentId',
+    path: '/$commentId',
+    getParentRoute: () => ApiShareIdCommentsRoute,
+  } as any)
+const ApiShareIdPeoplePersonIdRoute =
+  ApiShareIdPeoplePersonIdRouteImport.update({
+    id: '/$personId',
+    path: '/$personId',
+    getParentRoute: () => ApiShareIdPeopleRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -202,13 +241,19 @@ export interface FileRoutesByFullPath {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
-  '/api/share/$id': typeof ApiShareIdRoute
+  '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
+  '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
+  '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
+  '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
+  '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
+  '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -232,13 +277,19 @@ export interface FileRoutesByTo {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
-  '/api/share/$id': typeof ApiShareIdRoute
+  '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
+  '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
+  '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
+  '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
+  '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
+  '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -263,13 +314,19 @@ export interface FileRoutesById {
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
-  '/api/share/$id': typeof ApiShareIdRoute
+  '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
+  '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
+  '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
+  '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
+  '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
+  '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
+  '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -301,7 +358,13 @@ export interface FileRouteTypes {
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
+    | '/api/s/$slug/comments'
+    | '/api/share/$id/comments'
+    | '/api/share/$id/people'
     | '/api/documents/$id/revisions/$revisionId'
+    | '/api/s/$slug/comments/$commentId'
+    | '/api/share/$id/comments/$commentId'
+    | '/api/share/$id/people/$personId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -331,7 +394,13 @@ export interface FileRouteTypes {
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
+    | '/api/s/$slug/comments'
+    | '/api/share/$id/comments'
+    | '/api/share/$id/people'
     | '/api/documents/$id/revisions/$revisionId'
+    | '/api/s/$slug/comments/$commentId'
+    | '/api/share/$id/comments/$commentId'
+    | '/api/share/$id/people/$personId'
   id:
     | '__root__'
     | '/'
@@ -361,7 +430,13 @@ export interface FileRouteTypes {
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
+    | '/api/s/$slug/comments'
+    | '/api/share/$id/comments'
+    | '/api/share/$id/people'
     | '/api/documents/$id/revisions/$revisionId'
+    | '/api/s/$slug/comments/$commentId'
+    | '/api/share/$id/comments/$commentId'
+    | '/api/share/$id/people/$personId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -388,6 +463,7 @@ export interface RootRouteChildren {
   ApiSyncPullRoute: typeof ApiSyncPullRoute
   ApiSyncPushRoute: typeof ApiSyncPushRoute
   ApiDocumentsIdRevisionsRoute: typeof ApiDocumentsIdRevisionsRouteWithChildren
+  ApiSSlugCommentsRoute: typeof ApiSSlugCommentsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -581,12 +657,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDocumentsIdRevisionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/s/$slug/comments': {
+      id: '/api/s/$slug/comments'
+      path: '/api/s/$slug/comments'
+      fullPath: '/api/s/$slug/comments'
+      preLoaderRoute: typeof ApiSSlugCommentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/share/$id/comments': {
+      id: '/api/share/$id/comments'
+      path: '/comments'
+      fullPath: '/api/share/$id/comments'
+      preLoaderRoute: typeof ApiShareIdCommentsRouteImport
+      parentRoute: typeof ApiShareIdRoute
+    }
+    '/api/share/$id/people': {
+      id: '/api/share/$id/people'
+      path: '/people'
+      fullPath: '/api/share/$id/people'
+      preLoaderRoute: typeof ApiShareIdPeopleRouteImport
+      parentRoute: typeof ApiShareIdRoute
+    }
     '/api/documents/$id/revisions/$revisionId': {
       id: '/api/documents/$id/revisions/$revisionId'
       path: '/$revisionId'
       fullPath: '/api/documents/$id/revisions/$revisionId'
       preLoaderRoute: typeof ApiDocumentsIdRevisionsRevisionIdRouteImport
       parentRoute: typeof ApiDocumentsIdRevisionsRoute
+    }
+    '/api/s/$slug/comments/$commentId': {
+      id: '/api/s/$slug/comments/$commentId'
+      path: '/$commentId'
+      fullPath: '/api/s/$slug/comments/$commentId'
+      preLoaderRoute: typeof ApiSSlugCommentsCommentIdRouteImport
+      parentRoute: typeof ApiSSlugCommentsRoute
+    }
+    '/api/share/$id/comments/$commentId': {
+      id: '/api/share/$id/comments/$commentId'
+      path: '/$commentId'
+      fullPath: '/api/share/$id/comments/$commentId'
+      preLoaderRoute: typeof ApiShareIdCommentsCommentIdRouteImport
+      parentRoute: typeof ApiShareIdCommentsRoute
+    }
+    '/api/share/$id/people/$personId': {
+      id: '/api/share/$id/people/$personId'
+      path: '/$personId'
+      fullPath: '/api/share/$id/people/$personId'
+      preLoaderRoute: typeof ApiShareIdPeoplePersonIdRouteImport
+      parentRoute: typeof ApiShareIdPeopleRoute
     }
   }
 }
@@ -603,12 +721,48 @@ const ApiAssetsRouteWithChildren = ApiAssetsRoute._addFileChildren(
   ApiAssetsRouteChildren,
 )
 
+interface ApiShareIdCommentsRouteChildren {
+  ApiShareIdCommentsCommentIdRoute: typeof ApiShareIdCommentsCommentIdRoute
+}
+
+const ApiShareIdCommentsRouteChildren: ApiShareIdCommentsRouteChildren = {
+  ApiShareIdCommentsCommentIdRoute: ApiShareIdCommentsCommentIdRoute,
+}
+
+const ApiShareIdCommentsRouteWithChildren =
+  ApiShareIdCommentsRoute._addFileChildren(ApiShareIdCommentsRouteChildren)
+
+interface ApiShareIdPeopleRouteChildren {
+  ApiShareIdPeoplePersonIdRoute: typeof ApiShareIdPeoplePersonIdRoute
+}
+
+const ApiShareIdPeopleRouteChildren: ApiShareIdPeopleRouteChildren = {
+  ApiShareIdPeoplePersonIdRoute: ApiShareIdPeoplePersonIdRoute,
+}
+
+const ApiShareIdPeopleRouteWithChildren =
+  ApiShareIdPeopleRoute._addFileChildren(ApiShareIdPeopleRouteChildren)
+
+interface ApiShareIdRouteChildren {
+  ApiShareIdCommentsRoute: typeof ApiShareIdCommentsRouteWithChildren
+  ApiShareIdPeopleRoute: typeof ApiShareIdPeopleRouteWithChildren
+}
+
+const ApiShareIdRouteChildren: ApiShareIdRouteChildren = {
+  ApiShareIdCommentsRoute: ApiShareIdCommentsRouteWithChildren,
+  ApiShareIdPeopleRoute: ApiShareIdPeopleRouteWithChildren,
+}
+
+const ApiShareIdRouteWithChildren = ApiShareIdRoute._addFileChildren(
+  ApiShareIdRouteChildren,
+)
+
 interface ApiShareRouteChildren {
-  ApiShareIdRoute: typeof ApiShareIdRoute
+  ApiShareIdRoute: typeof ApiShareIdRouteWithChildren
 }
 
 const ApiShareRouteChildren: ApiShareRouteChildren = {
-  ApiShareIdRoute: ApiShareIdRoute,
+  ApiShareIdRoute: ApiShareIdRouteWithChildren,
 }
 
 const ApiShareRouteWithChildren = ApiShareRoute._addFileChildren(
@@ -654,6 +808,17 @@ const ApiDocumentsIdRevisionsRouteWithChildren =
     ApiDocumentsIdRevisionsRouteChildren,
   )
 
+interface ApiSSlugCommentsRouteChildren {
+  ApiSSlugCommentsCommentIdRoute: typeof ApiSSlugCommentsCommentIdRoute
+}
+
+const ApiSSlugCommentsRouteChildren: ApiSSlugCommentsRouteChildren = {
+  ApiSSlugCommentsCommentIdRoute: ApiSSlugCommentsCommentIdRoute,
+}
+
+const ApiSSlugCommentsRouteWithChildren =
+  ApiSSlugCommentsRoute._addFileChildren(ApiSSlugCommentsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ResetPasswordRoute: ResetPasswordRoute,
@@ -678,6 +843,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSyncPullRoute: ApiSyncPullRoute,
   ApiSyncPushRoute: ApiSyncPushRoute,
   ApiDocumentsIdRevisionsRoute: ApiDocumentsIdRevisionsRouteWithChildren,
+  ApiSSlugCommentsRoute: ApiSSlugCommentsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
