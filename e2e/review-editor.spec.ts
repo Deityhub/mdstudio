@@ -86,9 +86,31 @@ test("the writer reads, resolves and deletes the comments left on a link from th
 
   await panel.getByRole("button", { name: "Resolve" }).click();
   await expect(panel.getByRole("button", { name: "Reopen" })).toBeVisible();
-  await panel.getByRole("button", { name: "Delete comment" }).click();
+  await panel.getByRole("button", { name: "Delete" }).click();
   await expect(panel.getByText("Tighten the intro")).toBeHidden();
   await expect(panel.getByText("No comments yet")).toBeVisible();
 
   await guest.context.close();
+});
+
+test("share and comment requests are made only when the writer asks for them", async ({ page }) => {
+  const calls: string[] = [];
+  page.on("request", (r) => {
+    const path = new URL(r.url()).pathname;
+    if (path.startsWith("/api/share")) calls.push(`${r.method()} ${path}`);
+  });
+  await signIn(page);
+  await cloudDraft(page, "Quiet draft", "Nothing shared yet");
+  await page.waitForTimeout(1500);
+  expect(calls).toEqual([]);
+
+  const dialog = await openShare(page, "Quiet draft");
+  await expect(dialog.getByRole("button", { name: "Publish" })).toBeVisible();
+  expect(calls).toEqual(["GET /api/share"]);
+  await dialog.getByRole("button", { name: "Close" }).first().click();
+
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
+  await expect(page.getByText("Share this draft with comments turned on")).toBeVisible();
+  // the links were already read, so only the comments are asked for
+  expect(calls.filter((c) => c === "GET /api/share")).toHaveLength(1);
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ShareComment } from "./protocol";
-import { blockText, placeComments } from "./anchor";
+import { blockText, placeComments, plainText } from "./anchor";
 
 const c = (over: Partial<ShareComment> & { id: string }): ShareComment => ({
   parentId: null,
@@ -27,7 +27,26 @@ describe("blockText", () => {
   });
 });
 
+describe("plainText", () => {
+  it("is the whole block on one line, however long", () => {
+    expect(plainText(" a\n b ")).toBe("a b");
+    expect(plainText("x".repeat(500)).length).toBe(500);
+  });
+});
+
 describe("placeComments", () => {
+  it("finds an outdated comment by words selected anywhere in the block", () => {
+    const moved = [
+      { line: 2, text: "Something else" },
+      { line: 9, text: "Ship on Friday. Then rest, and ship again." },
+    ];
+    const { byLine } = placeComments(
+      [c({ id: "mid", line: 3, snippet: "rest, and ship", outdated: true })],
+      moved,
+    );
+    expect(byLine.get(9)?.[0]?.comment.id).toBe("mid");
+  });
+
   it("puts a current comment on the block that starts at its line, with its replies", () => {
     const { byLine, loose } = placeComments(
       [c({ id: "a", line: 3 }), c({ id: "r", parentId: "a", line: 3 }), c({ id: "b", line: 5 })],

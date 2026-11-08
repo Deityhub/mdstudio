@@ -1,12 +1,16 @@
 // Where a comment shows on the published page. A comment names the block it was written on by its
-// source line and the start of its text. If the copy has not changed since, the line is enough; after
-// an update the text lets it be found again, and a comment whose block is gone is listed apart.
+// source line and the words the reader selected in it. If the copy has not changed since, the line is
+// enough; after an update the words let it be found again, and a comment whose block is gone is listed
+// apart.
 import type { ShareComment } from "./protocol";
 
 const SNIPPET = 120;
 
-/** The words of a block on one line, cut to what a comment's snippet keeps. */
-export const blockText = (text: string) => text.replace(/\s+/g, " ").trim().slice(0, SNIPPET);
+/** The words of a block on one line. */
+export const plainText = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/** The words of a block or a selection on one line, cut to what a comment's snippet keeps. */
+export const blockText = (text: string) => plainText(text).slice(0, SNIPPET);
 
 export type Thread = { comment: ShareComment; replies: ShareComment[] };
 export type Block = { line: number; text: string };
@@ -27,7 +31,7 @@ export function placeComments(comments: ShareComment[], blocks: Block[]) {
   for (const comment of tops) {
     let line: number | undefined;
     if (comment.outdated) {
-      const same = comment.snippet ? blocks.filter((b) => b.text.startsWith(comment.snippet)) : [];
+      const same = comment.snippet ? blocks.filter((b) => b.text.includes(comment.snippet)) : [];
       line = (same.find((b) => b.line === comment.line) ?? same[0])?.line;
     } else if (blocks.some((b) => b.line === comment.line)) line = comment.line;
     if (line === undefined) loose.push(threadOf(comment));

@@ -11,6 +11,25 @@ async function reader(browser: Browser) {
   const context = await browser.newContext({ baseURL: SITE, extraHTTPHeaders: asVisitor() });
   return { context, page: await context.newPage() };
 }
+/** Selects words in the page the way a reader does, so the Comment button offers itself. */
+async function selectWords(page: Page, words: string) {
+  await page.evaluate((text) => {
+    const root = document.querySelector(".md-preview")!;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const at = n.textContent!.indexOf(text);
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(n, at);
+      range.setEnd(n, at + text.length);
+      const sel = window.getSelection()!;
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return;
+    }
+    throw new Error(`no text: ${text}`);
+  }, words);
+}
 /** Signs in through the page's own dialog. */
 async function signInOnPage(page: Page, email: string) {
   await page.getByRole("dialog").getByLabel("Email").fill(email);
@@ -62,7 +81,7 @@ test("someone signed in who was not invited gets a plain not-found page", async 
   await context.close();
 });
 
-test("readers sign in to comment on a block, reply, and take a comment back, in plain text", async ({
+test("readers sign in to comment on selected words, reply, and take a comment back, in plain text", async ({
   playwright,
   browser,
 }) => {
@@ -77,23 +96,29 @@ test("readers sign in to comment on a block, reply, and take a comment back, in 
   await expect(page.getByText("The writer is taking comments.")).toBeVisible();
   await page.getByRole("button", { name: "Sign in to read and write comments" }).click();
   await signInOnPage(page, reviewer.email);
-  await expect(page.getByRole("button", { name: /Comment on: Ship on Friday/ })).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(page.getByText("The writer is taking comments.")).toBeHidden({ timeout: 20_000 });
 
-  await page.getByRole("button", { name: /Comment on: Ship on Friday/ }).click();
-  await page
-    .getByLabel("Add a comment on this block")
-    .fill("<img src=x onerror=window.__x=1> Which Friday?");
+  await selectWords(page, "Friday");
+  await page.getByRole("button", { name: "Comment on selection" }).click();
+  await page.getByLabel("Add a comment").fill("<img src=x onerror=window.__x=1> Which Friday?");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
   const mine = page.getByText("Which Friday?");
   await expect(mine).toBeVisible();
   await expect(page.locator("img[src='x']")).toHaveCount(0); // text, not markup
   expect(await page.evaluate(() => (window as unknown as { __x?: number }).__x)).toBeUndefined();
+  // the words it is about stay highlighted
+  await expect(body(page).locator("mark.share-hl")).toHaveText("Friday");
 
   // it is still there after a reload, under the same block
   await page.reload();
   await expect(page.getByText("Which Friday?")).toBeVisible({ timeout: 20_000 });
+
+  // the column can be hidden, and a click on the highlighted words brings it back
+  await page.getByRole("button", { name: "Hide comments" }).click();
+  await expect(page.getByText("Which Friday?")).toBeHidden();
+  await body(page).locator("mark.share-hl").click();
+  await expect(page.getByText("Which Friday?")).toBeVisible();
+
   await page.getByRole("button", { name: "Reply" }).click();
   await page.getByLabel("Write a reply").fill("The 14th");
   await page.getByRole("button", { name: "Reply", exact: true }).last().click();

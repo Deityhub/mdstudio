@@ -24,7 +24,7 @@ import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { accountStore } from "@/lib/account/store";
 import { type SharePerson, ShareError, peopleApi, shareApi } from "@/lib/share/api";
 import { contentHash } from "@/lib/share/hash";
-import { setShare, useShares } from "@/lib/share/hooks";
+import { refreshShares, setShare, useShares } from "@/lib/share/hooks";
 import { shareDate } from "@/lib/share/page";
 import { MAX_SHARE_PEOPLE, type ShareAccess } from "@/lib/share/protocol";
 import type { MdDocument } from "@/lib/storage/documentStore";
@@ -73,7 +73,7 @@ export function ShareDialog({
   /** Saves the draft and brings the cloud up to date, so the published copy is the latest text. */
   beforePublish: () => Promise<void>;
 }) {
-  const { byDraft, defaultDays, maxDays, privateLinks } = useShares();
+  const { byDraft, defaultDays, maxDays, privateLinks, loaded } = useShares();
   const share = draft ? byDraft.get(draft.id) : undefined;
   const [days, setDays] = useState(String(defaultDays));
   const [busy, setBusy] = useState<"publish" | "extend" | "stop" | "settings" | "invite" | null>(
@@ -99,6 +99,11 @@ export function ShareDialog({
       setEmail("");
     }
   }, [open, draft?.id, defaultDays]);
+
+  // the links are read when the dialog is opened, and not before
+  useEffect(() => {
+    if (open) void refreshShares();
+  }, [open]);
 
   const access = share ? share.access : chosenAccess;
   const comments = share ? share.comments : chosenComments;
@@ -130,6 +135,17 @@ export function ShareDialog({
   }, [draft, share]);
 
   if (!draft) return null;
+  if (!loaded)
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Share</DialogTitle>
+            <DialogDescription>Loading…</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
 
   async function run<T>(
     kind: NonNullable<typeof busy>,
@@ -302,7 +318,7 @@ export function ShareDialog({
           <div className="grid gap-0.5">
             <Label htmlFor="share-comments">Let reviewers comment</Label>
             <p className="text-sm text-muted-foreground">
-              Signed-in readers with a confirmed email can comment on each paragraph.
+              Only verified and signed-in readers can comment
             </p>
           </div>
           <Switch
@@ -367,9 +383,6 @@ export function ShareDialog({
             ) : (
               <p className="text-sm text-muted-foreground">No one yet. Only you can open it.</p>
             )}
-            <p className="text-sm text-muted-foreground">
-              They sign in, or make an account, with the address you invite, and confirm it.
-            </p>
           </div>
         )}
 

@@ -17,7 +17,7 @@ import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { ReviewComments } from "@/components/studio/ReviewComments";
 import { ShareDialog } from "@/components/studio/ShareDialog";
-import { clearShares, refreshShares, useShares } from "@/lib/share/hooks";
+import { clearShares, useShares } from "@/lib/share/hooks";
 import {
   addToCloud,
   removeFromCloud,
@@ -482,12 +482,11 @@ export function Studio({ docId }: { docId: string }) {
     },
   });
   const cloudDrafts = useCloud();
-  // The account's share links follow each sync round, since a draft leaving the cloud takes its
-  // link down and a link can run out.
+  // The account's share links are read when something asks for them (the Share dialog, the
+  // Comments panel), never in the background, so they cost nothing until used.
   useEffect(() => {
-    if (cloudOn && account?.id) void refreshShares();
-    else clearShares();
-  }, [cloudOn, account?.id, syncStatus.at]);
+    if (!cloudOn || !account?.id) clearShares();
+  }, [cloudOn, account?.id]);
 
   const historyOpen = (overlay ? mobilePanel : panel) === "history";
   // The versions the cloud keeps for this draft: read while History is open, and again after each
@@ -1102,8 +1101,8 @@ export function Studio({ docId }: { docId: string }) {
       ["outline", ListTree, "Outline"],
       ["meta", Tags, "Front matter"],
       ["history", History, "History"],
-      // only a draft with a link has anything to hear back about
-      ...(ownShare ? ([["comments", MessageSquare, "Comments"]] as const) : []),
+      // comments belong to a draft that is in the cloud; the panel reads them when it is opened
+      ...(inCloud ? ([["comments", MessageSquare, "Comments"]] as const) : []),
     ] as const
   ).map(([p, Icon, label]) => (
     <Button
@@ -1199,12 +1198,7 @@ export function Studio({ docId }: { docId: string }) {
         />
       )}
       {activePanel === "comments" && doc && (
-        <ReviewComments
-          draftId={doc.id}
-          share={ownShare}
-          refreshKey={syncStatus.at}
-          onGo={goToLine}
-        />
+        <ReviewComments draftId={doc.id} share={ownShare} onGo={goToLine} />
       )}
       {activePanel === "meta" && (
         <FrontMatterForm

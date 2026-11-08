@@ -2,45 +2,45 @@ import { Check, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { type SharedLink, ownerApi } from "@/lib/share/api";
+import { type SharedLink, ShareError, ownerApi } from "@/lib/share/api";
+import { ensureShares } from "@/lib/share/hooks";
 import { shareDate } from "@/lib/share/page";
 import type { ShareComment } from "@/lib/share/protocol";
 
 /**
  * What reviewers said on the draft's link, for the writer: open ones first, each with the line it
- * is about (click to go there), and the writer may resolve or delete any of them.
+ * is about (click to go there), and the writer may resolve or delete any of them. It reads once
+ * when it is opened, and again only after the writer changes something.
  */
 export function ReviewComments({
   draftId,
   share,
-  refreshKey,
   onGo,
 }: {
   draftId: string;
   share: SharedLink | undefined;
-  /** Changes when the account has synced, which is when to look again. */
-  refreshKey: unknown;
   onGo: (line: number) => void;
 }) {
   const [items, setItems] = useState<ShareComment[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const linked = !!share;
 
   const load = useCallback(async () => {
-    if (!linked) return setItems(null);
     try {
       setItems(await ownerApi.comments(draftId));
       setFailed(false);
-    } catch {
-      setFailed(true);
+    } catch (error) {
+      // a draft with no link has nothing to read
+      if (error instanceof ShareError && error.code === "not_found") setItems([]);
+      else setFailed(true);
     }
-  }, [draftId, linked]);
+  }, [draftId]);
 
   useEffect(() => {
     setItems(null);
+    void ensureShares();
     void load();
-  }, [load, share?.slug, refreshKey]);
+  }, [load]);
 
   async function act(id: string, work: () => Promise<unknown>) {
     setBusy(id);
@@ -54,21 +54,17 @@ export function ReviewComments({
     }
   }
 
-  if (!share)
-    return (
-      <p className="text-sm text-muted-foreground">
-        Share this draft with comments turned on to hear back from reviewers here.
-      </p>
-    );
   if (failed && !items)
     return <p className="text-sm text-muted-foreground">Couldn't load the comments.</p>;
   if (!items) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (!items.length)
     return (
       <p className="text-sm text-muted-foreground">
-        {share.comments
-          ? "No comments yet. They show up here when reviewers write them."
-          : "Comments are off for this link. Turn them on in Share."}
+        {!share
+          ? "Share this draft with comments turned on to hear back from reviewers here."
+          : share.comments
+            ? "No comments yet. They show up here when reviewers write them."
+            : "Comments are off for this link. Turn them on in Share."}
       </p>
     );
 
@@ -102,7 +98,7 @@ export function ReviewComments({
       {c.outdated && (
         <p className="text-xs text-muted-foreground">Written on an earlier published copy.</p>
       )}
-      <div className="flex gap-1">
+      <div className="flex justify-end gap-1">
         {root && (
           <Button
             type="button"
@@ -121,11 +117,11 @@ export function ReviewComments({
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-destructive"
-          aria-label="Delete comment"
           pending={busy === c.id}
           onClick={() => void act(c.id, () => ownerApi.remove(draftId, c.id))}
         >
           <Trash2 className="size-3.5" />
+          Delete
         </Button>
       </div>
     </li>
