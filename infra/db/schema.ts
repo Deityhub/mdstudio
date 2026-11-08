@@ -1,6 +1,6 @@
 // Single SQLite schema shared by Cloudflare D1 and self-hosted better-sqlite3.
 // Authoritative table list: docs/SYSTEM_SPEC.md section 6. Timestamps are Unix milliseconds.
-import { index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, unique, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -59,6 +59,42 @@ export const oauthAccounts = sqliteTable(
     createdAt: integer("created_at").notNull(),
   },
   (t) => [unique().on(t.provider, t.providerUserId)],
+);
+
+/** A writer's GitHub connection for publishing. The token is sealed (see src/server/github/crypto.ts). */
+export const githubConnections = sqliteTable("github_connections", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  githubUserId: text("github_user_id").notNull(),
+  login: text("login").notNull(),
+  /** The scopes GitHub granted, space separated. */
+  scope: text("scope").notNull(),
+  tokenSealed: text("token_sealed").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+/** Where a cloud draft was last published on GitHub, one row per kind (file or gist). */
+export const githubPublications = sqliteTable(
+  "github_publications",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id").notNull(),
+    kind: text("kind").notNull(),
+    repo: text("repo"),
+    branch: text("branch"),
+    path: text("path"),
+    gistId: text("gist_id"),
+    /** The file's blob id at the last commit made from this draft, to notice later changes on GitHub. */
+    fileSha: text("file_sha"),
+    commitSha: text("commit_sha"),
+    url: text("url").notNull(),
+    contentHash: text("content_hash").notNull(),
+    publishedAt: integer("published_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("github_publications_document_kind").on(t.documentId, t.kind)],
 );
 
 export const documents = sqliteTable(
@@ -129,17 +165,71 @@ export const assets = sqliteTable(
   (t) => [unique().on(t.userId, t.sha256)],
 );
 
-export const shareLinks = sqliteTable("share_links", {
-  id: text("id").primaryKey(),
-  documentId: text("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
-  revisionId: text("revision_id").references(() => documentRevisions.id, {
-    onDelete: "set null",
-  }),
-  slug: text("slug").notNull().unique(),
-  isPublic: integer("is_public").notNull().default(1),
-  viewCount: integer("view_count").notNull().default(0),
-  expiresAt: integer("expires_at"),
-  createdAt: integer("created_at").notNull(),
-});
+// A public, read-only page for one cloud draft. It holds its own published copy (title and
+// content), which changes only when the writer publishes an update; the draft itself can move on.
+// One link per draft, and every link expires (expires_at is always set by the server code).
+export const shareLinks = sqliteTable(
+  "share_links",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    revisionId: text("revision_id").references(() => documentRevisions.id, {
+      onDelete: "set null",
+    }),
+    slug: text("slug").notNull().unique(),
+    isPublic: integer("is_public").notNull().default(1),
+    viewCount: integer("view_count").notNull().default(0),
+    expiresAt: integer("expires_at"),
+    createdAt: integer("created_at").notNull(),
+    title: text("title").notNull().default(""),
+    content: text("content").notNull().default(""),
+    publishedAt: integer("published_at").notNull().default(0),
+    updatedAt: integer("updated_at").notNull().default(0),
+    // who may open it: "public" (anyone with the link) or "people" (the named people, signed in)
+    access: text("access").notNull().default("public"),
+    // whether signed-in readers may comment on the published copy
+    comments: integer("comments").notNull().default(0),
+  },
+  (t) => [uniqueIndex("share_links_document_unique").on(t.documentId)],
+);
+
+/** People invited to a private link, by the inbox their address stands for. */
+export const sharePeople = sqliteTable(
+  "share_people",
+  {
+    id: text("id").primaryKey(),
+    shareId: text("share_id")
+      .notNull()
+      .references(() => shareLinks.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    emailKey: text("email_key").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("share_people_inbox_unique").on(t.shareId, t.emailKey)],
+);
+
+/** A reviewer's comment on a block of a published copy (one level of replies via parent_id). */
+export const shareComments = sqliteTable(
+  "share_comments",
+  {
+    id: text("id").primaryKey(),
+    shareId: text("share_id")
+      .notNull()
+      .references(() => shareLinks.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    parentId: text("parent_id"),
+    // the published copy it was written on (share_links.published_at at the time), the block's
+    // source line and the start of its text, to find the block again after an update
+    version: integer("version").notNull(),
+    line: integer("line").notNull(),
+    snippet: text("snippet").notNull().default(""),
+    body: text("body").notNull(),
+    createdAt: integer("created_at").notNull(),
+    resolvedAt: integer("resolved_at"),
+  },
+  (t) => [index("idx_share_comments_share").on(t.shareId, t.createdAt)],
+);

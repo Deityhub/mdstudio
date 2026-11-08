@@ -1,6 +1,8 @@
 // The wire contract of /api/sync/*, shared by the server (src/server/sync) and the browser engine.
 import { z } from "zod";
 
+/** What a draft id from the browser may look like before it is made into one of the caller's own. */
+export const LOCAL_ID = /^[A-Za-z0-9_-]{1,64}$/;
 export const MAX_PUSH_DOCS = 50;
 export const MAX_CONTENT = 1_000_000;
 

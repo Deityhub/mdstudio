@@ -15,7 +15,18 @@ import { VersionTag } from "@/components/VersionTag";
 import { AccountMenu } from "@/components/studio/AccountMenu";
 import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
-import { addToCloud, removeFromCloud, syncLabel, useCloud, useSync } from "@/lib/sync/hooks";
+import { ReviewComments } from "@/components/studio/ReviewComments";
+import { PUBLISH_AFTER_CONNECT, PublishDialog } from "@/components/studio/PublishDialog";
+import { ShareDialog } from "@/components/studio/ShareDialog";
+import { clearShares, useShares } from "@/lib/share/hooks";
+import {
+  addToCloud,
+  removeFromCloud,
+  syncLabel,
+  syncNow,
+  useCloud,
+  useSync,
+} from "@/lib/sync/hooks";
 import { type CloudRevision, fetchCloudRevision, listCloudRevisions } from "@/lib/sync/revisions";
 import { cloudOwners, isVisible } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
@@ -26,6 +37,8 @@ import {
   Archive,
   SlidersHorizontal,
   FolderUp,
+  Share2,
+  Github,
   FileUp,
   MonitorDown,
   Download,
@@ -41,6 +54,7 @@ import {
   ListTree,
   Tags,
   History,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,7 +171,7 @@ type SaveState = "saved" | "saving" | "error";
 const MarkdownEditor = lazy(() => import("./MarkdownEditor"));
 
 type View = "split" | "editor" | "preview";
-type Panel = "checks" | "outline" | "meta" | "history" | null;
+type Panel = "checks" | "outline" | "meta" | "history" | "comments" | null;
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -291,7 +305,7 @@ export function Studio({ docId }: { docId: string }) {
   // A draft kept in the cloud belongs to its account: it is hidden while anyone else, or nobody,
   // is signed in. Until the server has answered, nothing that belongs to an account is shown.
   const accountState = useAccount();
-  const { user: account, loaded: accountLoaded, images: hostingOn } = accountState;
+  const { user: account, loaded: accountLoaded, images: hostingOn, githubPublish } = accountState;
   // The cloud is open to accounts whose email is confirmed (or when this server sends no mail).
   const cloudOn = cloudReady(accountState);
   const visibleTo = useRef<string | undefined>(undefined);
@@ -470,6 +484,11 @@ export function Studio({ docId }: { docId: string }) {
     },
   });
   const cloudDrafts = useCloud();
+  // The account's share links are read when something asks for them (the Share dialog, the
+  // Comments panel), never in the background, so they cost nothing until used.
+  useEffect(() => {
+    if (!cloudOn || !account?.id) clearShares();
+  }, [cloudOn, account?.id]);
 
   const historyOpen = (overlay ? mobilePanel : panel) === "history";
   // The versions the cloud keeps for this draft: read while History is open, and again after each
@@ -953,6 +972,38 @@ export function Studio({ docId }: { docId: string }) {
     refreshList();
   };
   const [toDelete, setToDelete] = useState<MdDocument | null>(null);
+  // what is shared or published is the cloud's copy, so it is brought up to date first
+  const bringCloudUpToDate = async () => {
+    await flush();
+    if (account) await syncNow(account.id);
+  };
+  // the draft whose share dialog is open
+  const [shareTarget, setShareTarget] = useState<MdDocument | null>(null);
+  // the draft whose publish-to-GitHub dialog is open
+  const [publishTarget, setPublishTarget] = useState<MdDocument | null>(null);
+  // Back from GitHub after connecting, the dialog the writer left is opened again on its draft.
+  useEffect(() => {
+    if (!accountLoaded) return;
+    let id: string | null = null;
+    try {
+      id = sessionStorage.getItem(PUBLISH_AFTER_CONNECT);
+      if (id) sessionStorage.removeItem(PUBLISH_AFTER_CONNECT);
+    } catch {
+      return;
+    }
+    if (!id) return;
+    void documentStore.get(id).then((d) => {
+      if (!d) return;
+      go.current({ to: "/editor/$docId", params: { docId: d.id }, replace: true });
+      setPublishTarget(d);
+    });
+  }, [accountLoaded]);
+  const shares = useShares();
+  const sharedIds = useMemo(() => new Set(shares.byDraft.keys()), [shares.byDraft]);
+  const privateIds = useMemo(
+    () => new Set([...shares.byDraft].filter(([, s]) => s.access === "people").map(([id]) => id)),
+    [shares.byDraft],
+  );
   const remove = async (d: MdDocument) => {
     setToDelete(null);
     // an edit still waiting for its autosave must not write the draft back after it is deleted
@@ -1069,12 +1120,15 @@ export function Studio({ docId }: { docId: string }) {
     setMobilePanel(null);
     setTimeout(() => editor.current?.goToLine(line), 100);
   };
+  const ownShare = doc ? shares.byDraft.get(doc.id) : undefined;
   const panelButtons = (
     [
       ["checks", errCount ? AlertTriangle : CheckCircle2, "Checks"],
       ["outline", ListTree, "Outline"],
       ["meta", Tags, "Front matter"],
       ["history", History, "History"],
+      // comments belong to a draft that is in the cloud; the panel reads them when it is opened
+      ...(inCloud ? ([["comments", MessageSquare, "Comments"]] as const) : []),
     ] as const
   ).map(([p, Icon, label]) => (
     <Button
@@ -1116,6 +1170,12 @@ export function Studio({ docId }: { docId: string }) {
           onAdd: (d: MdDocument) =>
             cloudOn ? void addToCloud(account.id, [d.id]) : askToConfirmEmail(),
           onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
+          ...(cloudOn && {
+            onShare: (d: MdDocument) => setShareTarget(d),
+            shared: sharedIds,
+            sharedPrivately: privateIds,
+          }),
+          ...(cloudOn && githubPublish && { onPublish: (d: MdDocument) => setPublishTarget(d) }),
           ...(hostingOn && cloudOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
         },
       })}
@@ -1163,6 +1223,9 @@ export function Studio({ docId }: { docId: string }) {
               },
             })}
         />
+      )}
+      {activePanel === "comments" && doc && (
+        <ReviewComments draftId={doc.id} share={ownShare} onGo={goToLine} />
       )}
       {activePanel === "meta" && (
         <FrontMatterForm
@@ -1349,6 +1412,30 @@ export function Studio({ docId }: { docId: string }) {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+            {cloudOn && doc && cloudDrafts.linked.has(doc.id) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 sm:px-3"
+                aria-label="Share"
+                onClick={() => setShareTarget(doc)}
+              >
+                <Share2 className="size-4" />
+                <span className="hidden sm:inline">Share</span>
+              </Button>
+            )}
+            {cloudOn && githubPublish && doc && cloudDrafts.linked.has(doc.id) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 sm:px-3"
+                aria-label="Publish to GitHub"
+                onClick={() => setPublishTarget(doc)}
+              >
+                <Github className="size-4" />
+                <span className="hidden xl:inline">Publish</span>
+              </Button>
+            )}
             <ThemeToggle className="hidden sm:inline-flex" />
             <AccountMenu />
           </div>
@@ -1581,6 +1668,19 @@ export function Studio({ docId }: { docId: string }) {
         >
           {panelButtons}
         </nav>
+        <ShareDialog
+          draft={shareTarget && doc && shareTarget.id === doc.id ? doc : shareTarget}
+          open={shareTarget !== null}
+          onOpenChange={(open) => !open && setShareTarget(null)}
+          beforePublish={bringCloudUpToDate}
+        />
+        <PublishDialog
+          draft={publishTarget && doc && publishTarget.id === doc.id ? doc : publishTarget}
+          open={publishTarget !== null}
+          onOpenChange={(open) => !open && setPublishTarget(null)}
+          beforePublish={bringCloudUpToDate}
+          config={checkConfig}
+        />
         <Dialog open={toDelete !== null} onOpenChange={(open) => !open && setToDelete(null)}>
           <DialogContent>
             <DialogHeader>

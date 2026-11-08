@@ -7,7 +7,7 @@ import { SITE } from "@/lib/site/seo";
 /** Header for the public pages: logo (home), theme toggle and the GitHub link. */
 export function SiteHeader() {
   return (
-    <header className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-4 sm:px-6 sm:py-6">
+    <header className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 py-4 sm:px-6 sm:py-6">
       <Logo
         className="justify-self-start"
         markClassName="size-8"

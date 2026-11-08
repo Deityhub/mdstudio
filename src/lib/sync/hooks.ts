@@ -67,6 +67,14 @@ export async function removeFromCloud(userId: string, id: string) {
   requestSync();
 }
 
+/** Runs a round now and waits for it, so something that needs the cloud up to date can rely on it. */
+export async function syncNow(userId: string) {
+  const report = await syncOnce(depsFor(userId));
+  if (report.limit !== undefined) setCloud({ limit: report.limit });
+  await refreshCloud(userId);
+  return report;
+}
+
 // ---- Signing out ---------------------------------------------------------------------------
 
 /** Saves what can be saved and reports what removing this account's drafts would cost. */

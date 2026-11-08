@@ -1,10 +1,14 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { canonicalizeClasses, loadSystem, rewriteSource } from "./tailwind-classes";
 
+// the first lookups build Tailwind's caches, which takes seconds when the whole suite runs at once
+vi.setConfig({ testTimeout: 60_000 });
+
 let ds: Awaited<ReturnType<typeof loadSystem>>;
+// loading Tailwind's design system takes a few seconds when the whole suite runs at once
 beforeAll(async () => {
   ds = await loadSystem();
-});
+}, 60_000);
 
 describe("canonicalizeClasses", () => {
   it("merges width and height into size, keeping the other classes where they were", () => {

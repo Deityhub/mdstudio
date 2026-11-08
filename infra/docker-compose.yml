@@ -14,12 +14,18 @@ services:
       # Optional GitHub sign-in (see infra/README.md). Both are needed to switch it on.
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GH_TOKEN_KEY: ${GH_TOKEN_KEY:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
       # Drafts one account may keep in the cloud.
       MAX_CLOUD_DOCS: ${MAX_CLOUD_DOCS:-5}
       # Versions kept per cloud draft, and minutes between automatic ones.
       MAX_REVISIONS: ${MAX_REVISIONS:-10}
       REVISION_INTERVAL_MINUTES: ${REVISION_INTERVAL_MINUTES:-5}
+      # Share links: the longest a public link lasts, and how long a new one lasts by default (days).
+      SHARE_MAX_DAYS: ${SHARE_MAX_DAYS:-7}
+      SHARE_DEFAULT_DAYS: ${SHARE_DEFAULT_DAYS:-4}
+      # Set to "off" to stop links being limited to named people.
+      PRIVATE_LINKS: ${PRIVATE_LINKS:-on}
       # Email confirmation (optional): a sender and one way to send. Limits and proxy: see infra/README.md.
       MAIL_FROM: ${MAIL_FROM:-}
       SMTP_URL: ${SMTP_URL:-}

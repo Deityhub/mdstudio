@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.0 (2026-11-08)
+
+### Features
+
+- publish to GitHub from the editor
+- publish a cloud draft to GitHub
+- connect a GitHub account for publishing
+- select-to-comment on shared pages, richer invitations, no background share requests
+- review link controls in the editor
+- private-link sign-in and comments on the share page
+- comments and named-people access for share links, server side
+- share a cloud draft from the editor
+- a public page for each share link
+- share a cloud draft as a public read-only link that expires
+
+### Fixes
+
+- ensure full width for header in SiteHeader component
+
 ## 0.3.1 (2026-11-05)
 
 ### Features

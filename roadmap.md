@@ -67,15 +67,21 @@
 
 ## Milestone 4: Sharing & Multi-Platform Publishing (Target: Q4 2026)
 
-- [ ] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML.
-- [ ] **Link Management:** Configurable expiration dates and one-click link revocation.
-- [ ] **GitHub Publishing:** Direct commit and pull-request creation to user GitHub repositories using OAuth or personal access tokens.
+- [x] **Public Share Links:** Generate unguessable, read-only public web links (`/s/:slug`) with server-side rendered sanitized HTML. Scope: the published copy of a cloud draft, for review before publishing elsewhere (mdstudio is an editor to publish from, not a blogging platform). Done: server API, public page and editor controls.
+- [x] **Link Management:** Every link expires (1 to 7 days, 4 by default), can be extended or shortened, and can be revoked in one click.
+- [x] **Review Links:** Signed-in, verified readers can comment on a published copy, and a link can be limited to named people (free for now, behind one entitlement check so a paid plan can gate it). Server, the `/s/:slug` page (private-link sign-in, comments, replies, outdated marks) and the editor controls (who can open it, comments switch, invitations, the owner's Comments panel) are done.
+- [x] **GitHub Publishing:** Direct commit and pull-request creation (and gists) to user GitHub repositories, with images committed beside the file. Done: connecting a GitHub account (separate from sign-in, sealed token, `GH_TOKEN_KEY`), the publish endpoints (commit, pull request, gist, images, remembered targets) and the editor's Publish dialog.
 - [ ] **Blogging Integrations:** One-click publishing to dev.to and Hashnode via API integrations.
 
 ---
 
 ## Milestone 5: Collaboration & Advanced AI (Future)
 
+- [ ] **Edit access through a link:** Letting people named on a link edit the draft. Needs the collaboration engine below, so it waits for it.
 - [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
 - [ ] **Local AI Models:** Direct browser integration with local model runners (e.g., WebLLM or local Ollama instances via CORS).
 - [ ] **Inline AI Writing Actions:** In-place selection rewriting, summarization, proofreading, and automated image alt-text generation.
+
+## Decided not to build (for now)
+
+Deferred because they add abuse or cost risk for little gain on the editor path: **view counts** (a database write per public view could use up the free plan's daily write allowance; revisit with sampling or Cloudflare analytics), **custom slugs** (squatting, impersonation, and reused addresses once links expire) and **embeds** (a blogging feature, and an embed dies when its link expires).

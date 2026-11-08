@@ -113,6 +113,12 @@ callback URL, so previews do not offer GitHub sign-in; password sign-in works ev
 development use a second OAuth app with `http://localhost:8080/api/auth/github/callback` and export the
 two values in your shell before `bun run dev`.
 
+Publishing to GitHub (a writer connecting their own account) reuses the same OAuth app and callback
+URL, and needs one more secret: a random key that seals the stored GitHub tokens. Create it once and
+store it without printing it: `openssl rand -base64 32 | gh secret set GH_TOKEN_KEY`. The release
+workflow sets it on the Worker as `GH_TOKEN_KEY`. Keep it stable: a new key makes saved tokens
+unreadable, and writers then connect again. Without it, publishing is simply not offered.
+
 ## Sign-up protection
 
 mdstudio.deityhub.com protects the cloud from throwaway accounts with four things. The limits need nothing

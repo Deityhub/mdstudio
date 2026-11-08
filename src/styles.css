@@ -570,3 +570,14 @@ html.studio-open body {
   text-decoration-style: dotted;
   text-underline-offset: 0.2em;
 }
+
+/* Words a comment on a shared page is about */
+mark.share-hl {
+  background: color-mix(in oklch, var(--warning) 35%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  cursor: pointer;
+}
+mark.share-hl[data-active] {
+  background: color-mix(in oklch, var(--warning) 65%, transparent);
+}

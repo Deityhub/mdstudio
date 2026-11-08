@@ -13,6 +13,9 @@ const PORT = 4173;
 const MAIL_PORT = 4381;
 env["E2E_MAIL_DIR"] ??= mkdtempSync(join(tmpdir(), "mdstudio-e2e-mail-"));
 env["E2E_MAIL_URL"] ??= `http://localhost:${MAIL_PORT}`;
+// A fake GitHub for the mail server to connect to (see e2e/fake-github.ts).
+const GITHUB_PORT = 4382;
+env["E2E_GITHUB_URL"] ??= `http://localhost:${GITHUB_PORT}`;
 
 // A throwaway database per run, so accounts made by the specs never pile up in ./data.
 const data = () => mkdtempSync(join(tmpdir(), "mdstudio-e2e-"));
@@ -26,6 +29,12 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
   webServer: [
+    {
+      command: "bun e2e/fake-github.ts",
+      url: `http://localhost:${GITHUB_PORT}/__state`,
+      env: { PORT: String(GITHUB_PORT) },
+      reuseExistingServer: false,
+    },
     {
       command: "node .output/server/index.mjs",
       url: `http://localhost:${PORT}`,
@@ -49,6 +58,12 @@ export default defineConfig({
         MAIL_FROM: "mdstudio <noreply@example.com>",
         MAIL_OUTBOX_DIR: env["E2E_MAIL_DIR"],
         TRUST_PROXY: "1",
+        // publishing to GitHub, against the fake
+        GITHUB_CLIENT_ID: "e2e-client",
+        GITHUB_CLIENT_SECRET: "e2e-secret",
+        GH_TOKEN_KEY: Buffer.alloc(32, 5).toString("base64"),
+        GITHUB_URL: env["E2E_GITHUB_URL"],
+        GITHUB_API_URL: env["E2E_GITHUB_URL"],
       },
       // never reuse: a stray server on this port would answer without mail or the proxy setting
       reuseExistingServer: false,
