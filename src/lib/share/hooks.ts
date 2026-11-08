@@ -9,12 +9,15 @@ type ShareState = {
   byDraft: ReadonlyMap<string, SharedLink>;
   defaultDays: number;
   maxDays: number;
+  /** Whether links limited to named people can be made here. */
+  privateLinks: boolean;
 };
 
 const EMPTY: ShareState = {
   byDraft: new Map(),
   defaultDays: DEFAULT_SHARE_DAYS,
   maxDays: MAX_SHARE_DAYS,
+  privateLinks: true,
 };
 let state = EMPTY;
 const listeners = new Set<() => void>();
@@ -37,8 +40,8 @@ export const useShares = () =>
 /** Reads the links from the server. Quiet on failure: the next round tries again. */
 export async function refreshShares() {
   try {
-    const { shares, defaultDays, maxDays } = await shareApi.list();
-    set({ byDraft: new Map(shares.map((s) => [s.id, s])), defaultDays, maxDays });
+    const { shares, defaultDays, maxDays, privateLinks = true } = await shareApi.list();
+    set({ byDraft: new Map(shares.map((s) => [s.id, s])), defaultDays, maxDays, privateLinks });
   } catch (error) {
     if (error instanceof AuthExpiredError || error instanceof UnverifiedError)
       void accountStore.refresh();

@@ -88,11 +88,19 @@ async function cloudDraft(db: Db, userId: string, localId: string) {
   return row ?? null;
 }
 
+export type ShareSettings = { access?: ShareAccess; comments?: boolean };
+
+const validSettings = ({ access, comments }: ShareSettings) =>
+  (access === undefined || access === "public" || access === "people") &&
+  (comments === undefined || typeof comments === "boolean");
+
 /**
  * Publishes a cloud draft: the first time it makes the link (a fresh address, `days` from now,
  * the default when not given); after that it copies the draft's current text into the link and
  * keeps the address and expiry, unless `days` is given or the link has already expired, in which
- * case it gets a new expiry (and, if it had expired, a new address).
+ * case it gets a new expiry (and, if it had expired, a new address). `settings` (who may open it,
+ * whether readers may comment) apply when a link is made or renewed, so a private one is never
+ * public first; a live link's settings only change through `updateShare`.
  */
 export async function publishShare(
   db: Db,
@@ -101,8 +109,12 @@ export async function publishShare(
   days: number | undefined,
   config: ShareConfig,
   now = Date.now(),
+  settings: ShareSettings = {},
 ): Promise<{ ok: true; share: ShareInfo; created: boolean } | Failure> {
   if (days !== undefined && !wholeDays(days, config)) return { ok: false, error: "invalid" };
+  if (!validSettings(settings)) return { ok: false, error: "invalid" };
+  if (settings.access === "people" && !config.privateLinks)
+    return { ok: false, error: "unavailable" };
   const draft = await cloudDraft(db, userId, localId);
   if (!draft) return { ok: false, error: "not_found" };
 
@@ -122,8 +134,13 @@ export async function publishShare(
   }
   // an old one that ran out keeps its settings and comments but gets a new address, so the dead
   // one stays dead
+  const chosen = {
+    ...(settings.access !== undefined && { access: settings.access }),
+    ...(settings.comments !== undefined && { comments: settings.comments ? 1 : 0 }),
+  };
   const renewal = {
     ...fields,
+    ...chosen,
     slug: slug(),
     createdAt: now,
     expiresAt: now + (days ?? config.defaultDays) * DAY,

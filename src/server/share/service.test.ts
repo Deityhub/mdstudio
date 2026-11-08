@@ -142,6 +142,46 @@ describe("publishShare", () => {
   });
 });
 
+describe("publishShare with settings", () => {
+  it("makes a private, commentable link in one step, so it is never public first", async () => {
+    await cloud();
+    const r = await publishShare(db, "a", "d1", 2, DEFAULT_SHARE, t0, {
+      access: "people",
+      comments: true,
+    });
+    if (!r.ok) throw new Error(r.error);
+    expect(r.share).toMatchObject({ access: "people", comments: true });
+    expect(await getPublicShare(db, r.share.slug, t0 + 1)).toBeNull();
+  });
+
+  it("refuses a private link where the account may not have them, and makes nothing", async () => {
+    await cloud();
+    const off = { ...DEFAULT_SHARE, privateLinks: false };
+    expect(await publishShare(db, "a", "d1", 2, off, t0, { access: "people" })).toEqual({
+      ok: false,
+      error: "unavailable",
+    });
+    expect(await rows()).toHaveLength(0);
+  });
+
+  it("rejects settings that are not valid", async () => {
+    await cloud();
+    for (const bad of [{ access: "everyone" }, { comments: "yes" }])
+      expect(await publishShare(db, "a", "d1", 2, DEFAULT_SHARE, t0, bad as never)).toEqual({
+        ok: false,
+        error: "invalid",
+      });
+  });
+
+  it("leaves a live link's settings alone when it is published again", async () => {
+    await cloud();
+    await publishShare(db, "a", "d1", 2, DEFAULT_SHARE, t0, { access: "people", comments: true });
+    const r = await publishShare(db, "a", "d1", undefined, DEFAULT_SHARE, t0 + 1);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.share).toMatchObject({ access: "people", comments: true });
+  });
+});
+
 describe("getPublicShare", () => {
   it("is null for an unknown slug and exactly at the expiry time", async () => {
     await cloud();

@@ -131,7 +131,19 @@ export const publishHandler = (request: Request) =>
     if (days !== undefined && typeof days !== "number") return fail("invalid");
     const t = await hit(db, `share:${user.id}`, CHANGES_PER_HOUR, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
-    const r = await publishShare(db, user.id, body["id"], days, shareConfig(request, user));
+    const { access, comments } = body;
+    const r = await publishShare(
+      db,
+      user.id,
+      body["id"],
+      days,
+      shareConfig(request, user),
+      Date.now(),
+      {
+        ...(access !== undefined && { access: access as "public" | "people" }),
+        ...(comments !== undefined && { comments: comments as boolean }),
+      },
+    );
     return r.ok ? json({ share: withUrl(request, r.share), created: r.created }) : fail(r.error);
   });
 

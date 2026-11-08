@@ -13,6 +13,7 @@ import {
   FolderOpen,
   FolderPlus,
   Globe,
+  Lock,
   ImageUp,
   MoreHorizontal,
   Pencil,
@@ -182,6 +183,8 @@ export function Library({
     /** Opens the share dialog for a cloud draft; `shared` holds the ids that have a live link. */
     onShare?: (d: MdDocument) => void;
     shared?: ReadonlySet<string>;
+    /** Those of `shared` that only named people can open. */
+    sharedPrivately?: ReadonlySet<string>;
     /** Present when this server hosts images: moves a draft's local images to hosting. */
     onHostImages?: (d: MdDocument) => void;
   };
@@ -315,9 +318,15 @@ export function Library({
                   aria-label="Stored in your cloud"
                 />
               )}
-              {cloud?.shared?.has(d.id) && (
-                <Globe className="size-3 shrink-0 text-primary" aria-label="Shared publicly" />
-              )}
+              {cloud?.shared?.has(d.id) &&
+                (cloud.sharedPrivately?.has(d.id) ? (
+                  <Lock
+                    className="size-3 shrink-0 text-primary"
+                    aria-label="Shared with named people"
+                  />
+                ) : (
+                  <Globe className="size-3 shrink-0 text-primary" aria-label="Shared publicly" />
+                ))}
             </div>
             <div className="truncate text-xs text-muted-foreground">
               {snippets.get(d.id) || new Date(d.updatedAt).toLocaleDateString()}
