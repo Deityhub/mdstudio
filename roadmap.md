@@ -71,7 +71,6 @@
 - [x] **Link Management:** Every link expires (1 to 7 days, 4 by default), can be extended or shortened, and can be revoked in one click.
 - [x] **Review Links:** Signed-in, verified readers can comment on a published copy, and a link can be limited to named people (free for now, behind one entitlement check so a paid plan can gate it). Server, the `/s/:slug` page (private-link sign-in, comments, replies, outdated marks) and the editor controls (who can open it, comments switch, invitations, the owner's Comments panel) are done.
 - [x] **GitHub Publishing:** Direct commit and pull-request creation (and gists) to user GitHub repositories, with images committed beside the file. Done: connecting a GitHub account (separate from sign-in, sealed token, `GH_TOKEN_KEY`), the publish endpoints (commit, pull request, gist, images, remembered targets) and the editor's Publish dialog.
-- [ ] **Blogging Integrations:** One-click publishing to dev.to and Hashnode via API integrations.
 
 ---
 
@@ -81,6 +80,7 @@
 - [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
 - [ ] **Local AI Models:** Direct browser integration with local model runners (e.g., WebLLM or local Ollama instances via CORS).
 - [ ] **Inline AI Writing Actions:** In-place selection rewriting, summarization, proofreading, and automated image alt-text generation.
+- [ ] **Google Auth** Integrate google signin so we have three means to signup or login, Email/Password, Github and Google
 
 ## Decided not to build (for now)
 

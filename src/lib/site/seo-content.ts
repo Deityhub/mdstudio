@@ -9,18 +9,18 @@ export const BRAND = {
   tagline: "Write once. Render the same everywhere.",
   homeTitle: "mdstudio: Markdown editor that renders the same everywhere",
   description:
-    "Free, open-source Markdown editor with live preview. Checks your writing renders the same on GitHub, dev.to and Obsidian. Math, Mermaid, no sign-up.",
+    "Open-source Markdown editor with live preview. Checks your writing renders the same on GitHub, dev.to and Obsidian. Math, Mermaid, no sign-up.",
   imageAlt: "mdstudio: write once, render the same everywhere",
 } as const;
 
 export const LONG_DESCRIPTION =
-  "mdstudio is a free, open-source, local-first Markdown editor and portability checker. Write in a " +
+  "mdstudio is an open-source, local-first Markdown editor and portability checker. Write in a " +
   "full-featured editor with a complete formatting toolbar, watch a live preview that matches what " +
   "GitHub, dev.to, Obsidian or a strict CommonMark engine will render, and get clickable warnings for " +
   "anything that will not travel: raw HTML, local images, wiki-links, math, Mermaid diagrams and " +
   "trailing-space line breaks. Drafts autosave in your browser with no account, import from .md files or " +
   "pasted Google Docs and Notion content, and export clean UTF-8 Markdown or self-contained HTML. " +
-  "Optional AI writing helpers use your own API key. mdstudio is MIT licensed, runs free in the browser " +
+  "Optional AI writing helpers use your own API key. mdstudio is MIT licensed, runs in the browser " +
   "and can be self-hosted with Docker.";
 
 export const FEATURE_LIST = [
@@ -54,7 +54,7 @@ export const FAQ: Faq[] = [
   {
     question: "What is mdstudio?",
     answer:
-      "mdstudio is a free, open-source Markdown editor with a live preview and a portability checker. You write Markdown, see how it will render on GitHub, dev.to, Obsidian or a strict CommonMark engine, and fix anything that would look different before you publish.",
+      "mdstudio is an open-source Markdown editor with a live preview and a portability checker. You write Markdown, see how it will render on GitHub, dev.to, Obsidian or a strict CommonMark engine, and fix anything that would look different before you publish.",
   },
   {
     question: "How is mdstudio different from other Markdown editors?",
@@ -62,9 +62,9 @@ export const FAQ: Faq[] = [
       "Most editors render Markdown their own way, so a post can look right in the editor and wrong where you publish it. mdstudio keeps the raw Markdown as the single source of truth, renders it without preview-only tricks, and flags syntax that other platforms handle differently, such as raw HTML, local image paths, wiki-links, math and Mermaid.",
   },
   {
-    question: "Is mdstudio free and open source?",
+    question: "Is mdstudio open source?",
     answer:
-      "Yes. mdstudio is free to use in the browser and released under the MIT license. The source code is on GitHub, and you can self-host it with Docker.",
+      "Yes. mdstudio can be used in the browser and is released under the MIT license. The source code is on GitHub, and you can self-host it with Docker.",
   },
   {
     question: "Are my documents private?",

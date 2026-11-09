@@ -25,7 +25,7 @@ test("home page carries canonical, social meta and structured data", async ({ pa
   const ld = JSON.parse(
     (await page.locator('script[type="application/ld+json"]').first().textContent()) ?? "",
   );
-  expect(ld).toMatchObject({ "@type": "WebApplication", isAccessibleForFree: true });
+  expect(ld).toMatchObject({ "@type": "WebApplication" });
   const faq = (await page.locator('script[type="application/ld+json"]').allTextContents())
     .map((t) => JSON.parse(t))
     .find((d) => d["@type"] === "FAQPage");

@@ -71,9 +71,7 @@ export const jsonLd = () => [
     featureList: FEATURE_LIST,
     keywords:
       "markdown editor, markdown preview, markdown linter, portable markdown, GitHub Flavored Markdown, CommonMark, dev.to, Obsidian, KaTeX, Mermaid",
-    isAccessibleForFree: true,
     license: "https://opensource.org/license/mit",
-    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
     author: { "@type": "Person", name: SITE.author },
     codeRepository: SITE.repo,
     sameAs: [SITE.repo],

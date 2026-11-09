@@ -68,7 +68,7 @@ describe("brand copy", () => {
 
 describe("jsonLd", () => {
   const [app, site] = jsonLd() as unknown as [Record<string, unknown>, Record<string, unknown>];
-  it("describes a free web application with an author, license and features", () => {
+  it("describes a web application with an author, license and features", () => {
     expect(app).toMatchObject({
       "@context": "https://schema.org",
       "@type": "WebApplication",
@@ -76,7 +76,6 @@ describe("jsonLd", () => {
       alternateName: "Markdown Studio",
       url: `${SITE.url}/`,
       applicationCategory: "DeveloperApplication",
-      offers: { "@type": "Offer", price: "0" },
       author: { "@type": "Person", name: SITE.author },
     });
     expect(app["featureList"]).toEqual(FEATURE_LIST);
