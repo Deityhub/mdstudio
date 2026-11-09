@@ -28,7 +28,7 @@
 - [x] **Faithful Preview:** Strict CommonMark + GFM preview rendering via unified/remark/rehype with syntax-highlighted code fences.
 - [x] **Scroll Synchronization:** Bidirectional ratio-based scroll synchronization between editor and preview.
 - [x] **Security:** XSS prevention using `rehype-sanitize` with customized safe attribute allowlists.
-- [x] **Portability Linter:** Real-time syntax checker with selectable profiles (Strict CommonMark, GitHub, dev.to, Obsidian).
+- [x] **Portability Linter:** Real-time syntax checker with selectable profiles (Strict CommonMark, GFM extended, GFM without HTML, Wiki notes).
 - [x] **Import Pipeline:** Support for `.md` file imports, drag-and-drop, and rich HTML-to-Markdown paste conversion.
 - [x] **Export Pipeline:** Standard `.md`, clipboard copy, self-contained `.md` with base64 embedded images, and standalone `.html`.
 - [x] **Draft Library:** Local-first IndexedDB persistence with autosave debounce (400ms).
@@ -45,7 +45,7 @@
 - [x] **Local Document History:** Automatic periodic snapshots stored in IndexedDB with visual side-by-side diff and one-click restore.
 - [x] **Library Organization:** Full-text document search, tags (from front matter) and folder categorization.
 - [x] **Bulk Import & Export:** Export all drafts as a ZIP (folders and images kept); import ZIP archives, several files or a whole folder.
-- [x] **Obsidian Rendering:** `==highlight==` and `[[wiki-links]]` (with `|alias` and `#heading`) render in the Obsidian profile. `![[embeds]]` are not rendered.
+- [x] **Obsidian Rendering:** `==highlight==` and `[[wiki-links]]` (with `|alias` and `#heading`) render in the Wiki notes profile. `![[embeds]]` are not rendered.
 - [x] **Click-through Sync:** Click a block in the preview to put the editor cursor on its source line; the cursor's block gets a faint highlight in the preview.
 - [x] **Studio Polish:** Rename drafts, canonical URL and draft toggle in front matter.
 - [x] **Custom Checker Rules:** Turn built-in rules on or off and change their severity; publication standards (title and description length, required front matter, heading structure, word count, tags); your own text or regex rules; settings kept in the browser, shareable as JSON, and overridable per draft from front matter.
@@ -71,7 +71,6 @@
 - [x] **Link Management:** Every link expires (1 to 7 days, 4 by default), can be extended or shortened, and can be revoked in one click.
 - [x] **Review Links:** Signed-in, verified readers can comment on a published copy, and a link can be limited to named people (free for now, behind one entitlement check so a paid plan can gate it). Server, the `/s/:slug` page (private-link sign-in, comments, replies, outdated marks) and the editor controls (who can open it, comments switch, invitations, the owner's Comments panel) are done.
 - [x] **GitHub Publishing:** Direct commit and pull-request creation (and gists) to user GitHub repositories, with images committed beside the file. Done: connecting a GitHub account (separate from sign-in, sealed token, `GH_TOKEN_KEY`), the publish endpoints (commit, pull request, gist, images, remembered targets) and the editor's Publish dialog.
-- [ ] **Blogging Integrations:** One-click publishing to dev.to and Hashnode via API integrations.
 
 ---
 
@@ -81,6 +80,7 @@
 - [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
 - [ ] **Local AI Models:** Direct browser integration with local model runners (e.g., WebLLM or local Ollama instances via CORS).
 - [ ] **Inline AI Writing Actions:** In-place selection rewriting, summarization, proofreading, and automated image alt-text generation.
+- [ ] **Google Auth** Integrate google signin so we have three means to signup or login, Email/Password, Github and Google
 
 ## Decided not to build (for now)
 

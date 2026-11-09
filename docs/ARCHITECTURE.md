@@ -22,7 +22,7 @@
 
 ## Modules
 ### `src/lib/markdown/markdown.ts` (single home of all Markdown logic)
-- `PROFILES`: `commonmark | github | devto | obsidian` — controls which features are considered portable.
+- `PROFILES`: `commonmark | gfm-extended | gfm-no-html | wiki-notes` — controls which features are considered portable.
 - `renderMarkdown(text, profile, images)` → sanitized HTML string. Local `images/x.png` refs resolve to stored data URIs for preview only.
 - `checkPortability(text, profile)` → `Issue[] {rule, severity, line, message, fix?}`. Rules: raw-html, data-image, local-image, mermaid, highlight (`==x==`), wiki-link (`[[x]]`), math (`$`/`$$`), container (`:::`), trailing-break (two spaces), mixed-bullets, gfm-table/task/strike (on commonmark), fence-lang (missing language).
 - `getOutline`, `getStats` (words, chars, reading time), `deriveTitle`, `slugify`.

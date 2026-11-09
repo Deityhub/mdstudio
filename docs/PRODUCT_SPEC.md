@@ -7,7 +7,7 @@ Write, import, check and export Markdown that renders identically on GitHub, dev
 Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: React 16 class components, `marked` 0.6 with `breaks:true` + `smartypants:true` (preview lied about output), unsanitized `dangerouslySetInnerHTML` (XSS), no import/export/save, no tests.
 
 ## Target users
-- Developer-bloggers publishing on dev.to / Hashnode / personal Astro/Next/Hugo sites.
+- Developer-bloggers publishing from GitHub repositories and personal Astro/Next/Hugo sites.
 - Technical writers maintaining docs in Git repos.
 - Content teams drafting in Google Docs/Notion who need clean Markdown out.
 - Note-takers moving between Obsidian and the web.
@@ -33,7 +33,7 @@ Rebuild of github.com/Deityhub/markdown-previewer. Problems in the original: Rea
 | U8 | Manage many drafts locally (new, duplicate, rename, delete, autosave) | Done |
 | U9 | AI: suggest title/description/tags; write a draft from a topic | Done |
 | U10 | Use on phone | Done |
-| U11 | Publish directly to GitHub repo / dev.to / Hashnode / Ghost / WordPress | Planned |
+| U11 | Publish directly to a GitHub repository (commit or pull request) or gist | Done |
 | U12 | Version history and restore | Done |
 | U13 | Collections, tags, search across drafts | Done |
 | U14 | Templates per platform (Astro, Hugo, Jekyll, Docusaurus, dev.to) | Planned |

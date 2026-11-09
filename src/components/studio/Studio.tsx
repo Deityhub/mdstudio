@@ -121,6 +121,7 @@ import {
   splitFrontMatter,
   joinFrontMatter,
 } from "@/lib/markdown/markdown";
+import { parseProfile } from "@/lib/markdown/profiles";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editor/editing";
 import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editor/editing-insert";
 import { hydrateDiagrams, renderDiagramFor, withCachedDiagrams } from "@/lib/markdown/diagrams";
@@ -197,7 +198,7 @@ export function Studio({ docId }: { docId: string }) {
   const [doc, setDoc] = useState<MdDocument | null>(null);
   const [docs, setDocs] = useState<MdDocument[]>([]);
   const [missing, setMissing] = useState(false);
-  const [profile, setProfile] = useState<Profile>("github");
+  const [profile, setProfile] = useState<Profile>("gfm-extended");
   const [view, setView] = useState<View>("split");
   const [panel, setPanel] = useState<Panel>(null);
   const [library, setLibrary] = useState(true);
@@ -271,8 +272,8 @@ export function Studio({ docId }: { docId: string }) {
 
   // load prefs + docs
   useEffect(() => {
-    const p = localStorage.getItem("md:profile") as Profile | null;
-    if (p && PROFILES.some((x) => x.id === p)) setProfile(p);
+    const p = parseProfile(localStorage.getItem("md:profile"));
+    if (p) setProfile(p);
     setNormalize(localStorage.getItem("md:normalize") === "1");
     setCheckConfig(loadConfig());
     // Checks start open only on wide screens; below that the editor keeps the room until asked.

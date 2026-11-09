@@ -36,9 +36,19 @@ export type Feature =
   | "wikilink"
   | "html";
 
-const GFM_ONLY = { commonmark: false, github: true, devto: true, obsidian: true };
-const GITHUB_AND_OBSIDIAN = { commonmark: false, github: true, devto: false, obsidian: true };
-const NOWHERE = { commonmark: false, github: false, devto: false, obsidian: false };
+const GFM_ONLY = {
+  commonmark: false,
+  "gfm-extended": true,
+  "gfm-no-html": true,
+  "wiki-notes": true,
+};
+const EXTENDED = { ...GFM_ONLY, "gfm-no-html": false };
+const NOWHERE = {
+  commonmark: false,
+  "gfm-extended": false,
+  "gfm-no-html": false,
+  "wiki-notes": false,
+};
 
 /**
  * Where each feature renders. The checker's rules and the toolbar's warnings both read this, so
@@ -50,35 +60,28 @@ export const FEATURE_SUPPORT: Record<Feature, Record<Profile, boolean>> = {
   task: GFM_ONLY,
   strike: GFM_ONLY,
   footnote: GFM_ONLY,
-  alert: GITHUB_AND_OBSIDIAN,
-  math: GITHUB_AND_OBSIDIAN,
-  mermaid: GITHUB_AND_OBSIDIAN,
-  highlight: { ...NOWHERE, obsidian: true },
-  wikilink: { ...NOWHERE, obsidian: true },
+  alert: EXTENDED,
+  math: EXTENDED,
+  mermaid: EXTENDED,
+  highlight: { ...NOWHERE, "wiki-notes": true },
+  wikilink: { ...NOWHERE, "wiki-notes": true },
   html: NOWHERE,
 };
 
 export const supports = (feature: Feature, profile: Profile) => FEATURE_SUPPORT[feature][profile];
-
-const PROFILE_NAMES: Record<Profile, string> = {
-  github: "GitHub",
-  commonmark: "Strict CommonMark",
-  devto: "dev.to",
-  obsidian: "Obsidian",
-};
 
 /** Why a tool is flagged for this profile, or null when it renders there. */
 export function supportHint(feature: Feature, profile: Profile): string | null {
   if (supports(feature, profile)) return null;
   const where = PROFILES.map((p) => p.id)
     .filter((id) => supports(feature, id))
-    .map((id) => PROFILE_NAMES[id]);
+    .map((id) => PROFILES.find((p) => p.id === id)!.label);
   if (where.length === 0) return "Raw HTML may be removed or shown differently on other platforms";
   const list =
     where.length === 1
       ? where[0]
       : `${where.slice(0, -1).join(", ")} and ${where[where.length - 1]}`;
-  return `Renders on ${list} only`;
+  return `Supported in ${list} only`;
 }
 
 /* ---------------- front matter ---------------- */
@@ -157,7 +160,7 @@ const ALERT_TITLES: Record<string, string> = {
  */
 function rehypeAlerts(profile: Profile) {
   return () => (tree: HastRoot) => {
-    if (profile !== "github" && profile !== "obsidian") return;
+    if (profile !== "gfm-extended" && profile !== "wiki-notes") return;
     visit(tree, "element", (node: Element) => {
       if (node.tagName !== "blockquote") return;
       const first = node.children.find((c): c is Element => c.type === "element");
@@ -166,7 +169,7 @@ function rehypeAlerts(profile: Profile) {
       const m = /^\[!(note|tip|important|warning|caution)\]([^\n]*)\n?/i.exec(text.value);
       if (!m) return;
       const title = (m[2] ?? "").trim();
-      if (title && profile !== "obsidian") return;
+      if (title && profile !== "wiki-notes") return;
       const kind = (m[1] ?? "").toLowerCase();
       text.value = text.value.slice(m[0].length);
       if (!text.value) first.children.shift();
@@ -283,7 +286,7 @@ export type RenderOptions = {
 
 export function renderMarkdown(
   md: string,
-  profile: Profile = "github",
+  profile: Profile = "gfm-extended",
   images: Record<string, string> = {},
   options: RenderOptions = {},
 ): string {
@@ -406,7 +409,7 @@ function unclosedHtml(tree: MdRoot, report: (line: number, message: string) => v
 const isDelimiterRow = (l: string) =>
   l.includes("|") && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(l);
 
-export function checkPortability(md: string, profile: Profile = "github"): Issue[] {
+export function checkPortability(md: string, profile: Profile = "gfm-extended"): Issue[] {
   const issues: Issue[] = [];
   const lines = md.split(/\r?\n/);
   const inCode = fencedLines(lines);
@@ -424,7 +427,7 @@ export function checkPortability(md: string, profile: Profile = "github"): Issue
           line,
           "raw-html",
           "Raw HTML is stripped or rendered differently on many platforms.",
-          profile === "devto" ? "error" : "warning",
+          profile === "gfm-no-html" ? "error" : "warning",
         );
     }
     if (node.type === "image") {
@@ -546,7 +549,7 @@ export type Heading = { depth: number; text: string; line: number };
 
 export function getOutline(md: string): Heading[] {
   const out: Heading[] = [];
-  visit(parse(md, "github"), "heading", (node) => {
+  visit(parse(md, "gfm-extended"), "heading", (node) => {
     let text = "";
     visit(node, (c) => {
       if ("value" in c && typeof c.value === "string" && c.type !== "html") text += c.value;
@@ -606,7 +609,7 @@ export function finalizeText(md: string) {
   );
 }
 
-export function normalizeMarkdown(md: string, profile: Profile = "github"): string {
+export function normalizeMarkdown(md: string, profile: Profile = "gfm-extended"): string {
   const p = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]);
   if (usesGfm(profile)) p.use(remarkGfm);
   const out = p
