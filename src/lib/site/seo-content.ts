@@ -69,7 +69,32 @@ export const FAQ: Faq[] = [
   {
     question: "Are my documents private?",
     answer:
-      "Yes. Drafts are saved in your browser's IndexedDB and are not uploaded anywhere. There is no account to create. If you use the optional AI helpers, your API key stays in memory for the session and requests go directly from your browser to the provider you choose.",
+      "Yes. Drafts are saved in your browser's IndexedDB and are not uploaded anywhere unless you choose to keep one in your cloud, which needs an account. If you use the optional AI helpers, your API key stays in memory for the session and requests go directly from your browser to the provider you choose.",
+  },
+  {
+    question: "Do I need an account?",
+    answer:
+      "No. The whole editor works without one, and drafts stay on your device. An account is optional and adds what needs a server: keeping drafts in your cloud, sharing a draft as a read-only link with optional comments, and publishing to GitHub. Sign up with an email and password or with GitHub, then confirm your email.",
+  },
+  {
+    question: "What does an account offer me?",
+    answer:
+      "Cloud storage for chosen drafts that opens on any device you sign in on, with version history kept for them. Share links that expire, public or limited to people you invite, with comments from signed-in readers. And publishing a draft to GitHub as a commit, a pull request or a gist.",
+  },
+  {
+    question: "How does cloud storage work?",
+    answer:
+      "You choose which drafts go to your cloud, up to 5 drafts by default. A cloud draft is saved to your account and keeps its version history, so you can open it on another device. Drafts you do not choose stay only in your browser. Self-hosted installs keep cloud drafts in your own database.",
+  },
+  {
+    question: "Can I share a draft to get feedback?",
+    answer:
+      "Yes, from a cloud draft. Sharing publishes a copy as a read-only page that expires after 1 to 7 days, 4 by default. Make it public, or limit it to the email addresses you invite. Signed-in readers can select text and comment on it, and you can resolve or delete comments. Changing the draft does not change the page until you publish an update, and you can stop sharing at any time.",
+  },
+  {
+    question: "Can I publish to GitHub?",
+    answer:
+      "Yes. Connect your GitHub account, pick a repository and branch, and type the file path, including folders such as posts/my-post.md. Then commit straight to the branch or open a pull request. Local images are committed next to the file in an images folder. Publishing again updates the same file, and you can also publish a draft as a secret or public gist. Publishing needs an account with a confirmed email, and you can disconnect GitHub at any time.",
   },
   {
     question: "Does mdstudio work offline?",

@@ -18,7 +18,7 @@ Write Markdown in a full-featured editor with a complete formatting toolbar and 
 
 ## Who it is for
 
-- Technical bloggers publishing through GitHub and static site generators.
+- Technical bloggers publishing through GitHub, dev.to, Hashnode and/or static site generators.
 - Developers writing READMEs and documentation for GitHub.
 - Obsidian users who share notes outside Obsidian.
 - Documentation teams who need Markdown that renders the same in every tool.
@@ -26,6 +26,8 @@ Write Markdown in a full-featured editor with a complete formatting toolbar and 
 ## Common questions
 
 - Is it open source? Yes, it is MIT licensed, and you can use it in the browser or self-host it.
+- Do I need an account? No. An account is optional and adds cloud storage for chosen drafts (up to 5 by default), expiring share links with comments, and publishing to GitHub.
+- Can I publish to GitHub? Yes: commit or pull request to a repository, with images beside the file, or publish a gist. Needs an account with a confirmed email.
 - Are documents private? Yes by default. They stay in the browser; an account and the cloud are optional, and a draft is public only if the writer publishes it as a link that expires.
 - How is it different from other Markdown editors? It checks portability across platforms instead of rendering Markdown its own way.
 
@@ -49,4 +51,4 @@ Write Markdown in a full-featured editor with a complete formatting toolbar and 
 
 ## Author
 
-Chizoba Jude Ojini
+[Chizoba Jude Ojini](https://judeojini.com)

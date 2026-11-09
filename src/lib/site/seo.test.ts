@@ -61,9 +61,19 @@ describe("brand copy", () => {
   });
   it("makes no claims the product cannot back up yet", () => {
     const text = [BRAND.description, ...FEATURE_LIST, ...FAQ.map((f) => f.answer)].join(" ");
-    // offline use is real (service worker, tested), cloud sync and collaboration are not built yet
-    expect(text).not.toMatch(/cloud sync|sync across|collaborat|real-time/i);
+    // offline use, accounts, cloud drafts, share links and GitHub publishing are real; real-time
+    // collaboration and publishing elsewhere are not built
+    expect(text).not.toMatch(/collaborat|real-time|dev\.to api|hashnode|medium|wordpress/i);
   });
+  it("answers what an account gives, how the cloud works and how GitHub publishing works", () => {
+    const asked = (re: RegExp) => FAQ.find((f) => re.test(f.question));
+    expect(asked(/account/i)?.answer).toMatch(/optional/i);
+    expect(asked(/cloud/i)?.answer).toMatch(/5 drafts/);
+    expect(asked(/github/i)?.answer).toMatch(/pull request/i);
+    expect(asked(/share|feedback/i)?.answer).toMatch(/expire/i);
+  });
+  it("no longer says there is no account", () =>
+    expect(FAQ.map((f) => f.answer).join(" ")).not.toMatch(/no account to create/i));
 });
 
 describe("jsonLd", () => {

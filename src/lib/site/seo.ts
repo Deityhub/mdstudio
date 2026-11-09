@@ -11,6 +11,7 @@ export const SITE = {
   tagline: BRAND.tagline,
   description: BRAND.description,
   author: "Chizoba Jude Ojini",
+  authorUrl: "https://judeojini.com",
   repo: "https://github.com/Deityhub/mdstudio",
   image: "/og.png",
   imageAlt: BRAND.imageAlt,
