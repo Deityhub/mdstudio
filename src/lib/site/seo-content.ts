@@ -26,7 +26,7 @@ export const LONG_DESCRIPTION =
 export const FEATURE_LIST = [
   "Live Markdown preview that matches GitHub, dev.to, Obsidian and CommonMark",
   "Portability checker with clickable issues for non-portable syntax",
-  "Target profiles: Strict CommonMark, GitHub Flavored Markdown, dev.to, Obsidian",
+  "Target profiles: Strict CommonMark, GFM extended, GFM without HTML, Wiki notes",
   "Formatting toolbar for headings, lists, tables, links, images, code blocks, footnotes and alerts",
   "KaTeX math and Mermaid diagrams",
   "Local-first drafts stored in the browser (IndexedDB), no account needed",
@@ -42,7 +42,7 @@ export const FEATURE_LIST = [
 ];
 
 export const AUDIENCES = [
-  "Technical bloggers publishing to dev.to, Hashnode and static site generators",
+  "Technical bloggers publishing through GitHub, dev.to, Hashnode and/or other static site generators",
   "Developers writing READMEs and documentation for GitHub",
   "Obsidian users who share notes outside Obsidian",
   "Documentation teams who need Markdown that renders the same in every tool",
@@ -84,7 +84,7 @@ export const FAQ: Faq[] = [
   {
     question: "Which Markdown flavors and platforms does it check?",
     answer:
-      "Choose a target profile: Strict CommonMark, GitHub Flavored Markdown, dev.to or Obsidian. The preview and the portability checks adapt to the profile, and the toolbar warns before you insert syntax the target does not support.",
+      "Choose a target profile: Strict CommonMark, GFM extended, GFM without HTML or Wiki notes. The preview and the portability checks adapt to the profile, and the toolbar warns before you insert syntax the target does not support.",
   },
   {
     question: "Does mdstudio support math, diagrams, tables and footnotes?",

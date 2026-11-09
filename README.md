@@ -29,7 +29,7 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 
 - **Faithful live preview.** Strict CommonMark and GitHub Flavored Markdown, sanitized, with syntax-highlighted code. Scrolling stays aligned line by line, and clicking a block in the preview puts the editor cursor on its source line.
 - **Portability checker.** Raw HTML, local images and links, base64 images, wiki-links, `==highlights==`, math, Mermaid, trailing-space line breaks, missing alt text, unclosed tags and more. Every issue is clickable. Turn rules on or off, add publication standards (title and description length, required front matter, heading structure) and your own text or regex rules, and share them as a JSON file.
-- **Target profiles.** Strict CommonMark, GitHub, dev.to / Hashnode and Obsidian. The preview, the checks and the toolbar warnings follow your choice.
+- **Target profiles.** Strict CommonMark, GFM extended, GFM without HTML, and Wiki notes. The preview, the checks and the toolbar warnings follow your choice.
 - **Complete formatting toolbar.** Marks, headings, lists, task lists, links, images, footnotes, rules, code blocks, tables with cell navigation, GitHub alerts, math, diagrams and HTML helpers. Fully keyboard accessible.
 - **Math and diagrams.** KaTeX and Mermaid, rendered on demand, themed for light and dark.
 - **Local-first and private.** Drafts autosave to your browser's IndexedDB. No account, no uploads.
@@ -86,10 +86,10 @@ The app is served on <http://localhost:3000> with data in the `mdstudio-data` vo
 
 | Profile               | Use it for                         | Notes                                                |
 | --------------------- | ---------------------------------- | ---------------------------------------------------- |
-| **GitHub (GFM)**      | READMEs, issues, docs              | Tables, task lists, footnotes, alerts, math, Mermaid |
+| **GFM extended**      | READMEs, issues, docs              | Tables, task lists, footnotes, alerts, math, Mermaid |
 | **Strict CommonMark** | Anything that must work everywhere | Flags every GFM extension                            |
-| **dev.to / Hashnode** | Blog posts                         | GFM; raw HTML is an error                            |
-| **Obsidian**          | Notes you share outside Obsidian   | GFM plus highlights, wiki-links, math, Mermaid       |
+| **GFM without HTML**  | Blog posts                         | GFM; raw HTML is an error                            |
+| **Wiki notes**        | Notes with wiki-links, highlights  | GFM extended plus highlights and wiki-links          |
 
 ## How it works
 

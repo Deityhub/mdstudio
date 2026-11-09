@@ -35,7 +35,7 @@ const TONES: Record<Severity, string> = {
 /** Interactive sample of the portability checker; the real engine, running in the page. */
 export default function CheckerDemo() {
   const [md, setMd] = useState(DEMO_SAMPLE);
-  const [profile, setProfile] = useState<Profile>("github");
+  const [profile, setProfile] = useState<Profile>("gfm-extended");
   const field = useRef<HTMLTextAreaElement>(null);
 
   const results = useMemo(

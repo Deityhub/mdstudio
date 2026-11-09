@@ -39,6 +39,6 @@ Before you publish, run through this list:
 
 ## Check it automatically
 
-Reading a checklist is slow and easy to forget. [mdstudio](https://mdstudio.deityhub.com/editor) is a free Markdown editor built around this problem. Choose a target profile (Strict CommonMark, GitHub, dev.to or Obsidian), and its portability checker flags raw HTML, local images, wiki-links, math, Mermaid, trailing-space breaks and more, with a click to jump to each one. The preview shows what that platform renders, with no preview-only tricks, so what you see is what ships.
+Reading a checklist is slow and easy to forget. [mdstudio](https://mdstudio.deityhub.com/editor) is an open-source Markdown editor built around this problem. Choose a target profile (Strict CommonMark, GitHub (GFM extended), GFM without HTML or Wiki notes), and its portability checker flags raw HTML, local images, wiki-links, math, Mermaid, trailing-space breaks and more, with a click to jump to each one. The preview shows what that platform renders, with no preview-only tricks, so what you see is what ships.
 
-Your drafts stay in your browser, there is no account, and the project is open source under the MIT license. [Open the editor](https://mdstudio.deityhub.com/editor) and paste in a post to see what it finds.
+Your drafts stay in your browser, there is no account requirement unless you want to use the cloud features, and the project is open source under the MIT license. [Open the editor](https://mdstudio.deityhub.com/editor) and paste in a post to see what it finds.

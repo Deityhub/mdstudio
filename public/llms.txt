@@ -6,7 +6,7 @@ Write Markdown in a full-featured editor with a complete formatting toolbar and 
 
 ## What it does
 
-- Target profiles: Strict CommonMark, GitHub Flavored Markdown, dev.to, Obsidian. The preview, the checks and the toolbar warnings follow the chosen profile.
+- Target profiles: Strict CommonMark, GFM extended, GFM without HTML, Wiki notes. The preview, the checks and the toolbar warnings follow the chosen profile.
 - Portability checker: flags raw HTML, local image paths, base64 images, wiki-links, math, Mermaid and trailing-space line breaks, with clickable issues that jump to the line.
 - Rich Markdown: tables with cell navigation, task lists, footnotes, GitHub alerts, KaTeX math, Mermaid diagrams, syntax-highlighted code blocks.
 - Import and export: open .md files, ZIP archives or whole folders, paste from Google Docs, Notion and the web; export clean UTF-8 Markdown (LF endings), standalone HTML, or every draft as a ZIP.
@@ -18,7 +18,7 @@ Write Markdown in a full-featured editor with a complete formatting toolbar and 
 
 ## Who it is for
 
-- Technical bloggers publishing to dev.to, Hashnode and static site generators.
+- Technical bloggers publishing through GitHub and static site generators.
 - Developers writing READMEs and documentation for GitHub.
 - Obsidian users who share notes outside Obsidian.
 - Documentation teams who need Markdown that renders the same in every tool.

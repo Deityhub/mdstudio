@@ -53,8 +53,8 @@ describe("guide content is dogfooded", () => {
         expect(getOutline(md).filter((h) => h.depth === 1)).toEqual([]);
         expect(getOutline(md).filter((h) => h.depth === 2).length).toBeGreaterThanOrEqual(3);
       });
-      it("is itself portable Markdown: no checker issues on GitHub, dev.to or Obsidian", () => {
-        for (const profile of ["github", "devto", "obsidian"] as const)
+      it("is itself portable Markdown: no checker issues on the GFM and wiki profiles", () => {
+        for (const profile of ["gfm-extended", "gfm-no-html", "wiki-notes"] as const)
           expect(checkPortability(md, profile), profile).toEqual([]);
       });
       it("links to the editor", () =>

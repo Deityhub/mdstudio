@@ -38,12 +38,12 @@ test.describe("live checker demo", () => {
     await expect(report).toBeVisible();
     await expect(report.getByRole("button", { name: /Wiki links/ })).toHaveCount(1);
 
-    // Obsidian understands wiki-links, so that issue disappears
-    await demo.getByRole("radio", { name: /Obsidian/ }).click();
+    // The wiki profile understands wiki-links, so that issue disappears
+    await demo.getByRole("radio", { name: /Wiki notes/ }).click();
     await expect(report.getByRole("button", { name: /Wiki links/ })).toHaveCount(0);
 
     // Clicking an issue selects its line in the editor
-    await demo.getByRole("radio", { name: /GitHub/ }).click();
+    await demo.getByRole("radio", { name: /GFM extended/ }).click();
     await report.getByRole("button", { name: /Wiki links/ }).click();
     const selected = await demo
       .locator("textarea")

@@ -24,7 +24,7 @@ export const Route = createFileRoute("/guides/$slug")({
     const ids = headingIds(sections.map((s) => s.text));
     return {
       guide,
-      html: withHeadingIds(renderMarkdown(md, "github"), ids),
+      html: withHeadingIds(renderMarkdown(md, "gfm-extended"), ids),
       minutes: readingMinutes(md),
       toc: sections.map((s, i) => ({ text: s.text, id: ids[i]! })),
     };
