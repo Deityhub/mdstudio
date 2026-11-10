@@ -2,6 +2,7 @@
 import { getDb } from "../db";
 import { getEnv, siteOrigin } from "../env";
 import { getMailer } from "../mail";
+import { getPublicSettings } from "../settings/service";
 import { canonicalEmail } from "./email";
 import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
 import { authorizeUrl, githubSignIn, pkcePair, randomState } from "./github";
@@ -34,7 +35,12 @@ async function body(request: Request) {
   }
 }
 
-const STATUS = { invalid: 400, email_taken: 409, invalid_credentials: 401 } as const;
+const STATUS = {
+  invalid: 400,
+  email_taken: 409,
+  invalid_credentials: 401,
+  suspended: 403,
+} as const;
 
 // ---- Limits -------------------------------------------------------------------------------
 // Defaults are the ones in docs/SYSTEM_SPEC.md; the environment can raise or lower them.
@@ -61,6 +67,8 @@ export async function signupHandler(request: Request) {
     const t = await hit(db, `signup:${ip}`, limit(request, "SIGNUP_LIMIT", 5), HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
   }
+  // an admin can close sign-ups in the dashboard
+  if (!(await getPublicSettings(db)).signupsOpen) return json({ error: "signups_closed" }, 403);
   const input = await body(request);
   const secret = getEnv(request, "TURNSTILE_SECRET");
   if (
@@ -219,7 +227,11 @@ export async function logoutHandler(request: Request) {
 export async function meHandler(request: Request) {
   const token = readToken(request);
   const session = token ? await userForToken(await getDb(request), token) : null;
+  const site = await getPublicSettings(await getDb(request));
   const providers = {
+    // the notice an admin set and whether new accounts may be made (shown before anyone signs in)
+    notice: site.notice,
+    signupsOpen: site.signupsOpen,
     github: githubConfig(request) !== null,
     // whether this server can publish to GitHub (needs the OAuth app and a key for the tokens)
     githubPublish: await (await import("../github/routes")).publishingAvailable(request),

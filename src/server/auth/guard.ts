@@ -42,3 +42,26 @@ export const withVerifiedUser = (
       );
     return handler(user, db);
   });
+
+/**
+ * `withVerifiedUser` for the admin dashboard: only an admin gets in. Everyone else, signed in or
+ * not, gets the same "not found" as for a page that does not exist, so nothing says it is there.
+ */
+export const withAdmin = async (
+  request: Request,
+  handler: (user: PublicUser, db: Db) => Promise<Response>,
+) => {
+  const notFound = () =>
+    Response.json(
+      { error: "not_found" },
+      { status: 404, headers: { "cache-control": "no-store" } },
+    );
+  let ran = false;
+  const res = await withVerifiedUser(request, async (user, db) => {
+    if (!user.isAdmin) return notFound();
+    ran = true;
+    return handler(user, db);
+  });
+  // signed out or not confirmed yet is also "not found": nothing says the dashboard is there
+  return ran ? res : notFound();
+};
