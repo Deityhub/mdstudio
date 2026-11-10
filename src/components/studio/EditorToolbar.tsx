@@ -38,6 +38,7 @@ import {
   OctagonAlert,
   Plus,
   Quote,
+  Sparkles,
   Maximize2,
   Minimize2,
   Redo2,
@@ -65,6 +66,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { AiActionId } from "@/lib/ai/actions";
+import { AiMenuItems } from "./AiMenuItems";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editor/editing";
 import {
   ALERT_KINDS,
@@ -94,6 +97,9 @@ type Props = {
   onOpenImage: () => void;
   onOpenTable: () => void;
   onOpenShortcuts: () => void;
+  /** An AI action on the selected text, and the AI connection settings. */
+  onAiAction: (id: AiActionId) => void;
+  onAiIntegrations: () => void;
   /** Focus mode hides the side panels; the toggle sits right after undo and redo. */
   focus: boolean;
   onToggleFocus: () => void;
@@ -239,6 +245,8 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
     onOpenImage,
     onOpenTable,
     onOpenShortcuts,
+    onAiAction,
+    onAiIntegrations,
     focus,
     onToggleFocus,
   },
@@ -479,6 +487,12 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
     </ToolMenu>
   );
 
+  const aiMenu = (
+    <ToolMenu icon={Sparkles} label="AI actions" hint={null} editor={editor}>
+      <AiMenuItems onPick={onAiAction} onIntegrations={onAiIntegrations} />
+    </ToolMenu>
+  );
+
   return (
     <div
       ref={bar}
@@ -532,6 +546,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
       {codeMenu}
       {tableMenu}
       {insertMenu}
+      {aiMenu}
       <span className="hidden min-w-0 flex-1 truncate pl-2 pr-2 text-right text-xs text-muted-foreground md:block">
         Paste formatted text or drop .md / images · Alt+F10 for toolbar
       </span>

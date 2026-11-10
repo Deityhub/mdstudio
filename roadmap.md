@@ -78,8 +78,9 @@
 
 - [ ] **Edit access through a link:** Letting people named on a link edit the draft. Needs the collaboration engine below, so it waits for it.
 - [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
-- [ ] **Local AI Models:** Direct browser integration with local model runners (e.g., WebLLM or local Ollama instances via CORS).
-- [ ] **Inline AI Writing Actions:** In-place selection rewriting, summarization, proofreading, and automated image alt-text generation.
+- [x] **Local AI models, Ollama:** An Ollama preset (`http://localhost:11434/v1`, no key) shares the one AI connection. WebLLM (running a model inside the browser) is not built.
+- [x] **Inline AI Writing Actions:** Rewrite, shorten, expand, proofread, summarize, translate or a custom instruction on the selected text, reviewed as a diff before it is accepted.
+- [ ] **AI help for portability issues and image alt-text:** a "Fix with AI" action on a flagged check, and alt-text for images that lack it.
 - [ ] **Google Auth** Integrate google signin so we have three means to signup or login, Email/Password, Github and Google
 
 ## Decided not to build (for now)

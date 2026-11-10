@@ -37,7 +37,7 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 - **Version history.** Versions are kept automatically as you write; compare any of them side by side with the current draft and restore it.
 - **Works offline.** The studio keeps working with no connection and can be installed as an app.
 - **Import and export.** Open `.md` files, a ZIP or a whole folder, or paste from Google Docs, Notion and the web. Export clean UTF-8 Markdown (LF endings), self-contained Markdown with embedded images, standalone HTML, or every draft at once as a ZIP.
-- **Optional AI writer, bring your own key.** OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint (Ollama, OpenRouter, Groq). Keys stay in session memory and requests go straight from your browser to the provider.
+- **Optional AI writer and inline AI actions, bring your own key.** OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint (Ollama, OpenRouter, Groq). Keys stay in session memory and requests go straight from your browser to the provider.
 - **Responsive and themed.** Split view on desktop, single pane with drawers on phones, light and dark mode.
 - **Self-hostable.** One Docker container with SQLite, or Cloudflare Workers.
 - **Guides.** Seven practical [guides to portable Markdown](https://mdstudio.deityhub.com/guides), written in Markdown and rendered by mdstudio itself.

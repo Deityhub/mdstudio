@@ -246,10 +246,11 @@ Raw Content → [Optional normalizeMarkdown] → joinFrontMatter → finalizeTex
 ### 5.4 BYOK AI Assistance
 
 ```text
-1. Connect: Provider + Model ID + API Key (+ optional Base URL) → Stored in React state memory only.
+1. Set up: the writer saves AI integrations (provider, name, endpoint, models) once, in a separate dialog (`src/lib/ai/integrations.ts`). Names, endpoints and models are remembered on the device; API keys live in memory only, so after a reload an integration asks for its key again. Every AI task then picks an integration and a model from dropdowns. OpenAI, Anthropic and Gemini have a built-in model list, and "Refresh" asks the provider for its current one (`listModels` in `src/lib/ai/models.ts`). Ollama and custom endpoints offer only the models the writer typed (Ollama can also refresh). Ollama needs no key.
 2. Metadata Suggestion: Send draft content → Parse JSON stream → Populate interactive review inputs → "Apply" writes YAML front matter.
 3. Topic Drafting: Send topic prompt + notes → Stream Markdown response → "Open as New Draft" (guarantees existing work is never overwritten).
-4. Guardrails: AbortController cancels active streams; HTTP 401/402/403 errors halt immediately without wasteful retries.
+4. Inline actions: with text selected, the AI menu (toolbar, or a button over the selection on wide screens) offers Improve, Fix spelling and grammar, Shorten, Expand, Summarize, Translate and a custom instruction (`src/lib/ai/actions.ts`). Only the selection is sent, as data. The answer is shown as a diff and replaces the selection in one undoable step only on Accept, and only if that text has not changed meanwhile.
+5. Guardrails: AbortController cancels active streams; HTTP 401/402/403 errors halt immediately without wasteful retries.
 ```
 
 ### 5.5 Cloud Drafts and Synchronization

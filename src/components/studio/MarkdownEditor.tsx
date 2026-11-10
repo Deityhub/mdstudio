@@ -68,6 +68,8 @@ type Props = {
   onShowShortcuts?: () => void;
   /** The line (1-based) the cursor is on, whenever it changes (the preview highlights its block). */
   onCursorLine?: (line: number) => void;
+  /** Where selected text starts on screen once the writer has finished selecting, or null when nothing is selected. */
+  onSelectionRect?: (rect: { x: number; top: number; bottom: number } | null) => void;
 };
 
 const snapshot = (state: EditorState): Snapshot => ({
@@ -97,6 +99,11 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
       return false;
     };
     const cmd = (command: Command) => () => (api.run(command), true);
+    const emitSelection = (v: EditorView) => {
+      const { from, to } = v.state.selection.main;
+      const at = from === to ? null : v.coordsAtPos(from);
+      cb.current.onSelectionRect?.(at && { x: at.left, top: at.top, bottom: at.bottom });
+    };
     const emitContext = (state: EditorState) => {
       const context = getContext(snapshot(state));
       const key = JSON.stringify(context);
@@ -144,6 +151,8 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !silent.current) cb.current.onChange(u.state.doc.toString());
+          if ((u.docChanged || u.selectionSet) && u.state.selection.main.empty)
+            cb.current.onSelectionRect?.(null);
           if (u.docChanged || u.selectionSet) {
             emitContext(u.state);
             const line = u.state.doc.lineAt(u.state.selection.main.head).number;
@@ -154,7 +163,10 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
           }
         }),
         EditorView.domEventHandlers({
+          mouseup: (_e, v) => void setTimeout(() => emitSelection(v)),
+          keyup: (_e, v) => emitSelection(v),
           scroll: (_e, v) => {
+            cb.current.onSelectionRect?.(null);
             const s = v.scrollDOM;
             const max = s.scrollHeight - s.clientHeight;
             const block = v.lineBlockAtHeight(s.scrollTop - v.documentPadding.top);
