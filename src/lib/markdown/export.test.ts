@@ -8,7 +8,7 @@ const svg = async () => ({ svg: "<svg><title>d</title></svg>" });
 
 describe("export", () => {
   it("renders math to HTML and reports it so the stylesheet can travel with it", async () => {
-    const { html, math } = await renderExportBody("Euler $e^{i\\pi}=-1$", "github", {}, svg);
+    const { html, math } = await renderExportBody("Euler $e^{i\\pi}=-1$", "gfm-extended", {}, svg);
     expect(html).toContain('class="katex"');
     expect(math).toBe(true);
   });
@@ -21,7 +21,7 @@ describe("export", () => {
 
   it("inlines Mermaid diagrams for profiles that render them", async () => {
     const md = "```mermaid\ngraph TD\nA-->B\n```";
-    expect((await renderExportBody(md, "github", {}, svg)).html).toContain("md-mermaid");
+    expect((await renderExportBody(md, "gfm-extended", {}, svg)).html).toContain("md-mermaid");
     expect((await renderExportBody(md, "commonmark", {}, svg)).html).toContain("language-mermaid");
   });
 
@@ -29,7 +29,7 @@ describe("export", () => {
     const withMath = await standaloneDocument(
       "T",
       "$x^2$",
-      "github",
+      "gfm-extended",
       {},
       { render: svg, fetchAsset },
     );
@@ -38,7 +38,7 @@ describe("export", () => {
     const without = await standaloneDocument(
       "T",
       "plain",
-      "github",
+      "gfm-extended",
       {},
       { render: svg, fetchAsset },
     );

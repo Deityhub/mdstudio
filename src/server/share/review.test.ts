@@ -33,6 +33,7 @@ const person = (id: string, over: Partial<PublicUser> = {}): PublicUser => ({
   email: `${id}@x.co`,
   displayName: null,
   emailVerified: true,
+  isAdmin: false,
   ...over,
 });
 const owner = person("a", { displayName: "Ada" });

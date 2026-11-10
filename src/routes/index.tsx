@@ -112,7 +112,7 @@ function Index() {
         <section className="grid items-start gap-12 py-16 md:grid-cols-[1.1fr_1fr] md:py-24">
           <div>
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-primary">
-              Free Markdown editor
+              Markdown editor
             </p>
             <h1 className="font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl">
               Write once.
@@ -120,9 +120,9 @@ function Index() {
               Render the same <em className="text-primary">everywhere.</em>
             </h1>
             <p className="mt-6 max-w-lg text-lg text-muted-foreground">
-              mdstudio is a free, open-source Markdown editor with a live preview that matches
-              GitHub, dev.to and Obsidian, and a checker that flags anything that won&rsquo;t
-              travel. Then export a clean file that just works.
+              mdstudio is an open-source Markdown editor with a live preview that matches GitHub,
+              dev.to and Obsidian, and a checker that flags anything that won&rsquo;t travel. Then
+              export a clean file that just works.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
@@ -313,7 +313,7 @@ on two lines.
             Write something that renders the same everywhere
           </h2>
           <p className="mx-auto mt-3 max-w-xl opacity-90">
-            Free, open source and private. Open the editor and start typing.
+            Open source and private. Open the editor and start typing.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" variant="secondary">

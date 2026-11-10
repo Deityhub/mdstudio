@@ -1,4 +1,5 @@
-// Light/dark theme: follows the OS until the visitor picks one, then remembers it. The inline init
+// Light, dark or system: follows the OS until the visitor picks light or dark, then remembers it,
+// and "system" goes back to following the OS. The inline init
 // script applies the class before first paint so there is no flash of the wrong theme.
 export type Theme = "light" | "dark" | "system";
 
@@ -26,16 +27,41 @@ export function applyTheme(theme: Theme) {
   root.style.colorScheme = resolved;
 }
 
-/** Flips what the visitor currently sees and remembers it. Returns the new theme. */
-export function toggleTheme(): "light" | "dark" {
-  const next = document.documentElement.classList.contains("dark") ? "light" : "dark";
+/** The choice a click on the theme button moves to: light, then dark, then system, then light again. */
+export const nextTheme = (theme: Theme): Theme =>
+  theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+
+const listeners = new Set<() => void>();
+/** Calls `notify` whenever the choice changes (here, or in another tab). Returns how to stop. */
+export function subscribeTheme(notify: () => void) {
+  listeners.add(notify);
+  window.addEventListener("storage", notify);
+  return () => {
+    listeners.delete(notify);
+    window.removeEventListener("storage", notify);
+  };
+}
+
+/** Applies a choice and remembers it. "system" forgets the choice, so the OS decides again. */
+export function setTheme(theme: Theme) {
   try {
-    localStorage.setItem(THEME_KEY, next);
+    if (theme === "system") localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, theme);
   } catch {
     // private mode: the choice just lasts for this page view
   }
-  applyTheme(next);
-  return next;
+  applyTheme(theme);
+  for (const l of listeners) l();
+}
+
+/** While the choice is "system", follows the OS when it switches between light and dark. */
+export function watchSystemTheme() {
+  const query = window.matchMedia("(prefers-color-scheme: dark)");
+  const onChange = () => {
+    if (storedTheme() === "system") applyTheme("system");
+  };
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
 }
 
 /** Self-contained copy of applyTheme(storedTheme()) for an inline <head> script. */

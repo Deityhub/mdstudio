@@ -12,7 +12,7 @@ export function publishIssues(
   config: CheckConfig,
 ) {
   const lines = content.split(/\r?\n/);
-  return runChecks(content, "github", config).issues.filter(
+  return runChecks(content, "gfm-extended", config).issues.filter(
     (i) =>
       i.severity !== "info" &&
       !(i.rule === "local-image" && pointImagesAt(lines[i.line - 1] ?? "", images).used.length > 0),

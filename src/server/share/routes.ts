@@ -1,5 +1,5 @@
 import { type SitemapEntry } from "@/lib/site/seo";
-import { DEFAULT_SHARE_DAYS, MAX_SHARE_DAYS, shareUrl } from "@/lib/share/protocol";
+import { shareUrl } from "@/lib/share/protocol";
 import { withVerifiedUser } from "../auth/guard";
 import {
   noStoreJson as json,
@@ -10,8 +10,9 @@ import {
 import { hit } from "../auth/limits";
 import type { PublicUser } from "../auth/service";
 import { type Db, getDb } from "../db";
-import { canUse } from "../entitlements";
-import { getEnv, siteOrigin } from "../env";
+import { limitsFor } from "../limits/request";
+import type { Limits } from "../limits/catalog";
+import { siteOrigin } from "../env";
 import { getMailer } from "../mail";
 import { users } from "../../../infra/db/schema";
 import { eq } from "drizzle-orm";
@@ -38,33 +39,19 @@ import {
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
-/** Publishing and changing a link are limited per account, so a script cannot churn addresses. */
-const CHANGES_PER_HOUR = 60;
-/** Invitation emails cost mail allowance, so an account may send this many a day. */
-const INVITES_PER_DAY = 20;
-/** Comments a reader may write in an hour, across all links. */
-const COMMENTS_PER_HOUR = 30;
 /** The sitemap lists at most this many links, newest first. */
 const SITEMAP_LIMIT = 5000;
 
-const whole = (value: string | undefined, fallback: number) => {
-  const n = Number(value);
-  return value !== undefined && Number.isInteger(n) && n >= 1 ? n : fallback;
-};
-
 /**
- * How long links last: SHARE_MAX_DAYS at most (7 unless set) and SHARE_DEFAULT_DAYS when the writer
- * does not choose (4 unless set, never more than the maximum). Every link expires. Links limited
- * to named people depend on the account's entitlements (see entitlements.ts).
+ * How long links last and whether private links are open to this account: all account limits
+ * (`share_max_days`, `share_default_days`, `private_links`), so a plan can change them. A default
+ * longer than the maximum is cut to it.
  */
-export function shareConfig(request: Request, user: PublicUser): ShareConfig {
-  const maxDays = whole(getEnv(request, "SHARE_MAX_DAYS"), MAX_SHARE_DAYS);
-  const defaultDays = Math.min(
-    whole(getEnv(request, "SHARE_DEFAULT_DAYS"), DEFAULT_SHARE_DAYS),
-    maxDays,
-  );
-  return { defaultDays, maxDays, privateLinks: canUse(request, user, "private_links") };
-}
+export const shareConfig = (limits: Limits): ShareConfig => ({
+  defaultDays: Math.min(limits.share_default_days, limits.share_max_days),
+  maxDays: limits.share_max_days,
+  privateLinks: limits.private_links,
+});
 
 const withUrl = <T extends { slug: string }>(request: Request, share: T) => ({
   ...share,
@@ -101,7 +88,7 @@ async function sendQuietly(
 
 export const listHandler = (request: Request) =>
   withVerifiedUser(request, async (user, db) => {
-    const config = shareConfig(request, user);
+    const config = shareConfig(await limitsFor(request, db, user.id));
     return json({
       shares: (await listShares(db, user.id)).map((s) => withUrl(request, s)),
       defaultDays: config.defaultDays,
@@ -117,21 +104,14 @@ export const publishHandler = (request: Request) =>
     if (typeof body?.["id"] !== "string") return fail("invalid");
     const days = body["days"];
     if (days !== undefined && typeof days !== "number") return fail("invalid");
-    const t = await hit(db, `share:${user.id}`, CHANGES_PER_HOUR, HOUR);
+    const limits = await limitsFor(request, db, user.id);
+    const t = await hit(db, `share:${user.id}`, limits.share_changes_per_hour, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
     const { access, comments } = body;
-    const r = await publishShare(
-      db,
-      user.id,
-      body["id"],
-      days,
-      shareConfig(request, user),
-      Date.now(),
-      {
-        ...(access !== undefined && { access: access as "public" | "people" }),
-        ...(comments !== undefined && { comments: comments as boolean }),
-      },
-    );
+    const r = await publishShare(db, user.id, body["id"], days, shareConfig(limits), Date.now(), {
+      ...(access !== undefined && { access: access as "public" | "people" }),
+      ...(comments !== undefined && { comments: comments as boolean }),
+    });
     return r.ok ? json({ share: withUrl(request, r.share), created: r.created }) : fail(r.error);
   });
 
@@ -141,7 +121,8 @@ export const updateHandler = (request: Request, localId: string) =>
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
     const body = await readBody(request);
     if (!body) return fail("invalid");
-    const t = await hit(db, `share:${user.id}`, CHANGES_PER_HOUR, HOUR);
+    const limits = await limitsFor(request, db, user.id);
+    const t = await hit(db, `share:${user.id}`, limits.share_changes_per_hour, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
     const { days, access, comments } = body;
     const r = await updateShare(
@@ -153,7 +134,7 @@ export const updateHandler = (request: Request, localId: string) =>
         ...(access !== undefined && { access: access as "public" | "people" }),
         ...(comments !== undefined && { comments: comments as boolean }),
       },
-      shareConfig(request, user),
+      shareConfig(limits),
     );
     return r.ok ? json({ share: withUrl(request, r.share) }) : fail(r.error);
   });
@@ -176,11 +157,12 @@ export const peopleListHandler = (request: Request, localId: string) =>
 export const peopleAddHandler = (request: Request, localId: string) =>
   withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
-    if (!shareConfig(request, user).privateLinks) return fail("unavailable");
+    const limits = await limitsFor(request, db, user.id);
+    if (!limits.private_links) return fail("unavailable");
     const body = await readBody(request);
     if (typeof body?.["email"] !== "string") return fail("invalid");
     const before = (await listPeople(db, user.id, localId))?.length ?? 0;
-    const t = await hit(db, `invite:${user.id}`, INVITES_PER_DAY, DAY);
+    const t = await hit(db, `invite:${user.id}`, limits.invites_per_day, DAY);
     if (!t.allowed) return tooMany(t.retryAfter);
     const r = await addPerson(db, user.id, localId, body["email"]);
     if (!r.ok) return fail(r.error);
@@ -245,7 +227,12 @@ export const commentsAddHandler = (request: Request, address: string) =>
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
     const body = await readBody(request);
     if (!body) return fail("invalid");
-    const t = await hit(db, `comment:${user.id}`, COMMENTS_PER_HOUR, HOUR);
+    const t = await hit(
+      db,
+      `comment:${user.id}`,
+      (await limitsFor(request, db, user.id)).comments_per_hour,
+      HOUR,
+    );
     if (!t.allowed) return tooMany(t.retryAfter);
     const r = await addComment(db, user, address, {
       body: body["body"] as string,

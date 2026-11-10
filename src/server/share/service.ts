@@ -2,7 +2,7 @@
 // keeps its own title and text, which change only when the writer publishes an update, and it
 // always expires. It can be open to anyone with the link or only to named, signed-in people, and
 // can take comments from signed-in readers. See docs/SYSTEM_SPEC.md, "Share links".
-import { and, desc, eq, gt, isNull, like, lte } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, like, lte, sql } from "drizzle-orm";
 import { documents, sharePeople, shareLinks } from "../../../infra/db/schema";
 import {
   DEFAULT_SHARE_DAYS,
@@ -214,6 +214,12 @@ export async function revokeShare(db: Db, userId: string, localId: string) {
   return gone.length > 0;
 }
 
+/**
+ * A link stops working while its owner's account is suspended (it comes back if they are reinstated).
+ * The owner is the account id before the colon in the draft's id.
+ */
+const ownerActive = sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.suspended_at IS NOT NULL AND ${shareLinks.documentId} LIKE u.id || ':%')`;
+
 /** The caller's live links. Their expired ones are cleared on the way. */
 export async function listShares(db: Db, userId: string, now = Date.now()): Promise<ShareInfo[]> {
   const mine = like(shareLinks.documentId, `${remoteId(userId, "")}%`);
@@ -236,6 +242,7 @@ export async function getPublicShare(db: Db, address: string, now = Date.now()) 
         eq(shareLinks.slug, address),
         eq(shareLinks.access, "public"),
         gt(shareLinks.expiresAt, now),
+        ownerActive,
       ),
     );
   return row
@@ -253,7 +260,7 @@ export const sitemapShares = (db: Db, now: number, limit: number) =>
   db
     .select({ slug: shareLinks.slug, updatedAt: shareLinks.updatedAt })
     .from(shareLinks)
-    .where(and(eq(shareLinks.access, "public"), gt(shareLinks.expiresAt, now)))
+    .where(and(eq(shareLinks.access, "public"), gt(shareLinks.expiresAt, now), ownerActive))
     .orderBy(desc(shareLinks.updatedAt))
     .limit(limit);
 
@@ -294,7 +301,7 @@ export async function viewShare(
   const [row] = await db
     .select()
     .from(shareLinks)
-    .where(and(eq(shareLinks.slug, address), gt(shareLinks.expiresAt, now)));
+    .where(and(eq(shareLinks.slug, address), gt(shareLinks.expiresAt, now), ownerActive));
   if (!row) return { status: "not_found" };
   const isOwner = !!viewer && row.documentId.startsWith(remoteId(viewer.id, ""));
   if (row.access === "people" && !isOwner) {

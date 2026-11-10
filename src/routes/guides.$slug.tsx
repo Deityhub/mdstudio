@@ -24,7 +24,7 @@ export const Route = createFileRoute("/guides/$slug")({
     const ids = headingIds(sections.map((s) => s.text));
     return {
       guide,
-      html: withHeadingIds(renderMarkdown(md, "github"), ids),
+      html: withHeadingIds(renderMarkdown(md, "gfm-extended"), ids),
       minutes: readingMinutes(md),
       toc: sections.map((s, i) => ({ text: s.text, id: ids[i]! })),
     };
@@ -105,7 +105,7 @@ function GuidePage() {
             Check your own Markdown
           </h2>
           <p className="mx-auto mt-2 max-w-md opacity-90">
-            Free, open source and private. Pick a target platform and see what won&rsquo;t travel.
+            Open source and private. Pick a target platform and see what won&rsquo;t travel.
           </p>
           <div className="mt-6">
             <Button asChild size="lg" variant="secondary">

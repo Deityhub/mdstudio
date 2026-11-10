@@ -39,16 +39,20 @@ describe("feature support table", () => {
 
 describe("supportHint", () => {
   it("names the profiles that render the feature", () => {
-    expect(supportHint("alert", "commonmark")).toBe("Renders on GitHub and Obsidian only");
-    expect(supportHint("highlight", "github")).toBe("Renders on Obsidian only");
-    expect(supportHint("table", "commonmark")).toBe("Renders on GitHub, dev.to and Obsidian only");
+    expect(supportHint("alert", "commonmark")).toBe(
+      "Supported in GFM extended and Wiki notes only",
+    );
+    expect(supportHint("highlight", "gfm-extended")).toBe("Supported in Wiki notes only");
+    expect(supportHint("table", "commonmark")).toBe(
+      "Supported in GFM extended, GFM without HTML and Wiki notes only",
+    );
   });
   it("is null where the feature is supported", () => {
-    expect(supportHint("alert", "github")).toBeNull();
-    expect(supportHint("table", "devto")).toBeNull();
+    expect(supportHint("alert", "gfm-extended")).toBeNull();
+    expect(supportHint("table", "gfm-no-html")).toBeNull();
   });
   it("explains raw HTML separately", () =>
-    expect(supportHint("html", "github")).toBe(
+    expect(supportHint("html", "gfm-extended")).toBe(
       "Raw HTML may be removed or shown differently on other platforms",
     ));
 });

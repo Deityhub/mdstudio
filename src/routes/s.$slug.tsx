@@ -101,7 +101,7 @@ function Document({
   }, [data.content]);
   const html = useMemo(
     // source lines mark each block, which is how a comment finds the block it belongs to
-    () => renderMarkdown(data.content, "github", {}, { sourceLines: true }),
+    () => renderMarkdown(data.content, "gfm-extended", {}, { sourceLines: true }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data.content, mathVersion],
   );

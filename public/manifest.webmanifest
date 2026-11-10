@@ -1,7 +1,7 @@
 {
   "name": "mdstudio",
   "short_name": "mdstudio",
-  "description": "Free, open-source Markdown editor with live preview and portability checks for GitHub, dev.to and Obsidian.",
+  "description": "Open-source Markdown editor with live preview and portability checks for GitHub, dev.to and Obsidian.",
   "start_url": "/editor",
   "scope": "/",
   "display": "standalone",

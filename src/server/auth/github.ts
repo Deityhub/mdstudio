@@ -4,10 +4,13 @@ import { eq, or } from "drizzle-orm";
 import { oauthAccounts, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
 import { canonicalEmail } from "./email";
-import { type PublicUser, startSession } from "./service";
+import { getPublicSettings } from "../settings/service";
+import { type PublicUser, firstAccountIsAdmin, startSession } from "./service";
 
 export type GithubConfig = { clientId: string; clientSecret: string };
-type Failure = { error: "github_failed" | "no_verified_email" | "email_in_use" };
+type Failure = {
+  error: "github_failed" | "no_verified_email" | "email_in_use" | "suspended" | "signups_closed";
+};
 
 const b64url = (bytes: Uint8Array) =>
   btoa(String.fromCharCode(...bytes))
@@ -97,12 +100,24 @@ export async function githubSignIn(
       email: users.email,
       displayName: users.displayName,
       emailVerifiedAt: users.emailVerifiedAt,
+      role: users.role,
+      suspendedAt: users.suspendedAt,
     })
     .from(oauthAccounts)
     .innerJoin(users, eq(users.id, oauthAccounts.userId))
     .where(eq(oauthAccounts.providerUserId, providerUserId));
-  if (linked)
-    return startSession(db, { ...linked, emailVerified: linked.emailVerifiedAt !== null }, now);
+  if (linked) {
+    if (linked.suspendedAt !== null) return { error: "suspended" };
+    return startSession(
+      db,
+      {
+        ...linked,
+        emailVerified: linked.emailVerifiedAt !== null,
+        isAdmin: linked.role === "admin",
+      },
+      now,
+    );
+  }
 
   const verified = emails.filter((e) => e.verified);
   const email = (verified.find((e) => e.primary) ?? verified[0])?.email.toLowerCase();
@@ -117,6 +132,8 @@ export async function githubSignIn(
     .from(users)
     .where(or(eq(users.emailKey, emailKey), eq(users.email, email)));
   if (existing) return { error: "email_in_use" };
+  // an admin can close sign-ups; GitHub cannot be used to get round that
+  if (!(await getPublicSettings(db)).signupsOpen) return { error: "signups_closed" };
 
   // GitHub only reports addresses it has verified, so there is nothing left to confirm.
   const user = {
@@ -124,6 +141,7 @@ export async function githubSignIn(
     email,
     displayName: profile.name ?? profile.login ?? null,
     emailVerified: true,
+    isAdmin: false,
   };
   try {
     await db.insert(users).values({
@@ -133,6 +151,7 @@ export async function githubSignIn(
       emailVerifiedAt: now,
       displayName: user.displayName,
       avatarUrl: profile.avatar_url ?? null,
+      role: firstAccountIsAdmin,
       createdAt: now,
       updatedAt: now,
     });
@@ -146,5 +165,6 @@ export async function githubSignIn(
   } catch {
     return { error: "email_in_use" };
   }
-  return startSession(db, user, now);
+  const [made] = await db.select({ role: users.role }).from(users).where(eq(users.id, user.id));
+  return startSession(db, { ...user, isAdmin: made?.role === "admin" }, now);
 }

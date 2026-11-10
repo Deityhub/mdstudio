@@ -1,6 +1,6 @@
 // Account and session logic, independent of HTTP so it can be tested against a real database.
 // Sessions are database rows, not JWTs (ADR 10): revoking one takes effect immediately.
-import { and, eq, gt, or } from "drizzle-orm";
+import { and, eq, gt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { sessions, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
@@ -22,6 +22,8 @@ export type PublicUser = {
   displayName: string | null;
   /** True once the address was confirmed, or when this server sends no mail to confirm with. */
   emailVerified: boolean;
+  /** May use the admin dashboard. The first account ever made is an admin. */
+  isAdmin: boolean;
 };
 type Signed = { user: PublicUser; token: string };
 
@@ -41,12 +43,17 @@ const publicUser = (u: {
   email: string;
   displayName: string | null;
   emailVerifiedAt: number | null;
+  role?: string;
 }): PublicUser => ({
   id: u.id,
   email: u.email,
   displayName: u.displayName,
   emailVerified: u.emailVerifiedAt !== null,
+  isAdmin: u.role === "admin",
 });
+
+/** The role a new account gets: admin when it is the very first account, in one statement so two sign-ups cannot both win. */
+export const firstAccountIsAdmin = sql<string>`CASE WHEN (SELECT COUNT(*) FROM users) = 0 THEN 'admin' ELSE 'user' END`;
 
 export async function startSession(db: Db, user: PublicUser, now: number): Promise<Signed> {
   const token = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
@@ -86,6 +93,7 @@ export async function signup(
       ...user,
       emailKey,
       passwordHash,
+      role: firstAccountIsAdmin,
       createdAt: now,
       updatedAt: now,
     });
@@ -93,7 +101,8 @@ export async function signup(
     // Two signups for one inbox raced; the unique index let only one through.
     return { error: "email_taken" };
   }
-  return startSession(db, publicUser(user), now);
+  const [made] = await db.select({ role: users.role }).from(users).where(eq(users.id, user.id));
+  return startSession(db, publicUser({ ...user, role: made?.role ?? "user" }), now);
 }
 
 // Verified against this when the email is unknown, so both failures take the same time.
@@ -103,7 +112,7 @@ export async function login(
   db: Db,
   input: unknown,
   now = Date.now(),
-): Promise<Signed | { error: "invalid_credentials" }> {
+): Promise<Signed | { error: "invalid_credentials" | "suspended" }> {
   const parsed = Credentials.safeParse(input);
   if (!parsed.success) return { error: "invalid_credentials" };
   const { email, password } = parsed.data;
@@ -117,6 +126,8 @@ export async function login(
   const hash = row?.passwordHash ?? (await (decoy ??= hashPassword("decoy")));
   const ok = await verifyPassword(password, hash);
   if (!row || !row.passwordHash || !ok) return { error: "invalid_credentials" };
+  // said only after the password was right, so it never tells a stranger that an address exists
+  if (row.suspendedAt !== null) return { error: "suspended" };
   // Accounts from before the key existed get one the first time they sign in.
   if (!row.emailKey && emailKey)
     await db
@@ -150,13 +161,16 @@ export async function userForToken(
       email: users.email,
       displayName: users.displayName,
       emailVerifiedAt: users.emailVerifiedAt,
+      role: users.role,
+      suspendedAt: users.suspendedAt,
       expiresAt: sessions.expiresAt,
       createdAt: sessions.createdAt,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, now)));
-  if (!row) return null;
+  // a suspended account's sessions stop working at once
+  if (!row || row.suspendedAt !== null) return null;
   let { expiresAt } = row;
   const slid = Math.min(now + SESSION_MS, row.createdAt + SESSION_MAX_MS);
   if (expiresAt - now < SESSION_MS / 2 && slid > expiresAt) {

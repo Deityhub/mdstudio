@@ -25,7 +25,7 @@ description: What shipped in this release.
 
 # Release notes
 
-Everything below renders the same on GitHub, dev.to and Obsidian, except the parts mdstudio flags.
+Everything below renders the same in GFM, CommonMark and wiki-style tools, except the parts mdstudio flags.
 
 ## Highlights
 

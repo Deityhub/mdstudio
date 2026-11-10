@@ -33,7 +33,7 @@ describe("portable rendering", () => {
 
   it("only renders tables when GFM is on", () => {
     const md = "| a | b |\n| - | - |\n| 1 | 2 |";
-    expect(renderMarkdown(md, "github")).toContain("<table>");
+    expect(renderMarkdown(md, "gfm-extended")).toContain("<table>");
     expect(renderMarkdown(md, "commonmark")).not.toContain("<table>");
   });
 });
@@ -70,13 +70,13 @@ describe("front matter", () => {
 });
 
 describe("portability checker", () => {
-  const rules = (md: string, p: Parameters<typeof checkPortability>[1] = "github") =>
+  const rules = (md: string, p: Parameters<typeof checkPortability>[1] = "gfm-extended") =>
     checkPortability(md, p).map((i) => i.rule);
 
   it("flags raw HTML", () => expect(rules("<div>hi</div>")).toContain("raw-html"));
   it("flags ==highlight==", () => expect(rules("a ==b== c")).toContain("highlight"));
   it("allows ==highlight== for Obsidian", () =>
-    expect(rules("a ==b== c", "obsidian")).not.toContain("highlight"));
+    expect(rules("a ==b== c", "wiki-notes")).not.toContain("highlight"));
   it("flags wiki links", () => expect(rules("see [[Page]]")).toContain("wiki-link"));
   it("flags local images", () => expect(rules("![a](./a.png)")).toContain("local-image"));
   it("flags trailing-space breaks", () => expect(rules("one  \ntwo")).toContain("trailing-break"));
@@ -88,8 +88,11 @@ describe("portability checker", () => {
 });
 
 describe("portability checker locations", () => {
-  const find = (md: string, rule: string, p: Parameters<typeof checkPortability>[1] = "github") =>
-    checkPortability(md, p).filter((i) => i.rule === rule);
+  const find = (
+    md: string,
+    rule: string,
+    p: Parameters<typeof checkPortability>[1] = "gfm-extended",
+  ) => checkPortability(md, p).filter((i) => i.rule === rule);
 
   it("points mixed-bullets at the first line that breaks the pattern", () => {
     const issues = find("intro\n\n- a\n- b\n\ntext\n\n* c\n", "mixed-bullets");
@@ -141,7 +144,7 @@ describe("portability checker locations", () => {
 describe("alerts", () => {
   const md = "> [!NOTE]\n> Useful info";
   it("renders GitHub alerts as styled alerts for GitHub and Obsidian", () => {
-    for (const profile of ["github", "obsidian"] as const) {
+    for (const profile of ["gfm-extended", "wiki-notes"] as const) {
       const html = renderMarkdown(md, profile);
       expect(html).toContain('class="md-alert md-alert-note"');
       expect(html).toContain('<p class="md-alert-title">Note</p>');
@@ -150,33 +153,33 @@ describe("alerts", () => {
     }
   });
   it("leaves them as plain quotes where the platform does not render them", () => {
-    for (const profile of ["commonmark", "devto"] as const) {
+    for (const profile of ["commonmark", "gfm-no-html"] as const) {
       const html = renderMarkdown(md, profile);
       expect(html).not.toContain("md-alert");
       expect(html).toContain("[!NOTE]");
     }
   });
   it("needs the marker alone on the first line for GitHub, but Obsidian allows a title", () => {
-    expect(renderMarkdown("> [!NOTE] inline text", "github")).not.toContain("md-alert");
-    const html = renderMarkdown("> [!tip] Custom title\n> body", "obsidian");
+    expect(renderMarkdown("> [!NOTE] inline text", "gfm-extended")).not.toContain("md-alert");
+    const html = renderMarkdown("> [!tip] Custom title\n> body", "wiki-notes");
     expect(html).toContain("md-alert-tip");
     expect(html).toContain('<p class="md-alert-title">Custom title</p>');
   });
   it("keeps content after the marker and leaves ordinary quotes alone", () => {
-    expect(renderMarkdown("> [!WARNING]\n> one\n>\n> two", "github")).toContain("two");
-    expect(renderMarkdown("> just a quote", "github")).not.toContain("md-alert");
+    expect(renderMarkdown("> [!WARNING]\n> one\n>\n> two", "gfm-extended")).toContain("two");
+    expect(renderMarkdown("> just a quote", "gfm-extended")).not.toContain("md-alert");
   });
   it("cannot be spoofed with raw HTML classes", () =>
     expect(
-      renderMarkdown('<blockquote class="md-alert md-alert-note">x</blockquote>', "github"),
+      renderMarkdown('<blockquote class="md-alert md-alert-note">x</blockquote>', "gfm-extended"),
     ).not.toContain("md-alert"));
   it("is flagged by the checker outside GitHub and Obsidian", () => {
     const rule = (p: Parameters<typeof checkPortability>[1]) =>
       checkPortability(md, p).map((i) => i.rule);
     expect(rule("commonmark")).toContain("alert");
-    expect(rule("devto")).toContain("alert");
-    expect(rule("github")).not.toContain("alert");
-    expect(rule("obsidian")).not.toContain("alert");
+    expect(rule("gfm-no-html")).toContain("alert");
+    expect(rule("gfm-extended")).not.toContain("alert");
+    expect(rule("wiki-notes")).not.toContain("alert");
   });
 });
 
@@ -184,18 +187,18 @@ describe("math", () => {
   beforeAll(async () => {
     await ensureMath();
   });
-  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "github") =>
+  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "gfm-extended") =>
     renderMarkdown(md, p);
 
   it("renders inline and display math with KaTeX for GitHub and Obsidian", () => {
-    for (const profile of ["github", "obsidian"] as const) {
+    for (const profile of ["gfm-extended", "wiki-notes"] as const) {
       expect(html("Euler: $e^{i\\pi}+1=0$.", profile)).toContain('class="katex"');
       expect(html("$$\nx^2\n$$", profile)).toContain("katex-display");
       expect(html("```math\nx^2\n```", profile)).toContain("katex-display");
     }
   });
   it("leaves the source alone where the platform does not render math", () => {
-    for (const profile of ["commonmark", "devto"] as const) {
+    for (const profile of ["commonmark", "gfm-no-html"] as const) {
       const out = html("Euler: $e^{i\\pi}$.", profile);
       expect(out).not.toContain("katex");
       expect(out).toContain("$e^{i");
@@ -220,20 +223,20 @@ describe("math", () => {
   it("is flagged by the checker outside the profiles that render it, ignoring code and currency", () => {
     const rule = (md: string, p: Parameters<typeof checkPortability>[1]) =>
       checkPortability(md, p).some((i) => i.rule === "math");
-    for (const p of ["commonmark", "devto"] as const) {
+    for (const p of ["commonmark", "gfm-no-html"] as const) {
       expect(rule("so $x^2$ here", p)).toBe(true);
       expect(rule("$$\nx\n$$", p)).toBe(true);
       expect(rule("costs $5 and $10", p)).toBe(false);
       expect(rule("code `$x$` here", p)).toBe(false);
       expect(rule("```\n$x$\n```", p)).toBe(false);
     }
-    expect(rule("so $x^2$ here", "github")).toBe(false);
-    expect(rule("so $x^2$ here", "obsidian")).toBe(false);
+    expect(rule("so $x^2$ here", "gfm-extended")).toBe(false);
+    expect(rule("so $x^2$ here", "wiki-notes")).toBe(false);
   });
 });
 
 describe("highlights", () => {
-  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "obsidian") =>
+  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "wiki-notes") =>
     renderMarkdown(md, p);
 
   it("renders ==text== as <mark> for Obsidian", () => {
@@ -243,7 +246,7 @@ describe("highlights", () => {
     expect(html("- item ==x==")).toContain("<mark>x</mark>");
   });
   it("leaves the text alone for platforms that don't render it", () => {
-    for (const p of ["github", "commonmark", "devto"] as const) {
+    for (const p of ["gfm-extended", "commonmark", "gfm-no-html"] as const) {
       expect(html("a ==b== c", p)).toContain("==b==");
       expect(html("a ==b== c", p)).not.toContain("<mark");
     }
@@ -260,7 +263,7 @@ describe("highlights", () => {
 });
 
 describe("wiki-links", () => {
-  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "obsidian") =>
+  const html = (md: string, p: Parameters<typeof renderMarkdown>[1] = "wiki-notes") =>
     renderMarkdown(md, p);
   const link = (text: string, target: string) =>
     `<span class="wikilink" title="Link to ${target}">${text}</span>`;
@@ -279,7 +282,7 @@ describe("wiki-links", () => {
     expect(html('[[a"b]]')).not.toContain('title="Link to a"b');
   });
   it("leaves the text alone elsewhere, and ignores code, embeds and empty links", () => {
-    for (const p of ["github", "commonmark", "devto"] as const)
+    for (const p of ["gfm-extended", "commonmark", "gfm-no-html"] as const)
       expect(html("[[Note]]", p)).not.toContain("wikilink");
     expect(html("`[[Note]]`")).not.toContain("wikilink");
     expect(html("![[image.png]]")).not.toContain("wikilink");
@@ -326,11 +329,11 @@ describe("source lines for click-through sync", () => {
 
   it("adds nothing unless asked, so exports stay clean", () => {
     expect(renderMarkdown(md)).not.toContain("data-sl");
-    expect(renderMarkdown(md, "github", {}, {})).not.toContain("data-el");
+    expect(renderMarkdown(md, "gfm-extended", {}, {})).not.toContain("data-el");
   });
 
   it("tags each block with its first and last line in the full text, front matter included", () => {
-    expect(lines(renderMarkdown(md, "github", {}, { sourceLines: true }))).toEqual([
+    expect(lines(renderMarkdown(md, "gfm-extended", {}, { sourceLines: true }))).toEqual([
       "h1 5-5",
       "p 7-8",
       "li 10-10",
@@ -349,7 +352,7 @@ describe("source lines for click-through sync", () => {
   it("only writes numbers, so nothing from the document reaches an attribute", () => {
     const html = renderMarkdown(
       '# <img src=x onerror=alert(1)> "quoted"',
-      "github",
+      "gfm-extended",
       {},
       { sourceLines: true },
     );

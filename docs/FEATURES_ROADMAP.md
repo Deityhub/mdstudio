@@ -32,7 +32,7 @@ Editor, strict preview, scroll sync, profiles + portability checker, import/drag
 ## Phase 3 — Publishing 🗓
 Client-side by default with user tokens; server proxy only where CORS forces it.
 1. **GitHub**: PAT or GitHub App; choose repo/branch/path; commit `.md` + images; optional PR. Track `publications`.
-2. **dev.to** (Forem API), **Hashnode** (GraphQL), **Ghost** (Admin API, needs proxy), **WordPress** (REST + application password), **Medium** (import link only — API closed), **Substack** (copy HTML).
+2. **Other platforms**: not planned. Only GitHub publishing is supported for now.
 3. **Update vs create**: re-publish updates remote post by stored remote id.
 4. **Per-target transforms preview**: show exactly what's sent.
 AC: dry-run view; failures shown with fix; no token persisted unless user opts in to encrypted local storage.

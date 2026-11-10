@@ -21,7 +21,7 @@ p{font-size:30px;margin:28px 0 0;color:#6b5d50;white-space:nowrap}
 </style>
 <div class="brand">${svg}mdstudio</div>
 <div><h1>Write once.<br><em>Render the same everywhere.</em></h1>
-<p>Faithful live preview and portability checks for GitHub, dev.to and Obsidian.</p></div>
+<p>Live preview and portability checks for GitHub, CommonMark and wiki notes.</p></div>
 <div class="url">mdstudio.deityhub.com</div>`;
 
 // The mark has no background of its own, so app icons sit on the paper color with some padding.

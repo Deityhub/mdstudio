@@ -55,6 +55,7 @@ import {
   Tags,
   History,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +78,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SiteNotice } from "@/components/SiteNotice";
 import { cn } from "@/lib/utils";
 import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/ui/layout";
 import { HistoryPanel } from "@/components/studio/HistoryPanel";
@@ -121,6 +123,7 @@ import {
   splitFrontMatter,
   joinFrontMatter,
 } from "@/lib/markdown/markdown";
+import { parseProfile } from "@/lib/markdown/profiles";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editor/editing";
 import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editor/editing-insert";
 import { hydrateDiagrams, renderDiagramFor, withCachedDiagrams } from "@/lib/markdown/diagrams";
@@ -142,6 +145,11 @@ import {
 } from "./InsertDialogs";
 import type { EditorHandle } from "./MarkdownEditor";
 import { AiWriter } from "./AiWriter";
+import { AiEditDialog, type AiEdit } from "./AiEditDialog";
+import { canFix, fixInstruction, fixTarget } from "@/lib/ai/fix";
+import { AiMenuItems } from "./AiMenuItems";
+import { AiIntegrationsDialog } from "./AiIntegrationsDialog";
+import type { AiActionId } from "@/lib/ai/actions";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   Dialog,
@@ -197,7 +205,7 @@ export function Studio({ docId }: { docId: string }) {
   const [doc, setDoc] = useState<MdDocument | null>(null);
   const [docs, setDocs] = useState<MdDocument[]>([]);
   const [missing, setMissing] = useState(false);
-  const [profile, setProfile] = useState<Profile>("github");
+  const [profile, setProfile] = useState<Profile>("gfm-extended");
   const [view, setView] = useState<View>("split");
   const [panel, setPanel] = useState<Panel>(null);
   const [library, setLibrary] = useState(true);
@@ -212,6 +220,9 @@ export function Studio({ docId }: { docId: string }) {
   const [imageDialog, setImageDialog] = useState({ open: false, initialAlt: "" });
   const [tableDialog, setTableDialog] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
+  const [aiEdit, setAiEdit] = useState<(AiEdit & { from: number; to: number }) | null>(null);
+  const [aiIntegrations, setAiIntegrations] = useState(false);
+  const [selRect, setSelRect] = useState<{ x: number; top: number; bottom: number } | null>(null);
   const toolbar = useRef<ToolbarHandle>(null);
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
@@ -246,6 +257,41 @@ export function Studio({ docId }: { docId: string }) {
   const [checkConfig, setCheckConfig] = useState<CheckConfig>(DEFAULT_CONFIG);
   const [rulesOpen, setRulesOpen] = useState(false);
   const editor = useRef<EditorHandle>(null);
+  const startAi = (action: AiActionId) => {
+    const snap = editor.current?.getSnapshot();
+    if (!snap || snap.from === snap.to) {
+      toast.info("Select some text first");
+      return;
+    }
+    setSelRect(null);
+    setAiEdit({ action, text: snap.text.slice(snap.from, snap.to), from: snap.from, to: snap.to });
+  };
+  /** Asks the AI to fix one flagged problem, in the paragraph, code block or front matter it is in. */
+  const fixIssue = (issue: Issue) => {
+    const target = fixTarget(content, issue);
+    if (!target) {
+      toast.info("Couldn't find the text for this check");
+      return;
+    }
+    setAiEdit({
+      ...target,
+      label: issue.rule === "missing-alt" ? "Suggest alt text" : "Fix with AI",
+      instruction: fixInstruction(issue, profile),
+    });
+  };
+  /** Puts the suggestion where the selection was, in one step, unless that text has changed meanwhile. */
+  const acceptAi = (insert: string) => {
+    const e = editor.current;
+    if (!e || !aiEdit) return;
+    const { text, from, to } = aiEdit;
+    if (e.getSnapshot().text.slice(from, to) !== text) {
+      toast.error("The selected text changed, so nothing was replaced");
+      return;
+    }
+    e.apply({ changes: [{ from, to, insert }], from, to: from + insert.length });
+    setAiEdit(null);
+    toast.success("AI suggestion applied", { description: "Undo puts the old text back." });
+  };
   const preview = useRef<HTMLDivElement>(null);
   const install = useInstallPrompt();
   const online = useOnline();
@@ -271,8 +317,8 @@ export function Studio({ docId }: { docId: string }) {
 
   // load prefs + docs
   useEffect(() => {
-    const p = localStorage.getItem("md:profile") as Profile | null;
-    if (p && PROFILES.some((x) => x.id === p)) setProfile(p);
+    const p = parseProfile(localStorage.getItem("md:profile"));
+    if (p) setProfile(p);
     setNormalize(localStorage.getItem("md:normalize") === "1");
     setCheckConfig(loadConfig());
     // Checks start open only on wide screens; below that the editor keeps the room until asked.
@@ -1187,6 +1233,7 @@ export function Studio({ docId }: { docId: string }) {
         <ChecksPanel
           issues={issues}
           onGo={(l) => goToLine(l)}
+          onFix={fixIssue}
           onOpenRules={() => setRulesOpen(true)}
         />
       )}
@@ -1239,6 +1286,7 @@ export function Studio({ docId }: { docId: string }) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="studio-shell flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+        <SiteNotice />
         {/* Top bar */}
         <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b border-border px-2 py-2 sm:px-3">
           <div className="flex min-w-0 items-center gap-1">
@@ -1562,6 +1610,8 @@ export function Studio({ docId }: { docId: string }) {
                 onOpenImage={openImage}
                 onOpenTable={() => setTableDialog(true)}
                 onOpenShortcuts={() => setShortcuts(true)}
+                onAiAction={startAi}
+                onAiIntegrations={() => setAiIntegrations(true)}
                 focus={focus}
                 onToggleFocus={() => setFocus((f) => !f)}
               />
@@ -1589,6 +1639,7 @@ export function Studio({ docId }: { docId: string }) {
                           onFocusToolbar={() => toolbar.current?.focus()}
                           onShowShortcuts={() => setShortcuts(true)}
                           onCursorLine={setCursorLine}
+                          onSelectionRect={setSelRect}
                         />
                       </Suspense>
                     </ClientOnly>
@@ -1719,6 +1770,30 @@ export function Studio({ docId }: { docId: string }) {
           config={checkConfig}
           onChange={chooseCheckConfig}
         />
+        {selRect && !aiEdit && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="fixed z-40 hidden h-7 gap-1 px-2 shadow-md md:inline-flex"
+                style={{
+                  left: Math.max(8, Math.min(selRect.x, window.innerWidth - 80)),
+                  top: selRect.top > 48 ? selRect.top - 36 : selRect.bottom + 6,
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+                aria-label="AI actions on the selection"
+              >
+                <Sparkles className="size-3.5" /> AI
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <AiMenuItems onPick={startAi} onIntegrations={() => setAiIntegrations(true)} />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        <AiEditDialog edit={aiEdit} onClose={() => setAiEdit(null)} onAccept={acceptAi} />
+        <AiIntegrationsDialog open={aiIntegrations} onOpenChange={setAiIntegrations} />
         <ShortcutsDialog
           open={shortcuts}
           onOpenChange={setShortcuts}
@@ -1784,10 +1859,12 @@ function EditorFallback() {
 function ChecksPanel({
   issues,
   onGo,
+  onFix,
   onOpenRules,
 }: {
   issues: Issue[];
   onGo: (l: number) => void;
+  onFix: (issue: Issue) => void;
   onOpenRules: () => void;
 }) {
   const rules = (
@@ -1816,10 +1893,10 @@ function ChecksPanel({
           const Icon =
             i.severity === "error" ? CircleAlert : i.severity === "warning" ? AlertTriangle : Info;
           return (
-            <li key={k}>
+            <li key={k} className="rounded-md border border-border bg-card">
               <button
                 onClick={() => onGo(i.line)}
-                className="flex w-full gap-2 rounded-md border border-border bg-card p-2.5 text-left hover:bg-accent"
+                className="flex w-full gap-2 rounded-md p-2.5 text-left hover:bg-accent"
               >
                 <Icon
                   className={cn(
@@ -1841,6 +1918,19 @@ function ChecksPanel({
                   )}
                 </span>
               </button>
+              {canFix(i) && (
+                <div className="px-2.5 pb-2.5 pl-9">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
+                    onClick={() => onFix(i)}
+                  >
+                    <Sparkles className="size-3.5" />
+                    {i.rule === "missing-alt" ? "Suggest alt text" : "Fix with AI"}
+                  </Button>
+                </div>
+              )}
             </li>
           );
         })}
