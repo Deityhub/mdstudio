@@ -7,15 +7,18 @@ import {
   tooManyResponse as tooMany,
 } from "../auth/http";
 import { hit } from "../auth/limits";
+import { limitsFor } from "../limits/request";
 import { listIntegrations, putIntegration, removeIntegration } from "./service";
 
 const HOUR = 3_600_000;
-/** Changes per account per hour: generous for a person, a wall for a script. */
-const CHANGES_PER_HOUR = 300;
 
 export const listHandler = (request: Request) =>
   withVerifiedUser(request, async (user, db) =>
-    json({ integrations: await listIntegrations(db, user.id) }),
+    json({
+      integrations: await listIntegrations(db, user.id),
+      // how many this account may keep (an account limit), so the page can say so
+      limit: (await limitsFor(request, db, user.id)).ai_integrations,
+    }),
   );
 
 /** Saves one integration. The id in the address must match the one in the body. */
@@ -24,16 +27,22 @@ export const putHandler = (request: Request, id: string) =>
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
     const parsed = integrationSchema.safeParse(await readBody(request));
     if (!parsed.success || parsed.data.id !== id) return json({ error: "invalid" }, 400);
-    const t = await hit(db, `ai:${user.id}`, CHANGES_PER_HOUR, HOUR);
+    const limits = await limitsFor(request, db, user.id);
+    const t = await hit(db, `ai:${user.id}`, limits.ai_changes_per_hour, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
-    const r = await putIntegration(db, user.id, parsed.data);
+    const r = await putIntegration(db, user.id, parsed.data, limits.ai_integrations);
     return r.ok ? json({ integration: r.integration }) : json({ error: r.error }, 409);
   });
 
 export const deleteHandler = (request: Request, id: string) =>
   withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
-    const t = await hit(db, `ai:${user.id}`, CHANGES_PER_HOUR, HOUR);
+    const t = await hit(
+      db,
+      `ai:${user.id}`,
+      (await limitsFor(request, db, user.id)).ai_changes_per_hour,
+      HOUR,
+    );
     if (!t.allowed) return tooMany(t.retryAfter);
     return (await removeIntegration(db, user.id, id))
       ? json({ ok: true })

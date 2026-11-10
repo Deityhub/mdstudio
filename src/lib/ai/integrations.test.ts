@@ -110,7 +110,7 @@ const fakeRemote = (initial: Item[] = []) => {
   const stored = new Map(initial.map((i) => [i.id, i]));
   return {
     stored,
-    list: vi.fn(async () => [...stored.values()]),
+    list: vi.fn(async () => ({ items: [...stored.values()], limit: 20 })),
     put: vi.fn(async (i: Item) => void stored.set(i.id, i)),
     remove: vi.fn(async (id: string) => void stored.delete(id)),
   };
@@ -184,7 +184,12 @@ describe("integrations kept in the account", () => {
     const { ai } = await load();
     let release!: (items: Item[]) => void;
     const remote = fakeRemote();
-    remote.list.mockImplementationOnce(() => new Promise<Item[]>((r) => (release = r)));
+    remote.list.mockImplementationOnce(
+      () =>
+        new Promise<{ items: Item[]; limit: number }>(
+          (r) => (release = (items: Item[]) => r({ items, limit: 20 })),
+        ),
+    );
     const joining = ai.joinCloud(remote, vi.fn());
     ai.leaveCloud();
     release([cloudItem()]);

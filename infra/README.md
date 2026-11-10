@@ -37,6 +37,17 @@ since a new key means writers connect again. The same OAuth app and callback are
 
 ## Cloud limits
 
+Limits are per account. The environment variables below are the **server-wide defaults**; a default set in
+the admin dashboard, an account's plan or its own override take precedence (see "Account limits" in
+`docs/SYSTEM_SPEC.md`). The first account created on a server is its **admin** and can open `/admin` to change
+all of this. Another admin is made in the dashboard, or with SQL:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'pat@example.com';  -- 'user' takes it away
+```
+
+On Cloudflare run it in the D1 console (or `wrangler d1 execute`). Self-hosted: `sqlite3 /data/studio.db`.
+
 Cloud history: `MAX_REVISIONS` versions kept per cloud draft (default 10; `0` switches server history off) and
 `REVISION_INTERVAL_MINUTES` between automatic versions (default 5). They are stored compressed. The browser's
 own History keeps 50 and is separate.

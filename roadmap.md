@@ -33,6 +33,7 @@
 - [x] **Export Pipeline:** Standard `.md`, clipboard copy, self-contained `.md` with base64 embedded images, and standalone `.html`.
 - [x] **Draft Library:** Local-first IndexedDB persistence with autosave debounce (400ms).
 - [x] **Writing Aids:** Live word count, character count, reading time estimation, and click-to-navigate outline.
+- [x] **Account limits and admin dashboard:** Limits come from the account (its own overrides and plan), then dashboard-set server defaults, the environment and built-in values. The first account is the admin (`users.role`). `/admin` has an overview, accounts (role, plan, suspend, limits, content, delete), plans, server settings (sign-ups, site notice, default limits) and an audit log.
 - [x] **AI integrations in the account:** Signed-in writers keep their AI integrations (provider, name, endpoint, models, never the API key) in their account and see them on every device; signed out they stay in the browser. This browser's own integrations move into the account on sign-in.
 - [x] **BYOK AI Assistant:** Direct browser streaming integration for OpenAI, Anthropic, Gemini, and custom OpenAI-compatible models.
 - [x] **Responsive Workspace:** Full phone and tablet responsiveness with single-pane view switching and drawer-based panels.

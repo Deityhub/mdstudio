@@ -6,6 +6,8 @@ export type AccountUser = {
   displayName: string | null;
   /** False until the address is confirmed by the link in an email (always true without email). */
   emailVerified: boolean;
+  /** May use the admin dashboard. */
+  isAdmin?: boolean;
 };
 export type Account = {
   user: AccountUser | null;
@@ -18,6 +20,10 @@ export type Account = {
   email: boolean;
   /** Public key of the sign-up CAPTCHA, when the server has one. */
   turnstile: string | null;
+  /** A site-wide notice an admin set, shown above every page. */
+  notice?: string | null;
+  /** False when an admin has closed sign-ups. */
+  signupsOpen?: boolean;
 };
 
 const MESSAGES: Record<string, string> = {
@@ -35,6 +41,8 @@ const MESSAGES: Record<string, string> = {
   github_unavailable: "GitHub sign-in isn't set up on this server.",
   no_verified_email: "Your GitHub account has no verified email address.",
   email_in_use: "That email already has a password account. Sign in with your password instead.",
+  suspended: "This account has been suspended.",
+  signups_closed: "New accounts aren't being created right now.",
 };
 
 export const authMessage = (code: string) => MESSAGES[code] ?? "Something went wrong. Try again.";
@@ -68,6 +76,8 @@ export async function fetchAccount(): Promise<Account> {
         images?: boolean;
         email?: boolean;
         turnstile?: string | null;
+        notice?: string | null;
+        signupsOpen?: boolean;
       };
     };
     rememberUser(body.user ?? null);
@@ -78,6 +88,8 @@ export async function fetchAccount(): Promise<Account> {
       images: body.providers?.images === true,
       email: body.providers?.email === true,
       turnstile: body.providers?.turnstile ?? null,
+      notice: body.providers?.notice ?? null,
+      signupsOpen: body.providers?.signupsOpen !== false,
     };
   } catch {
     // Can't reach the server: assume nothing changed rather than hiding the account's drafts.
@@ -88,6 +100,8 @@ export async function fetchAccount(): Promise<Account> {
       images: false,
       email: false,
       turnstile: null,
+      notice: null,
+      signupsOpen: true,
     };
   }
 }

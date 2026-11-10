@@ -367,7 +367,11 @@ test("library: create a folder, move drafts in through the menu, and keep it aft
   await stored(page, '"folder":"Blog posts"');
   await page.reload();
   await expect(nav.getByRole("group", { name: "Folder Blog posts" })).toBeVisible();
-  await nav.getByRole("button", { name: /^Blog posts/ }).click();
+  // folders start collapsed after a reload, and open when clicked
+  await expect(nav.getByRole("button", { name: /^Blog posts/ })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
   await expect(nav.getByText("One", { exact: true })).toBeHidden();
   await nav.getByRole("button", { name: /^Blog posts/ }).click();
   await expect(nav.getByText("One", { exact: true })).toBeVisible();
@@ -536,6 +540,8 @@ test("bulk: import a ZIP of drafts, folders and images", async ({ page }) => {
     });
   const nav = page.getByRole("navigation", { name: "Drafts" });
   await expect(page.getByText("Imported 2 drafts")).toBeVisible();
+  // imported folders start collapsed
+  await nav.getByRole("button", { name: /^Notes/ }).click();
   await expect(nav.getByRole("group", { name: "Folder Notes" }).getByText("First")).toBeVisible();
   // a file with no heading keeps its file name instead of "Untitled"
   await expect(nav.getByText("second", { exact: true })).toBeVisible();
@@ -558,6 +564,12 @@ test("bulk: import a folder of Markdown files", async ({ page }) => {
   await page.getByLabel("Import a folder").setInputFiles(dir);
   const nav = page.getByRole("navigation", { name: "Drafts" });
   await expect(page.getByText("Imported 2 drafts")).toBeVisible();
+  // imported folders start collapsed
+  await nav
+    .getByRole("button", { name: /^My notes/ })
+    .first()
+    .click();
+  await nav.getByRole("button", { name: /^My notes \/ Work/ }).click();
   await expect(
     nav.getByRole("group", { name: "Folder My notes" }).getByText("Top level"),
   ).toBeVisible();
@@ -632,6 +644,8 @@ test("library: rename a folder through its menu, and its drafts follow", async (
   await expect(nav.getByRole("group", { name: "Folder POSTS" })).toBeVisible();
   await stored(page, '"folder":"POSTS"');
   await page.reload();
+  // collapsed after a reload; open it to see the draft
+  await nav.getByRole("button", { name: /^POSTS/ }).click();
   await expect(
     nav.getByRole("group", { name: "Folder POSTS" }).getByText("Inside", { exact: true }),
   ).toBeVisible();

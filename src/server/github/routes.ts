@@ -13,6 +13,7 @@ import {
   tooManyResponse as tooMany,
 } from "../auth/http";
 import { hit } from "../auth/limits";
+import { limitsFor } from "../limits/request";
 import { redirectUri } from "../auth/routes";
 import { userForToken } from "../auth/service";
 import { getDb } from "../db";
@@ -141,16 +142,13 @@ const STATUS: Record<PublishError, number> = {
 const fail = (error: PublishError) => json({ error }, STATUS[error]);
 const unavailable = () => json({ error: "feature_unavailable" }, 403);
 
-/** Reading GitHub's lists costs a request each, so it is limited per account. */
-const READS_PER_HOUR = 120;
-/** Publishing is limited per account, so a script cannot churn commits. */
-const PUBLISHES_PER_HOUR = 30;
-
 export const reposHandler = (request: Request) =>
   withVerifiedUser(request, async (user, db) => {
     const cfg = await setup(request);
-    if (!cfg) return unavailable();
-    const t = await hit(db, `ghread:${user.id}`, READS_PER_HOUR, HOUR);
+    const limits = await limitsFor(request, db, user.id);
+    if (!cfg || !limits.github_publish) return unavailable();
+    // reading GitHub's lists costs a request each, so it is limited per account
+    const t = await hit(db, `ghread:${user.id}`, limits.github_reads_per_hour, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
     const r = await listRepos(db, cfg.key, cfg.urls, user.id);
     return r.ok ? json({ repos: r.repos }) : fail(r.error);
@@ -159,8 +157,10 @@ export const reposHandler = (request: Request) =>
 export const branchesHandler = (request: Request, owner: string, name: string) =>
   withVerifiedUser(request, async (user, db) => {
     const cfg = await setup(request);
-    if (!cfg) return unavailable();
-    const t = await hit(db, `ghread:${user.id}`, READS_PER_HOUR, HOUR);
+    const limits = await limitsFor(request, db, user.id);
+    if (!cfg || !limits.github_publish) return unavailable();
+    // reading GitHub's lists costs a request each, so it is limited per account
+    const t = await hit(db, `ghread:${user.id}`, limits.github_reads_per_hour, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
     const r = await listBranches(db, cfg.key, cfg.urls, user.id, `${owner}/${name}`);
     return r.ok ? json({ branches: r.branches, defaultBranch: r.defaultBranch }) : fail(r.error);
@@ -177,10 +177,12 @@ export const publishHandler = (request: Request) =>
   withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
     const cfg = await setup(request);
-    if (!cfg) return unavailable();
+    const limits = await limitsFor(request, db, user.id);
+    if (!cfg || !limits.github_publish) return unavailable();
     const body = await readJson(request);
     if (!body || (body["target"] !== "file" && body["target"] !== "gist")) return fail("invalid");
-    const t = await hit(db, `ghpublish:${user.id}`, PUBLISHES_PER_HOUR, HOUR);
+    // publishing is limited per account, so a script cannot churn commits
+    const t = await hit(db, `ghpublish:${user.id}`, limits.github_publishes_per_hour, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
     const r =
       body["target"] === "file"

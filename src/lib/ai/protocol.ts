@@ -3,9 +3,6 @@
 import { z } from "zod";
 import { PROVIDER_URLS, checkEndpoint, type ProviderId } from "./provider";
 
-/** The most integrations one account keeps in the cloud. */
-export const MAX_CLOUD_INTEGRATIONS = 20;
-
 const PROVIDERS = Object.keys(PROVIDER_URLS) as [ProviderId, ...ProviderId[]];
 
 export const integrationSchema = z.object({

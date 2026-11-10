@@ -16,6 +16,7 @@ const who = (id: string, over: Partial<PublicUser> = {}): PublicUser => ({
   email: `${id}@x.co`,
   displayName: null,
   emailVerified: true,
+  isAdmin: false,
   ...over,
 });
 

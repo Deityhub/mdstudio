@@ -1,11 +1,10 @@
 import { withVerifiedUser } from "../auth/guard";
 import { sameOrigin } from "../auth/http";
-import { getDb } from "../db";
+import { type Db, getDb } from "../db";
 import { getEnv } from "../env";
+import { limitsFor } from "../limits/request";
 import {
   type AssetInfo,
-  DEFAULT_MAX_ASSETS,
-  DEFAULT_MAX_BYTES,
   MAX_ASSET_EACH,
   deleteAsset,
   listAssets,
@@ -17,17 +16,11 @@ import { getStore } from "./store";
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { "cache-control": "no-store" } });
 
-const num = (value: string | undefined, fallback: number) => {
-  const n = Number(value);
-  return value !== undefined && Number.isInteger(n) && n >= 0 ? n : fallback;
+/** Per account (its plan and own limits apply): how many images and how many bytes in all. */
+const assetLimits = async (request: Request, db: Db, userId: string) => {
+  const l = await limitsFor(request, db, userId);
+  return { maxAssets: l.assets, maxBytes: l.asset_bytes, maxEach: MAX_ASSET_EACH };
 };
-
-/** Per account: MAX_ASSETS images and MAX_ASSET_BYTES in all (10 and 10 MB unless set). */
-const limitsFor = (request: Request) => ({
-  maxAssets: num(getEnv(request, "MAX_ASSETS"), DEFAULT_MAX_ASSETS),
-  maxBytes: num(getEnv(request, "MAX_ASSET_BYTES"), DEFAULT_MAX_BYTES),
-  maxEach: MAX_ASSET_EACH,
-});
 
 /** Links are absolute, so the Markdown works wherever it is pasted. */
 const origin = (request: Request) =>
@@ -56,7 +49,7 @@ export const uploadHandler = (request: Request) =>
       store,
       user.id,
       { bytes: new Uint8Array(await file.arrayBuffer()), fileName: file.name },
-      limitsFor(request),
+      await assetLimits(request, db, user.id),
     );
     if ("error" in result) {
       const status = { invalid_type: 415, too_large: 413, limit_count: 409, limit_bytes: 409 }[
@@ -70,7 +63,11 @@ export const uploadHandler = (request: Request) =>
 export const listHandler = (request: Request) =>
   withVerifiedUser(request, async (user, db) => {
     if (!(await imagesAvailable(request))) return UNAVAILABLE();
-    const { assets, usage } = await listAssets(db, user.id, limitsFor(request));
+    const { assets, usage } = await listAssets(
+      db,
+      user.id,
+      await assetLimits(request, db, user.id),
+    );
     return json({ assets: assets.map(withUrl(request)), usage });
   });
 

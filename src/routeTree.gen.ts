@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AFileRouteImport } from './routes/a.$file'
@@ -21,6 +22,11 @@ import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
+import { Route as ApiAdminAuditRouteImport } from './routes/api/admin.audit'
+import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin.overview'
+import { Route as ApiAdminPlansRouteImport } from './routes/api/admin.plans'
+import { Route as ApiAdminSettingsRouteImport } from './routes/api/admin.settings'
+import { Route as ApiAdminUsersRouteImport } from './routes/api/admin.users'
 import { Route as ApiAiIntegrationsRouteImport } from './routes/api/ai.integrations'
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
 import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
@@ -38,6 +44,8 @@ import { Route as ApiGithubReposRouteImport } from './routes/api/github.repos'
 import { Route as ApiShareIdRouteImport } from './routes/api/share.$id'
 import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
 import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
+import { Route as ApiAdminPlansNameRouteImport } from './routes/api/admin.plans.$name'
+import { Route as ApiAdminUsersIdRouteImport } from './routes/api/admin.users.$id'
 import { Route as ApiAiIntegrationsIdRouteImport } from './routes/api/ai.integrations.$id'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
@@ -46,15 +54,23 @@ import { Route as ApiGithubPublicationsIdRouteImport } from './routes/api/github
 import { Route as ApiSSlugCommentsRouteImport } from './routes/api/s.$slug.comments'
 import { Route as ApiShareIdCommentsRouteImport } from './routes/api/share.$id.comments'
 import { Route as ApiShareIdPeopleRouteImport } from './routes/api/share.$id.people'
+import { Route as ApiAdminUsersIdContentRouteImport } from './routes/api/admin.users.$id.content'
+import { Route as ApiAdminUsersIdSignOutRouteImport } from './routes/api/admin.users.$id.sign-out'
 import { Route as ApiDocumentsIdRevisionsRevisionIdRouteImport } from './routes/api/documents.$id.revisions.$revisionId'
 import { Route as ApiSSlugCommentsCommentIdRouteImport } from './routes/api/s.$slug.comments.$commentId'
 import { Route as ApiShareIdCommentsCommentIdRouteImport } from './routes/api/share.$id.comments.$commentId'
 import { Route as ApiShareIdPeoplePersonIdRouteImport } from './routes/api/share.$id.people.$personId'
+import { Route as ApiAdminUsersIdKindItemRouteImport } from './routes/api/admin.users.$id.$kind.$item'
 import { Route as ApiGithubReposOwnerRepoBranchesRouteImport } from './routes/api/github.repos.$owner.$repo.branches'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -110,6 +126,31 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
 const SSlugRoute = SSlugRouteImport.update({
   id: '/s/$slug',
   path: '/s/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminAuditRoute = ApiAdminAuditRouteImport.update({
+  id: '/api/admin/audit',
+  path: '/api/admin/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
+  id: '/api/admin/overview',
+  path: '/api/admin/overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminPlansRoute = ApiAdminPlansRouteImport.update({
+  id: '/api/admin/plans',
+  path: '/api/admin/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminSettingsRoute = ApiAdminSettingsRouteImport.update({
+  id: '/api/admin/settings',
+  path: '/api/admin/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminUsersRoute = ApiAdminUsersRouteImport.update({
+  id: '/api/admin/users',
+  path: '/api/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiIntegrationsRoute = ApiAiIntegrationsRouteImport.update({
@@ -197,6 +238,16 @@ const ApiSyncPushRoute = ApiSyncPushRouteImport.update({
   path: '/api/sync/push',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminPlansNameRoute = ApiAdminPlansNameRouteImport.update({
+  id: '/$name',
+  path: '/$name',
+  getParentRoute: () => ApiAdminPlansRoute,
+} as any)
+const ApiAdminUsersIdRoute = ApiAdminUsersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAdminUsersRoute,
+} as any)
 const ApiAiIntegrationsIdRoute = ApiAiIntegrationsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -237,6 +288,16 @@ const ApiShareIdPeopleRoute = ApiShareIdPeopleRouteImport.update({
   path: '/people',
   getParentRoute: () => ApiShareIdRoute,
 } as any)
+const ApiAdminUsersIdContentRoute = ApiAdminUsersIdContentRouteImport.update({
+  id: '/content',
+  path: '/content',
+  getParentRoute: () => ApiAdminUsersIdRoute,
+} as any)
+const ApiAdminUsersIdSignOutRoute = ApiAdminUsersIdSignOutRouteImport.update({
+  id: '/sign-out',
+  path: '/sign-out',
+  getParentRoute: () => ApiAdminUsersIdRoute,
+} as any)
 const ApiDocumentsIdRevisionsRevisionIdRoute =
   ApiDocumentsIdRevisionsRevisionIdRouteImport.update({
     id: '/$revisionId',
@@ -261,6 +322,11 @@ const ApiShareIdPeoplePersonIdRoute =
     path: '/$personId',
     getParentRoute: () => ApiShareIdPeopleRoute,
   } as any)
+const ApiAdminUsersIdKindItemRoute = ApiAdminUsersIdKindItemRouteImport.update({
+  id: '/$kind/$item',
+  path: '/$kind/$item',
+  getParentRoute: () => ApiAdminUsersIdRoute,
+} as any)
 const ApiGithubReposOwnerRepoBranchesRoute =
   ApiGithubReposOwnerRepoBranchesRouteImport.update({
     id: '/$owner/$repo/branches',
@@ -270,6 +336,7 @@ const ApiGithubReposOwnerRepoBranchesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/a/$file': typeof AFileRoute
@@ -281,6 +348,11 @@ export interface FileRoutesByFullPath {
   '/s/$slug': typeof SSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/admin/audit': typeof ApiAdminAuditRoute
+  '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/plans': typeof ApiAdminPlansRouteWithChildren
+  '/api/admin/settings': typeof ApiAdminSettingsRoute
+  '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
@@ -298,6 +370,8 @@ export interface FileRoutesByFullPath {
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
+  '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
@@ -306,14 +380,18 @@ export interface FileRoutesByFullPath {
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
   '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
+  '/api/admin/users/$id/content': typeof ApiAdminUsersIdContentRoute
+  '/api/admin/users/$id/sign-out': typeof ApiAdminUsersIdSignOutRoute
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
+  '/api/admin/users/$id/$kind/$item': typeof ApiAdminUsersIdKindItemRoute
   '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/a/$file': typeof AFileRoute
@@ -325,6 +403,11 @@ export interface FileRoutesByTo {
   '/s/$slug': typeof SSlugRoute
   '/editor': typeof EditorIndexRoute
   '/guides': typeof GuidesIndexRoute
+  '/api/admin/audit': typeof ApiAdminAuditRoute
+  '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/plans': typeof ApiAdminPlansRouteWithChildren
+  '/api/admin/settings': typeof ApiAdminSettingsRoute
+  '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
@@ -342,6 +425,8 @@ export interface FileRoutesByTo {
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
+  '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
@@ -350,15 +435,19 @@ export interface FileRoutesByTo {
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
   '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
+  '/api/admin/users/$id/content': typeof ApiAdminUsersIdContentRoute
+  '/api/admin/users/$id/sign-out': typeof ApiAdminUsersIdSignOutRoute
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
+  '/api/admin/users/$id/$kind/$item': typeof ApiAdminUsersIdKindItemRoute
   '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/a/$file': typeof AFileRoute
@@ -370,6 +459,11 @@ export interface FileRoutesById {
   '/s/$slug': typeof SSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/admin/audit': typeof ApiAdminAuditRoute
+  '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/plans': typeof ApiAdminPlansRouteWithChildren
+  '/api/admin/settings': typeof ApiAdminSettingsRoute
+  '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
@@ -387,6 +481,8 @@ export interface FileRoutesById {
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
+  '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
@@ -395,16 +491,20 @@ export interface FileRoutesById {
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
   '/api/share/$id/comments': typeof ApiShareIdCommentsRouteWithChildren
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
+  '/api/admin/users/$id/content': typeof ApiAdminUsersIdContentRoute
+  '/api/admin/users/$id/sign-out': typeof ApiAdminUsersIdSignOutRoute
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
+  '/api/admin/users/$id/$kind/$item': typeof ApiAdminUsersIdKindItemRoute
   '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/reset-password'
     | '/sitemap.xml'
     | '/a/$file'
@@ -416,6 +516,11 @@ export interface FileRouteTypes {
     | '/s/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/admin/audit'
+    | '/api/admin/overview'
+    | '/api/admin/plans'
+    | '/api/admin/settings'
+    | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
     | '/api/auth/forgot'
@@ -433,6 +538,8 @@ export interface FileRouteTypes {
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
+    | '/api/admin/plans/$name'
+    | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
@@ -441,14 +548,18 @@ export interface FileRouteTypes {
     | '/api/s/$slug/comments'
     | '/api/share/$id/comments'
     | '/api/share/$id/people'
+    | '/api/admin/users/$id/content'
+    | '/api/admin/users/$id/sign-out'
     | '/api/documents/$id/revisions/$revisionId'
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
+    | '/api/admin/users/$id/$kind/$item'
     | '/api/github/repos/$owner/$repo/branches'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/reset-password'
     | '/sitemap.xml'
     | '/a/$file'
@@ -460,6 +571,11 @@ export interface FileRouteTypes {
     | '/s/$slug'
     | '/editor'
     | '/guides'
+    | '/api/admin/audit'
+    | '/api/admin/overview'
+    | '/api/admin/plans'
+    | '/api/admin/settings'
+    | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
     | '/api/auth/forgot'
@@ -477,6 +593,8 @@ export interface FileRouteTypes {
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
+    | '/api/admin/plans/$name'
+    | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
@@ -485,14 +603,18 @@ export interface FileRouteTypes {
     | '/api/s/$slug/comments'
     | '/api/share/$id/comments'
     | '/api/share/$id/people'
+    | '/api/admin/users/$id/content'
+    | '/api/admin/users/$id/sign-out'
     | '/api/documents/$id/revisions/$revisionId'
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
+    | '/api/admin/users/$id/$kind/$item'
     | '/api/github/repos/$owner/$repo/branches'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/reset-password'
     | '/sitemap.xml'
     | '/a/$file'
@@ -504,6 +626,11 @@ export interface FileRouteTypes {
     | '/s/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/admin/audit'
+    | '/api/admin/overview'
+    | '/api/admin/plans'
+    | '/api/admin/settings'
+    | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
     | '/api/auth/forgot'
@@ -521,6 +648,8 @@ export interface FileRouteTypes {
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
+    | '/api/admin/plans/$name'
+    | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
@@ -529,15 +658,19 @@ export interface FileRouteTypes {
     | '/api/s/$slug/comments'
     | '/api/share/$id/comments'
     | '/api/share/$id/people'
+    | '/api/admin/users/$id/content'
+    | '/api/admin/users/$id/sign-out'
     | '/api/documents/$id/revisions/$revisionId'
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
+    | '/api/admin/users/$id/$kind/$item'
     | '/api/github/repos/$owner/$repo/branches'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AFileRoute: typeof AFileRoute
@@ -549,6 +682,11 @@ export interface RootRouteChildren {
   SSlugRoute: typeof SSlugRoute
   EditorIndexRoute: typeof EditorIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
+  ApiAdminAuditRoute: typeof ApiAdminAuditRoute
+  ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
+  ApiAdminPlansRoute: typeof ApiAdminPlansRouteWithChildren
+  ApiAdminSettingsRoute: typeof ApiAdminSettingsRoute
+  ApiAdminUsersRoute: typeof ApiAdminUsersRouteWithChildren
   ApiAiIntegrationsRoute: typeof ApiAiIntegrationsRouteWithChildren
   ApiAuthForgotRoute: typeof ApiAuthForgotRoute
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
@@ -576,6 +714,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -653,6 +798,41 @@ declare module '@tanstack/react-router' {
       path: '/s/$slug'
       fullPath: '/s/$slug'
       preLoaderRoute: typeof SSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/audit': {
+      id: '/api/admin/audit'
+      path: '/api/admin/audit'
+      fullPath: '/api/admin/audit'
+      preLoaderRoute: typeof ApiAdminAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/overview': {
+      id: '/api/admin/overview'
+      path: '/api/admin/overview'
+      fullPath: '/api/admin/overview'
+      preLoaderRoute: typeof ApiAdminOverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/plans': {
+      id: '/api/admin/plans'
+      path: '/api/admin/plans'
+      fullPath: '/api/admin/plans'
+      preLoaderRoute: typeof ApiAdminPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/settings': {
+      id: '/api/admin/settings'
+      path: '/api/admin/settings'
+      fullPath: '/api/admin/settings'
+      preLoaderRoute: typeof ApiAdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/users': {
+      id: '/api/admin/users'
+      path: '/api/admin/users'
+      fullPath: '/api/admin/users'
+      preLoaderRoute: typeof ApiAdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai/integrations': {
@@ -774,6 +954,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSyncPushRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/plans/$name': {
+      id: '/api/admin/plans/$name'
+      path: '/$name'
+      fullPath: '/api/admin/plans/$name'
+      preLoaderRoute: typeof ApiAdminPlansNameRouteImport
+      parentRoute: typeof ApiAdminPlansRoute
+    }
+    '/api/admin/users/$id': {
+      id: '/api/admin/users/$id'
+      path: '/$id'
+      fullPath: '/api/admin/users/$id'
+      preLoaderRoute: typeof ApiAdminUsersIdRouteImport
+      parentRoute: typeof ApiAdminUsersRoute
+    }
     '/api/ai/integrations/$id': {
       id: '/api/ai/integrations/$id'
       path: '/$id'
@@ -830,6 +1024,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiShareIdPeopleRouteImport
       parentRoute: typeof ApiShareIdRoute
     }
+    '/api/admin/users/$id/content': {
+      id: '/api/admin/users/$id/content'
+      path: '/content'
+      fullPath: '/api/admin/users/$id/content'
+      preLoaderRoute: typeof ApiAdminUsersIdContentRouteImport
+      parentRoute: typeof ApiAdminUsersIdRoute
+    }
+    '/api/admin/users/$id/sign-out': {
+      id: '/api/admin/users/$id/sign-out'
+      path: '/sign-out'
+      fullPath: '/api/admin/users/$id/sign-out'
+      preLoaderRoute: typeof ApiAdminUsersIdSignOutRouteImport
+      parentRoute: typeof ApiAdminUsersIdRoute
+    }
     '/api/documents/$id/revisions/$revisionId': {
       id: '/api/documents/$id/revisions/$revisionId'
       path: '/$revisionId'
@@ -857,6 +1065,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/share/$id/people/$personId'
       preLoaderRoute: typeof ApiShareIdPeoplePersonIdRouteImport
       parentRoute: typeof ApiShareIdPeopleRoute
+    }
+    '/api/admin/users/$id/$kind/$item': {
+      id: '/api/admin/users/$id/$kind/$item'
+      path: '/$kind/$item'
+      fullPath: '/api/admin/users/$id/$kind/$item'
+      preLoaderRoute: typeof ApiAdminUsersIdKindItemRouteImport
+      parentRoute: typeof ApiAdminUsersIdRoute
     }
     '/api/github/repos/$owner/$repo/branches': {
       id: '/api/github/repos/$owner/$repo/branches'
@@ -926,6 +1141,46 @@ const ApiShareRouteChildren: ApiShareRouteChildren = {
 
 const ApiShareRouteWithChildren = ApiShareRoute._addFileChildren(
   ApiShareRouteChildren,
+)
+
+interface ApiAdminPlansRouteChildren {
+  ApiAdminPlansNameRoute: typeof ApiAdminPlansNameRoute
+}
+
+const ApiAdminPlansRouteChildren: ApiAdminPlansRouteChildren = {
+  ApiAdminPlansNameRoute: ApiAdminPlansNameRoute,
+}
+
+const ApiAdminPlansRouteWithChildren = ApiAdminPlansRoute._addFileChildren(
+  ApiAdminPlansRouteChildren,
+)
+
+interface ApiAdminUsersIdRouteChildren {
+  ApiAdminUsersIdContentRoute: typeof ApiAdminUsersIdContentRoute
+  ApiAdminUsersIdSignOutRoute: typeof ApiAdminUsersIdSignOutRoute
+  ApiAdminUsersIdKindItemRoute: typeof ApiAdminUsersIdKindItemRoute
+}
+
+const ApiAdminUsersIdRouteChildren: ApiAdminUsersIdRouteChildren = {
+  ApiAdminUsersIdContentRoute: ApiAdminUsersIdContentRoute,
+  ApiAdminUsersIdSignOutRoute: ApiAdminUsersIdSignOutRoute,
+  ApiAdminUsersIdKindItemRoute: ApiAdminUsersIdKindItemRoute,
+}
+
+const ApiAdminUsersIdRouteWithChildren = ApiAdminUsersIdRoute._addFileChildren(
+  ApiAdminUsersIdRouteChildren,
+)
+
+interface ApiAdminUsersRouteChildren {
+  ApiAdminUsersIdRoute: typeof ApiAdminUsersIdRouteWithChildren
+}
+
+const ApiAdminUsersRouteChildren: ApiAdminUsersRouteChildren = {
+  ApiAdminUsersIdRoute: ApiAdminUsersIdRouteWithChildren,
+}
+
+const ApiAdminUsersRouteWithChildren = ApiAdminUsersRoute._addFileChildren(
+  ApiAdminUsersRouteChildren,
 )
 
 interface ApiAiIntegrationsRouteChildren {
@@ -1003,6 +1258,7 @@ const ApiSSlugCommentsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AFileRoute: AFileRoute,
@@ -1014,6 +1270,11 @@ const rootRouteChildren: RootRouteChildren = {
   SSlugRoute: SSlugRoute,
   EditorIndexRoute: EditorIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,
+  ApiAdminAuditRoute: ApiAdminAuditRoute,
+  ApiAdminOverviewRoute: ApiAdminOverviewRoute,
+  ApiAdminPlansRoute: ApiAdminPlansRouteWithChildren,
+  ApiAdminSettingsRoute: ApiAdminSettingsRoute,
+  ApiAdminUsersRoute: ApiAdminUsersRouteWithChildren,
   ApiAiIntegrationsRoute: ApiAiIntegrationsRouteWithChildren,
   ApiAuthForgotRoute: ApiAuthForgotRoute,
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,

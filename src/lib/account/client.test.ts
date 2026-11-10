@@ -21,6 +21,8 @@ describe("account client", () => {
       images: false,
       email: false,
       turnstile: null,
+      notice: null,
+      signupsOpen: true,
     });
   });
 
@@ -39,6 +41,8 @@ describe("account client", () => {
       images: false,
       email: false,
       turnstile: null,
+      notice: null,
+      signupsOpen: true,
     });
     reply({
       user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
