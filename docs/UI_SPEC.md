@@ -5,13 +5,13 @@ Items marked **(planned)** are specified but not built yet.
 
 ## 1. Landing `/` — `01_home_page.png`, `08_home_checker_demo.png`
 
-Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home), a light/dark toggle and a GitHub link (opens the repository in a new tab). Sections, top to bottom:
+Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home), a theme button (each click goes Light, Dark, System and round again; its icon and label show the current choice) and a GitHub link (opens the repository in a new tab). Sections, top to bottom:
 
 - **Hero:** "Write once. Render the same everywhere.", a short description, a primary "Start writing" button to `/editor`, a "Try the checker" anchor, and a decorative (`aria-hidden`) editor/preview mock. The page has exactly one `h1`.
 - **How it works:** Write, Check, Export.
 - **Live checker demo** (`#try-it`): the real portability engine, lazy-loaded behind `ClientOnly`. An editable sample, four target pills with live issue counts, and a clickable report that selects the offending line.
 - **Features** (six cards), **target profiles** (four cards), **About** and **Who it's for**, an eight-question **FAQ** (native `details`, mirrored in FAQPage JSON-LD), a closing call to action, and a footer (copyright and author on the left, GitHub and Changelog on the right).
-- **Theme:** an inline head script applies the saved or OS theme before first paint; the toggle also lives in the studio header.
+- **Theme:** an inline head script applies the saved or OS theme before first paint; the theme button also lives in the studio header. "System" forgets any saved choice and follows the OS, including when it switches while the page is open; Light and Dark are remembered on this device and ignore the OS.
 
 ## 1b. Guides `/guides` and `/guides/$slug`
 
