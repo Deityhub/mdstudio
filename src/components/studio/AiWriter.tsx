@@ -13,20 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { type SuggestedMetadata } from "@/lib/ai/writing";
-import {
-  generateWithProvider,
-  PROVIDER_URLS,
-  type AiConnection,
-  type ProviderId,
-} from "@/lib/ai/provider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { generateWithProvider } from "@/lib/ai/provider";
+import { ai, useAi } from "@/lib/ai/integrations";
 import { renderMarkdown } from "@/lib/markdown/markdown";
+import { AiPicker } from "./AiPicker";
+import { useStickToBottom } from "./useStickToBottom";
 
 export function AiWriter({
   content,
@@ -38,13 +29,8 @@ export function AiWriter({
   onCreate: (markdown: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
-  const [connection, setConnection] = useState<AiConnection>({
-    provider: "openai",
-    baseUrl: PROVIDER_URLS.openai,
-    model: "",
-    apiKey: "",
-  });
-  const [connected, setConnected] = useState(false);
+  useAi();
+  const connection = ai.connection();
   const [mode, setMode] = useState("metadata");
   const [draft, setDraft] = useState("");
   const [topic, setTopic] = useState("");
@@ -57,9 +43,11 @@ export function AiWriter({
   const [stopped, setStopped] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const upload = useRef<HTMLInputElement>(null);
+  // the body scrolls on its own, and follows the text as it streams in
+  const follow = useStickToBottom<HTMLDivElement>(busy, output + reasoning);
   useEffect(() => () => abort.current?.abort(), []);
   const generate = async () => {
-    if (abort.current) return;
+    if (abort.current || !connection) return;
     const controller = new AbortController();
     abort.current = controller;
     setBusy(true);
@@ -91,6 +79,16 @@ export function AiWriter({
     if (!next) abort.current?.abort();
     setOpen(next);
   };
+  /** What was applied or opened is done with: the next visit starts without it. */
+  const clearResult = () => {
+    setMetadata(null);
+    setOutput("");
+    setReasoning("");
+    setError("");
+    setStopped(false);
+  };
+  const hasInput = mode === "metadata" ? !!draft.trim() : !!topic.trim();
+  const hasResult = mode === "metadata" ? !!metadata : !!output;
   return (
     <Dialog open={open} onOpenChange={close}>
       <Button
@@ -105,312 +103,238 @@ export function AiWriter({
         <Sparkles className="size-4" /> <span className="hidden md:inline">AI writer</span>
         <span className="sr-only md:hidden">AI writer</span>
       </Button>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] min-w-0 max-w-3xl overflow-y-auto overscroll-contain p-4 sm:max-h-[90dvh] sm:p-6 [&_input]:text-base [&_textarea]:text-base [&_input]:sm:text-sm [&_textarea]:sm:text-sm">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] min-w-0 max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-h-[90dvh] [&_input]:text-base [&_textarea]:text-base [&_input]:sm:text-sm [&_textarea]:sm:text-sm">
+        <DialogHeader className="px-4 pr-12 pt-4 sm:px-6 sm:pt-6">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" /> AI writer
           </DialogTitle>
-          <DialogDescription>Your provider · Your API key</DialogDescription>
+          <DialogDescription>Pick the AI to use, then what you want from it.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 border-b border-border pb-4">
-          <Label htmlFor="ai-provider">AI provider</Label>
-          <Select
-            disabled={busy}
-            value={connection.provider}
+        <div className="space-y-3 border-b border-border px-4 py-3 sm:px-6">
+          <AiPicker disabled={busy} />
+          <Tabs
+            value={mode}
             onValueChange={(value) => {
-              const provider = value as ProviderId;
-              setConnection({ provider, baseUrl: PROVIDER_URLS[provider], model: "", apiKey: "" });
-              setConnected(false);
+              setMode(value);
+              setError("");
             }}
           >
-            <SelectTrigger id="ai-provider">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="openai">OpenAI</SelectItem>
-              <SelectItem value="anthropic">Anthropic</SelectItem>
-              <SelectItem value="gemini">Google Gemini</SelectItem>
-              <SelectItem value="compatible">Custom / OpenAI-compatible</SelectItem>
-            </SelectContent>
-          </Select>
-          {connection.provider === "compatible" && (
-            <div className="space-y-1">
-              <Label htmlFor="ai-endpoint">API base URL</Label>
-              <Input
-                id="ai-endpoint"
-                value={connection.baseUrl}
+            <TabsList className="grid h-auto w-full grid-cols-2">
+              <TabsTrigger
+                className="min-h-11 min-w-0 whitespace-normal text-center"
+                value="metadata"
                 disabled={busy}
-                placeholder="https://your-provider.example/v1"
-                onChange={(e) => {
-                  setConnection({ ...connection, baseUrl: e.target.value });
-                  setConnected(false);
+              >
+                Title, description & tags
+              </TabsTrigger>
+              <TabsTrigger
+                className="min-h-11 min-w-0 whitespace-normal text-center"
+                value="write"
+                disabled={busy}
+              >
+                Write a topic
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <div
+          ref={follow.ref}
+          onScroll={follow.onScroll}
+          className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4 sm:px-6"
+        >
+          {mode === "metadata" ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label htmlFor="ai-draft">Markdown draft</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => setDraft(content)}
+                  >
+                    Use current draft
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => upload.current?.click()}
+                  >
+                    <Upload className="size-4" /> Import .md
+                  </Button>
+                </div>
+              </div>
+              <Textarea
+                id="ai-draft"
+                className="font-mono"
+                rows={6}
+                maxLength={100000}
+                disabled={busy}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="# Paste your draft here"
+              />
+              <input
+                hidden
+                ref={upload}
+                type="file"
+                accept=".md,.markdown,.txt"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  try {
+                    const text = await file.text();
+                    if (text.length > 100000)
+                      throw new Error("Drafts must be under 100,000 characters.");
+                    setDraft(text);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Unable to read this file.");
+                  }
                 }}
               />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="ai-topic">Topic</Label>
+                <Input
+                  id="ai-topic"
+                  maxLength={5000}
+                  disabled={busy}
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="e.g. Building accessible React forms"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ai-notes">Notes, audience & tone (optional)</Label>
+                <Textarea
+                  id="ai-notes"
+                  rows={3}
+                  maxLength={10000}
+                  disabled={busy}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Key points, source material, or writing preferences"
+                />
+              </div>
             </div>
           )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label htmlFor="ai-model">Model ID</Label>
-              <Input
-                id="ai-model"
-                value={connection.model}
-                disabled={busy}
-                placeholder="Model ID from your provider"
-                onChange={(e) => {
-                  setConnection({ ...connection, model: e.target.value });
-                  setConnected(false);
-                }}
-              />
+          {busy && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {output ? "Writing…" : "Thinking…"}
+            </p>
+          )}
+          {reasoning && (
+            <details className="text-xs text-muted-foreground">
+              <summary>AI thinking</summary>
+              <p className="mt-2 whitespace-pre-wrap wrap-break-word">{reasoning}</p>
+            </details>
+          )}
+          {error && (
+            <p role="alert" className="wrap-break-word text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          {stopped && (
+            <p className="text-sm text-muted-foreground">Stopped. Partial content kept.</p>
+          )}
+          {mode === "metadata" && metadata && (
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="space-y-1">
+                <Label htmlFor="ai-title">Suggested title</Label>
+                <Input
+                  id="ai-title"
+                  value={metadata.title}
+                  onChange={(e) => setMetadata({ ...metadata, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ai-description">Suggested description</Label>
+                <Textarea
+                  id="ai-description"
+                  rows={2}
+                  value={metadata.description}
+                  onChange={(e) => setMetadata({ ...metadata, description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ai-tags">Suggested tags</Label>
+                <Input
+                  id="ai-tags"
+                  value={metadata.tags.join(", ")}
+                  onChange={(e) =>
+                    setMetadata({
+                      ...metadata,
+                      tags: e.target.value.split(",").map((tag) => tag.trim()),
+                    })
+                  }
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="ai-key">API key</Label>
-              <Input
-                id="ai-key"
-                type="password"
-                autoComplete="off"
-                value={connection.apiKey}
-                disabled={busy}
-                placeholder="Your provider API key"
-                onChange={(e) => {
-                  setConnection({ ...connection, apiKey: e.target.value });
-                  setConnected(false);
-                }}
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={
-                busy ||
-                !connection.apiKey.trim() ||
-                !connection.model.trim() ||
-                !connection.baseUrl.trim()
-              }
-              onClick={() => setConnected(true)}
-            >
-              <Check className="size-4" />{" "}
-              {connected ? "Connection configured" : "Use this connection"}
-            </Button>
-            {connected && (
+          )}
+          {mode === "write" && output && (
+            <article
+              aria-label="Generated draft"
+              className="md-preview min-w-0 overflow-x-auto border-t border-border pt-4"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
+            />
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 sm:px-6">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Submitted text goes to your chosen provider. Provider charges apply.
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            {busy ? (
+              <Button variant="outline" onClick={() => abort.current?.abort()}>
+                <Square className="size-4" /> Stop
+              </Button>
+            ) : (
               <Button
-                variant="ghost"
-                size="sm"
-                disabled={busy}
+                variant={hasResult ? "outline" : "default"}
+                onClick={generate}
+                disabled={!connection || !hasInput}
+              >
+                <Sparkles className="size-4" />{" "}
+                {hasResult
+                  ? "Try again"
+                  : mode === "metadata"
+                    ? "Suggest metadata"
+                    : "Generate draft"}
+              </Button>
+            )}
+            {mode === "metadata" && metadata && !busy && (
+              <Button
+                disabled={!metadata.title.trim()}
                 onClick={() => {
-                  setConnection({ ...connection, apiKey: "" });
-                  setConnected(false);
+                  onApply({ ...metadata, tags: metadata.tags.filter(Boolean) });
+                  clearResult();
+                  close(false);
                 }}
               >
-                Disconnect
+                <Check className="size-4" /> Apply to current draft
+              </Button>
+            )}
+            {mode === "write" && output && !busy && (
+              <Button
+                onClick={async () => {
+                  try {
+                    await onCreate(output);
+                    clearResult();
+                    close(false);
+                  } catch {
+                    setError("Unable to save the generated draft.");
+                  }
+                }}
+              >
+                <FilePlus className="size-4" /> Open as new draft
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Key stays in memory until this draft is closed or the page reloads. Requests go directly
-            to your provider; browser access is required. Connection is verified on generation.
-          </p>
         </div>
-        <Tabs
-          value={mode}
-          onValueChange={(value) => {
-            setMode(value);
-            setError("");
-          }}
-        >
-          <TabsList className="grid h-auto w-full grid-cols-2">
-            <TabsTrigger
-              className="min-h-11 min-w-0 whitespace-normal text-center"
-              value="metadata"
-              disabled={busy}
-            >
-              Title, description & tags
-            </TabsTrigger>
-            <TabsTrigger
-              className="min-h-11 min-w-0 whitespace-normal text-center"
-              value="write"
-              disabled={busy}
-            >
-              Write a topic
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        {mode === "metadata" ? (
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label htmlFor="ai-draft">Markdown draft</Label>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" disabled={busy} onClick={() => setDraft(content)}>
-                  Use current draft
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => upload.current?.click()}
-                >
-                  <Upload className="size-4" /> Import .md
-                </Button>
-              </div>
-            </div>
-            <Textarea
-              id="ai-draft"
-              className="font-mono"
-              rows={6}
-              maxLength={100000}
-              disabled={busy}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="# Paste your draft here"
-            />
-            <input
-              hidden
-              ref={upload}
-              type="file"
-              accept=".md,.markdown,.txt"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (!file) return;
-                try {
-                  const text = await file.text();
-                  if (text.length > 100000)
-                    throw new Error("Drafts must be under 100,000 characters.");
-                  setDraft(text);
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : "Unable to read this file.");
-                }
-              }}
-            />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="ai-topic">Topic</Label>
-              <Input
-                id="ai-topic"
-                maxLength={5000}
-                disabled={busy}
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="e.g. Building accessible React forms"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="ai-notes">Notes, audience & tone (optional)</Label>
-              <Textarea
-                id="ai-notes"
-                rows={3}
-                maxLength={10000}
-                disabled={busy}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Key points, source material, or writing preferences"
-              />
-            </div>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Submitted text goes to your chosen provider. Provider charges apply.
-          </p>
-          {busy ? (
-            <Button variant="outline" onClick={() => abort.current?.abort()}>
-              <Square className="size-4" /> Stop
-            </Button>
-          ) : (
-            <Button
-              onClick={generate}
-              disabled={!connected || (mode === "metadata" ? !draft.trim() : !topic.trim())}
-            >
-              <Sparkles className="size-4" />{" "}
-              {mode === "metadata" ? "Suggest metadata" : "Generate draft"}
-            </Button>
-          )}
-        </div>
-        {busy && (
-          <p role="status" className="text-sm text-muted-foreground">
-            {output ? "Writing…" : "Thinking…"}
-          </p>
-        )}
-        {reasoning && (
-          <details className="text-xs text-muted-foreground">
-            <summary>AI thinking</summary>
-            <p className="mt-2 whitespace-pre-wrap wrap-break-word">{reasoning}</p>
-          </details>
-        )}
-        {error && (
-          <p role="alert" className="wrap-break-word text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        {stopped && <p className="text-sm text-muted-foreground">Stopped. Partial content kept.</p>}
-        {mode === "metadata" && metadata && (
-          <div className="space-y-3 border-t border-border pt-4">
-            <div className="space-y-1">
-              <Label htmlFor="ai-title">Suggested title</Label>
-              <Input
-                id="ai-title"
-                value={metadata.title}
-                onChange={(e) => setMetadata({ ...metadata, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="ai-description">Suggested description</Label>
-              <Textarea
-                id="ai-description"
-                rows={2}
-                value={metadata.description}
-                onChange={(e) => setMetadata({ ...metadata, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="ai-tags">Suggested tags</Label>
-              <Input
-                id="ai-tags"
-                value={metadata.tags.join(", ")}
-                onChange={(e) =>
-                  setMetadata({
-                    ...metadata,
-                    tags: e.target.value.split(",").map((tag) => tag.trim()),
-                  })
-                }
-              />
-            </div>
-            <Button
-              disabled={!metadata.title.trim()}
-              onClick={() => {
-                onApply({ ...metadata, tags: metadata.tags.filter(Boolean) });
-                close(false);
-              }}
-            >
-              <Check className="size-4" /> Apply to current draft
-            </Button>
-          </div>
-        )}
-        {mode === "write" && output && (
-          <div className="space-y-3 border-t border-border pt-4">
-            <article
-              aria-label="Generated draft"
-              className="md-preview max-h-80 overflow-y-auto"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
-            />
-            <Button
-              disabled={busy}
-              onClick={async () => {
-                try {
-                  await onCreate(output);
-                  close(false);
-                } catch {
-                  setError("Unable to save the generated draft.");
-                }
-              }}
-            >
-              <FilePlus className="size-4" /> Open as new draft
-            </Button>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

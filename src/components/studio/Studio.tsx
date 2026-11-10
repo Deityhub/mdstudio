@@ -55,6 +55,7 @@ import {
   Tags,
   History,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +144,10 @@ import {
 } from "./InsertDialogs";
 import type { EditorHandle } from "./MarkdownEditor";
 import { AiWriter } from "./AiWriter";
+import { AiEditDialog } from "./AiEditDialog";
+import { AiMenuItems } from "./AiMenuItems";
+import { AiIntegrationsDialog } from "./AiIntegrationsDialog";
+import type { AiActionId } from "@/lib/ai/actions";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   Dialog,
@@ -213,6 +218,14 @@ export function Studio({ docId }: { docId: string }) {
   const [imageDialog, setImageDialog] = useState({ open: false, initialAlt: "" });
   const [tableDialog, setTableDialog] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
+  const [aiEdit, setAiEdit] = useState<{
+    action: AiActionId;
+    text: string;
+    from: number;
+    to: number;
+  } | null>(null);
+  const [aiIntegrations, setAiIntegrations] = useState(false);
+  const [selRect, setSelRect] = useState<{ x: number; top: number; bottom: number } | null>(null);
   const toolbar = useRef<ToolbarHandle>(null);
   const [compact, setCompact] = useState(false);
   const [phone, setPhone] = useState(false);
@@ -247,6 +260,28 @@ export function Studio({ docId }: { docId: string }) {
   const [checkConfig, setCheckConfig] = useState<CheckConfig>(DEFAULT_CONFIG);
   const [rulesOpen, setRulesOpen] = useState(false);
   const editor = useRef<EditorHandle>(null);
+  const startAi = (action: AiActionId) => {
+    const snap = editor.current?.getSnapshot();
+    if (!snap || snap.from === snap.to) {
+      toast.info("Select some text first");
+      return;
+    }
+    setSelRect(null);
+    setAiEdit({ action, text: snap.text.slice(snap.from, snap.to), from: snap.from, to: snap.to });
+  };
+  /** Puts the suggestion where the selection was, in one step, unless that text has changed meanwhile. */
+  const acceptAi = (insert: string) => {
+    const e = editor.current;
+    if (!e || !aiEdit) return;
+    const { text, from, to } = aiEdit;
+    if (e.getSnapshot().text.slice(from, to) !== text) {
+      toast.error("The selected text changed, so nothing was replaced");
+      return;
+    }
+    e.apply({ changes: [{ from, to, insert }], from, to: from + insert.length });
+    setAiEdit(null);
+    toast.success("AI suggestion applied", { description: "Undo puts the old text back." });
+  };
   const preview = useRef<HTMLDivElement>(null);
   const install = useInstallPrompt();
   const online = useOnline();
@@ -1563,6 +1598,8 @@ export function Studio({ docId }: { docId: string }) {
                 onOpenImage={openImage}
                 onOpenTable={() => setTableDialog(true)}
                 onOpenShortcuts={() => setShortcuts(true)}
+                onAiAction={startAi}
+                onAiIntegrations={() => setAiIntegrations(true)}
                 focus={focus}
                 onToggleFocus={() => setFocus((f) => !f)}
               />
@@ -1590,6 +1627,7 @@ export function Studio({ docId }: { docId: string }) {
                           onFocusToolbar={() => toolbar.current?.focus()}
                           onShowShortcuts={() => setShortcuts(true)}
                           onCursorLine={setCursorLine}
+                          onSelectionRect={setSelRect}
                         />
                       </Suspense>
                     </ClientOnly>
@@ -1720,6 +1758,30 @@ export function Studio({ docId }: { docId: string }) {
           config={checkConfig}
           onChange={chooseCheckConfig}
         />
+        {selRect && !aiEdit && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="fixed z-40 hidden h-7 gap-1 px-2 shadow-md md:inline-flex"
+                style={{
+                  left: Math.max(8, Math.min(selRect.x, window.innerWidth - 80)),
+                  top: selRect.top > 48 ? selRect.top - 36 : selRect.bottom + 6,
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+                aria-label="AI actions on the selection"
+              >
+                <Sparkles className="size-3.5" /> AI
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <AiMenuItems onPick={startAi} onIntegrations={() => setAiIntegrations(true)} />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        <AiEditDialog edit={aiEdit} onClose={() => setAiEdit(null)} onAccept={acceptAi} />
+        <AiIntegrationsDialog open={aiIntegrations} onOpenChange={setAiIntegrations} />
         <ShortcutsDialog
           open={shortcuts}
           onOpenChange={setShortcuts}

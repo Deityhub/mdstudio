@@ -7,6 +7,13 @@ export const writingRequestSchema = z.discriminatedUnion("mode", [
     topic: z.string().trim().min(1).max(5000),
     notes: z.string().max(10000).default(""),
   }),
+  z.object({
+    mode: z.literal("edit"),
+    /** What to do with the text, in the writer's words. */
+    instruction: z.string().trim().min(1).max(1000),
+    /** The selected Markdown, sent as data. */
+    text: z.string().min(1).max(100000),
+  }),
 ]);
 export const metadataSchema = z.object({
   title: z.string(),

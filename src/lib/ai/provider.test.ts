@@ -116,3 +116,30 @@ describe("independent AI providers", () => {
     expect(fetch.mock.calls[0]?.[1]?.signal).toBe(controller.signal);
   });
 });
+
+describe("inline edit requests", () => {
+  it("sends the instruction as the system rule and the selection as data", () => {
+    const request = buildProviderRequest(connection, {
+      mode: "edit",
+      instruction: "Shorten this",
+      text: "A long sentence.",
+    });
+    const [system, user] = request.body.messages as { role: string; content: string }[];
+    expect(system?.content).toContain("Shorten this");
+    expect(system?.content).toMatch(/only the rewritten/i);
+    expect(user?.content).toBe("A long sentence.");
+  });
+  it("streams edit text as it arrives", async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"Hi"}}]}\n\ndata: {"choices":[{"delta":{"content":" there"},"finish_reason":"stop"}]}\n\n';
+    vi.stubGlobal("fetch", async () => new Response(sse));
+    const parts: string[] = [];
+    await generateWithProvider(
+      connection,
+      { mode: "edit", instruction: "x", text: "y" },
+      new AbortController().signal,
+      (e) => e.type === "text" && parts.push(e.text),
+    );
+    expect(parts.join("")).toBe("Hi there");
+  });
+});

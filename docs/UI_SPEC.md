@@ -91,7 +91,10 @@ Fields: title, slug, date, cover image URL, description, tags (comma separated).
 
 ## 6. AI writer dialog — `05_ai_writer_dialog.png`
 
-- **Connection:** provider Select (OpenAI, Anthropic, Google Gemini, custom/OpenAI-compatible), base URL (custom only), model ID, API key, "Use this connection" and "Disconnect". The key stays in memory until the draft closes or the page reloads, and requests go directly to the provider.
+- **Picker (shared by every AI task):** an AI integration Select, a Model Select, a Refresh models button and a Manage button. With no integration set up it shows "Set up an integration", which opens the AI integrations dialog on top; saving returns to the task with the new integration selected. An integration that lost its key after a reload shows "needs its API key again" with an "Add key" button.
+- **AI integrations dialog:** a list (name, provider, Ready or Key needed, edit, remove) and an add/edit form: provider (OpenAI, Anthropic, Google Gemini, Ollama on this computer, custom/OpenAI-compatible), optional name, base URL (Ollama and custom), API key (not for Ollama) and model IDs (custom: required and the only choices; Ollama: optional). Also reached from the AI menu as "AI integrations…". Keys stay in memory; the rest is remembered on this device.
+- **Layout:** the title, picker and tabs stay at the top and the action buttons stay at the bottom while the middle scrolls, and it follows the streamed text unless the reader scrolls up. Applying a suggestion or opening a generated draft closes the dialog and clears the result.
+- **Inline actions:** the toolbar has an AI menu (sparkles) and, from 768px up, a small AI button appears over selected text. Both list the actions; an action opens a dialog that streams the result and shows a before/after diff with Accept, Try again and Discard. Translate asks for a language and Custom for an instruction. With nothing selected a toast asks for a selection.
 - **Tab "Title, description & tags":** the current draft (editable, or uploaded) → "Suggest metadata" → editable suggested fields → apply to the draft's front matter.
 - **Tab "Write a topic":** topic and notes → "Generate draft" streams Markdown → Stop / Open as new draft (never overwrites the current draft).
 - Errors are shown inline (auth, quota, network/CORS).
