@@ -1,9 +1,62 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b23878f1-aa68-4819-ad0a-46fb572a1b80",
+  "id": "9bedc226-6e25-4dc9-b145-eec818c8f72b",
   "prevId": "bda2a980-57b8-4857-903e-34b25a71cc8f",
   "tables": {
+    "account_limits": {
+      "name": "account_limits",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "account_limits_user_id_users_id_fk": {
+          "name": "account_limits_user_id_users_id_fk",
+          "tableFrom": "account_limits",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "account_limits_user_id_key_pk": {
+          "columns": [
+            "user_id",
+            "key"
+          ],
+          "name": "account_limits_user_id_key_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "ai_integrations": {
       "name": "ai_integrations",
       "columns": {
@@ -1421,14 +1474,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'free'"
-        },
-        "limits": {
-          "name": "limits",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'{}'"
         },
         "role": {
           "name": "role",
