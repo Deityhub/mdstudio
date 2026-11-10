@@ -19,6 +19,9 @@ env["E2E_GITHUB_URL"] ??= `http://localhost:${GITHUB_PORT}`;
 
 // A throwaway database per run, so accounts made by the specs never pile up in ./data.
 const data = () => mkdtempSync(join(tmpdir(), "mdstudio-e2e-"));
+// The main server's folder is known to the specs, so one can make an account an admin directly in
+// its database (the first account made is the admin, which a spec running alongside others cannot rely on).
+env["E2E_DATA_DIR"] ??= data();
 
 export default defineConfig({
   testDir: "e2e",
@@ -41,7 +44,7 @@ export default defineConfig({
       env: {
         PORT: String(PORT),
         NODE_ENV: "production",
-        DATA_DIR: data(),
+        DATA_DIR: env["E2E_DATA_DIR"],
         // keep a version at every sync and only the last 3, so the specs can see both rules at work
         MAX_REVISIONS: "3",
         REVISION_INTERVAL_MINUTES: "0",

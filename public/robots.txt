@@ -3,6 +3,7 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /admin
 
 # AI crawlers, named explicitly so the intent is unambiguous.
 User-agent: GPTBot
@@ -19,5 +20,6 @@ User-agent: CCBot
 User-agent: Bytespider
 Allow: /
 Disallow: /api/
+Disallow: /admin
 
 Sitemap: https://mdstudio.deityhub.com/sitemap.xml

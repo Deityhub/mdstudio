@@ -102,6 +102,10 @@ Fields: title, slug, date, cover image URL, description, tags (comma separated).
 - **Tab "Write a topic":** topic and notes → "Generate draft" streams Markdown → Stop / Open as new draft (never overwrites the current draft).
 - Errors are shown inline (auth, quota, network/CORS).
 
+## 6a. Admin dashboard: `/admin`
+
+Only for an admin; anyone else sees the site's 404. Reached from "Admin dashboard" in the account menu. A header with the logo, "Back to the editor" and the theme button, and tabs (kept in the address, so a link opens one): **Overview** (cards of site totals), **Accounts** (a search box, a table of accounts with plan, cloud drafts, status badges and join date; opening one shows a dialog with Account controls (role, plan, suspended, email confirmed, Save account, Sign out everywhere, Delete account, each destructive one asking for a second press), Usage, "Limits for this account" (a number field or switch per limit, grouped as Storage and counts, Sharing and publishing, Rate limits, each saying where its value comes from, with Reset and Save limits) and Content (cloud drafts, share links and images by title and size, each with a two-press Remove)), **Plans** (list, New plan form with name, label and the same limit controls), **Server** (a switch for new accounts, a site notice, and default limits for every account), **Audit log** (who did what to whom, newest first). The site notice, when set, shows as a banner above the editor.
+
 ## 7. Small screens — `06_mobile_editor_view.png`, `07_mobile_preview_view.png`
 
 - **Below 768px** the studio is a single pane: the view toggle offers Editor and Preview only, and the panel buttons move to a bottom navigation bar.

@@ -78,6 +78,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SiteNotice } from "@/components/SiteNotice";
 import { cn } from "@/lib/utils";
 import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/ui/layout";
 import { HistoryPanel } from "@/components/studio/HistoryPanel";
@@ -1285,6 +1286,7 @@ export function Studio({ docId }: { docId: string }) {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="studio-shell flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+        <SiteNotice />
         {/* Top bar */}
         <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b border-border px-2 py-2 sm:px-3">
           <div className="flex min-w-0 items-center gap-1">

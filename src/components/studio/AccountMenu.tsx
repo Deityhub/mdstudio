@@ -1,5 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Cloud, Eye, EyeOff, Github, ImageIcon, LogOut, UserRound } from "lucide-react";
+import {
+  Cloud,
+  Eye,
+  EyeOff,
+  Github,
+  ImageIcon,
+  LogOut,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -132,6 +141,15 @@ export function AccountMenu() {
             {account.images && (
               <DropdownMenuItem onSelect={() => setManageImages(true)}>
                 <ImageIcon className="size-4" /> Manage images…
+              </DropdownMenuItem>
+            )}
+            {user.isAdmin && (
+              <DropdownMenuItem
+                onSelect={() =>
+                  void navigate({ to: "/admin", search: { tab: "overview", user: "" } })
+                }
+              >
+                <ShieldCheck className="size-4" /> Admin dashboard
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={() => void startSignOut()}>

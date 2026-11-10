@@ -97,7 +97,7 @@ wrangler r2 bucket create my-preview-assets    # variable R2_PREVIEW_BUCKET, sha
 The API token then needs **Workers R2 Storage: Edit**, and the build binds the bucket as `IMAGES` when
 `R2_BUCKET` is set (`infra/worker-config.ts`; Nitro already uses `ASSETS` for the static files). Before
 doing this on a public site, add email verification, sign-up throttling and a global storage cap. Each
-account may keep 10 images and 10 MB (`MAX_ASSETS`, `MAX_ASSET_BYTES`).
+account may keep 10 images and 10 MB by default (`MAX_ASSETS`, `MAX_ASSET_BYTES`; per account limits can override them).
 Image links contain the address of the site that hosted them, so a draft written on a PR preview links to
 that preview, which disappears when the pull request closes.
 
@@ -118,6 +118,14 @@ URL, and needs one more secret: a random key that seals the stored GitHub tokens
 store it without printing it: `openssl rand -base64 32 | gh secret set GH_TOKEN_KEY`. The release
 workflow sets it on the Worker as `GH_TOKEN_KEY`. Keep it stable: a new key makes saved tokens
 unreadable, and writers then connect again. Without it, publishing is simply not offered.
+
+## Admins and account limits
+
+Limits and most of the server's behaviour are managed in the admin dashboard at `/admin`, which needs no secret
+or setting. The first account ever created is the admin; the release migration also makes the oldest existing
+account the admin. To make another account an admin, or to take it away, run SQL in the D1 dashboard:
+`UPDATE users SET role = 'admin' WHERE email = '...';` (`'user'` removes it). The environment variables such as
+`MAX_CLOUD_DOCS` stay as server-wide defaults (see "Account limits" in `docs/SYSTEM_SPEC.md`).
 
 ## Sign-up protection
 
