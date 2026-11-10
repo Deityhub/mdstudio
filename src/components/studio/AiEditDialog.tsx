@@ -151,7 +151,7 @@ export function AiEditDialog({
           </>
         )}
         <DialogFooter className="gap-2 sm:justify-between">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Discard
           </Button>
           <div className="flex gap-2">
