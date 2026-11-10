@@ -18,7 +18,11 @@ import { diffLines, diffStats } from "@/lib/editor/diff";
 import { AiPicker } from "./AiPicker";
 import { DiffTable } from "./DiffTable";
 
-export type AiEdit = { action: AiActionId; text: string };
+/**
+ * What to change: an action on a selection (the writer may need to add a language or an instruction),
+ * or a ready-made `instruction` such as the fix for a check, with a `label` for the title.
+ */
+export type AiEdit = { text: string; action?: AiActionId; instruction?: string; label?: string };
 
 /**
  * Runs one action on the selected text and shows the result as a diff. Nothing reaches the draft
@@ -37,7 +41,9 @@ export function AiEditDialog({
   const connection = ai.connection();
   const ready = !!connection;
   const action = AI_ACTIONS.find((a) => a.id === edit?.action);
-  const needs = action && "needs" in action ? action.needs : null;
+  const needs = !edit?.instruction && action && "needs" in action ? action.needs : null;
+  const instructionFor = () =>
+    edit?.instruction ?? (edit?.action ? actionInstruction(edit.action, input) : null);
   const [input, setInput] = useState("");
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
@@ -47,7 +53,7 @@ export function AiEditDialog({
 
   const run = async () => {
     if (!edit || abort.current || !connection) return;
-    const instruction = actionInstruction(edit.action, input);
+    const instruction = instructionFor();
     if (!instruction) return;
     const controller = new AbortController();
     abort.current = controller;
@@ -72,7 +78,7 @@ export function AiEditDialog({
   };
 
   // a new request starts clean; nothing is sent until the writer chooses the AI and presses Run
-  const key = edit ? `${edit.action}:${edit.text}` : "";
+  const key = edit ? `${edit.action ?? edit.instruction}:${edit.text}` : "";
   useEffect(() => {
     abort.current?.abort();
     setInput("");
@@ -94,7 +100,8 @@ export function AiEditDialog({
       <DialogContent className="flex max-h-[90dvh] max-w-4xl flex-col [&_input]:text-base [&_input]:sm:text-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="size-5 text-primary" /> {action?.label.replace("…", "")}
+            <Sparkles className="size-5 text-primary" />{" "}
+            {edit?.label ?? action?.label.replace("…", "")}
           </DialogTitle>
           <DialogDescription>
             Review the change. Your draft stays as it is until you accept.
@@ -134,7 +141,13 @@ export function AiEditDialog({
             <p className="text-xs text-muted-foreground">
               {stats.removed} line{stats.removed === 1 ? "" : "s"} removed, {stats.added} added
             </p>
-            <DiffTable rows={rows} showAll follow={busy} left="Selected text" right="Suggestion" />
+            <DiffTable
+              rows={rows}
+              showAll
+              follow={busy}
+              left={edit?.instruction ? "Now" : "Selected text"}
+              right="Suggestion"
+            />
           </>
         )}
         <DialogFooter className="gap-2 sm:justify-between">
@@ -149,7 +162,7 @@ export function AiEditDialog({
             ) : (
               <Button
                 variant={started ? "outline" : "default"}
-                disabled={!ready || !actionInstruction(edit?.action ?? "custom", input)}
+                disabled={!ready || !instructionFor()}
                 onClick={() => void run()}
               >
                 {started ? <RefreshCw className="size-4" /> : <Sparkles className="size-4" />}
