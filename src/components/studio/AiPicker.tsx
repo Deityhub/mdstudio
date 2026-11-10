@@ -30,8 +30,13 @@ export function AiPicker({ disabled }: { disabled?: boolean }) {
   const open = (editId: string | null) => setSetup({ open: true, editId });
 
   const refresh = async () => {
-    const connection = ai.connection();
-    if (!item || !connection) return;
+    if (!item) return;
+    // listing models needs the endpoint and key, not a chosen model
+    const connection = {
+      provider: item.provider,
+      baseUrl: item.baseUrl,
+      apiKey: state.keys[item.id] ?? "",
+    };
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;

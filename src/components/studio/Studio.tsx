@@ -144,7 +144,8 @@ import {
 } from "./InsertDialogs";
 import type { EditorHandle } from "./MarkdownEditor";
 import { AiWriter } from "./AiWriter";
-import { AiEditDialog } from "./AiEditDialog";
+import { AiEditDialog, type AiEdit } from "./AiEditDialog";
+import { canFix, fixInstruction, fixTarget } from "@/lib/ai/fix";
 import { AiMenuItems } from "./AiMenuItems";
 import { AiIntegrationsDialog } from "./AiIntegrationsDialog";
 import type { AiActionId } from "@/lib/ai/actions";
@@ -218,12 +219,7 @@ export function Studio({ docId }: { docId: string }) {
   const [imageDialog, setImageDialog] = useState({ open: false, initialAlt: "" });
   const [tableDialog, setTableDialog] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
-  const [aiEdit, setAiEdit] = useState<{
-    action: AiActionId;
-    text: string;
-    from: number;
-    to: number;
-  } | null>(null);
+  const [aiEdit, setAiEdit] = useState<(AiEdit & { from: number; to: number }) | null>(null);
   const [aiIntegrations, setAiIntegrations] = useState(false);
   const [selRect, setSelRect] = useState<{ x: number; top: number; bottom: number } | null>(null);
   const toolbar = useRef<ToolbarHandle>(null);
@@ -268,6 +264,19 @@ export function Studio({ docId }: { docId: string }) {
     }
     setSelRect(null);
     setAiEdit({ action, text: snap.text.slice(snap.from, snap.to), from: snap.from, to: snap.to });
+  };
+  /** Asks the AI to fix one flagged problem, in the paragraph, code block or front matter it is in. */
+  const fixIssue = (issue: Issue) => {
+    const target = fixTarget(content, issue);
+    if (!target) {
+      toast.info("Couldn't find the text for this check");
+      return;
+    }
+    setAiEdit({
+      ...target,
+      label: issue.rule === "missing-alt" ? "Suggest alt text" : "Fix with AI",
+      instruction: fixInstruction(issue, profile),
+    });
   };
   /** Puts the suggestion where the selection was, in one step, unless that text has changed meanwhile. */
   const acceptAi = (insert: string) => {
@@ -1223,6 +1232,7 @@ export function Studio({ docId }: { docId: string }) {
         <ChecksPanel
           issues={issues}
           onGo={(l) => goToLine(l)}
+          onFix={fixIssue}
           onOpenRules={() => setRulesOpen(true)}
         />
       )}
@@ -1847,10 +1857,12 @@ function EditorFallback() {
 function ChecksPanel({
   issues,
   onGo,
+  onFix,
   onOpenRules,
 }: {
   issues: Issue[];
   onGo: (l: number) => void;
+  onFix: (issue: Issue) => void;
   onOpenRules: () => void;
 }) {
   const rules = (
@@ -1879,10 +1891,10 @@ function ChecksPanel({
           const Icon =
             i.severity === "error" ? CircleAlert : i.severity === "warning" ? AlertTriangle : Info;
           return (
-            <li key={k}>
+            <li key={k} className="rounded-md border border-border bg-card">
               <button
                 onClick={() => onGo(i.line)}
-                className="flex w-full gap-2 rounded-md border border-border bg-card p-2.5 text-left hover:bg-accent"
+                className="flex w-full gap-2 rounded-md p-2.5 text-left hover:bg-accent"
               >
                 <Icon
                   className={cn(
@@ -1904,6 +1916,19 @@ function ChecksPanel({
                   )}
                 </span>
               </button>
+              {canFix(i) && (
+                <div className="px-2.5 pb-2.5 pl-9">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
+                    onClick={() => onFix(i)}
+                  >
+                    <Sparkles className="size-3.5" />
+                    {i.rule === "missing-alt" ? "Suggest alt text" : "Fix with AI"}
+                  </Button>
+                </div>
+              )}
             </li>
           );
         })}

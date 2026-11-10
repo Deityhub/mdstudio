@@ -250,7 +250,9 @@ Raw Content → [Optional normalizeMarkdown] → joinFrontMatter → finalizeTex
 2. Metadata Suggestion: Send draft content → Parse JSON stream → Populate interactive review inputs → "Apply" writes YAML front matter.
 3. Topic Drafting: Send topic prompt + notes → Stream Markdown response → "Open as New Draft" (guarantees existing work is never overwritten).
 4. Inline actions: with text selected, the AI menu (toolbar, or a button over the selection on wide screens) offers Improve, Fix spelling and grammar, Shorten, Expand, Summarize, Translate and a custom instruction (`src/lib/ai/actions.ts`). Only the selection is sent, as data. The answer is shown as a diff and replaces the selection in one undoable step only on Accept, and only if that text has not changed meanwhile.
-5. Guardrails: AbortController cancels active streams; HTTP 401/402/403 errors halt immediately without wasteful retries.
+5. Fix with AI: in the Checks panel, issues that a rewrite can fix (raw HTML, math, alerts, highlights, wiki-links, GFM extensions, the writer's own rules and standards, missing alt text) have a "Fix with AI" button (`src/lib/ai/fix.ts`). Only the paragraph, code block or front matter the issue is in is sent, with the target profile and the issue message, and the answer goes through the same diff review and Accept as the inline actions. Alt text is written from the file name and the surrounding words; the model never sees the picture.
+6. Integration form: "Test connection" lists the provider's models (or, for a custom endpoint with no list, sends one tiny request), and custom endpoints have presets (OpenRouter, Groq, Mistral, Together) that fill the base URL.
+7. Guardrails: AbortController cancels active streams; HTTP 401/402/403 errors halt immediately without wasteful retries.
 ```
 
 ### 5.5 Cloud Drafts and Synchronization

@@ -1,4 +1,9 @@
-import { checkEndpoint, type AiConnection, type ProviderId } from "./provider";
+import {
+  checkEndpoint,
+  generateWithProvider,
+  type AiConnection,
+  type ProviderId,
+} from "./provider";
 
 export const PROVIDER_LABELS: Record<ProviderId, string> = {
   openai: "OpenAI",
@@ -69,4 +74,30 @@ export async function listModels(connection: Listed, signal: AbortSignal): Promi
       : (body.data ?? []).map((m: { id: string }) => m.id);
   const usable = provider === "openai" ? ids.filter((id) => !NOT_TEXT.test(id)) : ids;
   return [...new Set(usable)].sort();
+}
+
+/** Services that speak the OpenAI protocol, to fill the endpoint of a custom integration. */
+export const COMPATIBLE_PRESETS = [
+  { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
+  { label: "Groq", baseUrl: "https://api.groq.com/openai/v1" },
+  { label: "Mistral", baseUrl: "https://api.mistral.ai/v1" },
+  { label: "Together", baseUrl: "https://api.together.xyz/v1" },
+] as const;
+
+/**
+ * Checks that the endpoint, key and browser access work. A provider with a model list is asked for
+ * it (free of charge); a custom endpoint may have none, so it gets one tiny request instead.
+ */
+export async function testConnection(
+  connection: AiConnection,
+  signal: AbortSignal,
+): Promise<{ models: string[] }> {
+  if (connection.provider !== "compatible") return { models: await listModels(connection, signal) };
+  await generateWithProvider(
+    connection,
+    { mode: "edit", instruction: "Reply with the single word OK.", text: "ping" },
+    signal,
+    () => {},
+  );
+  return { models: [] };
 }

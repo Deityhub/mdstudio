@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ai, needsKey, useAi } from "@/lib/ai/integrations";
-import { PROVIDER_LABELS } from "@/lib/ai/models";
+import { COMPATIBLE_PRESETS, PROVIDER_LABELS, testConnection } from "@/lib/ai/models";
 import { PROVIDER_URLS, type ProviderId } from "@/lib/ai/provider";
 
 type View = { kind: "list" } | { kind: "form"; id: string | null };
@@ -144,6 +144,27 @@ function IntegrationForm({
   const local = provider === "ollama";
   const custom = provider === "compatible";
   const list = models.split(",").filter((m) => m.trim());
+  const [test, setTest] = useState<{ sig: string; ok: boolean; message: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+  const sig = [provider, baseUrl, apiKey, models].join("\n");
+  const runTest = async () => {
+    setTesting(true);
+    try {
+      const { models: found } = await testConnection(
+        { provider, baseUrl, apiKey, model: list[0]?.trim() ?? "" },
+        new AbortController().signal,
+      );
+      setTest({
+        sig,
+        ok: true,
+        message: found.length ? `It works. ${found.length} models available.` : "It works.",
+      });
+    } catch (e) {
+      setTest({ sig, ok: false, message: e instanceof Error ? e.message : "The test failed." });
+    } finally {
+      setTesting(false);
+    }
+  };
   const valid =
     (!(local || custom) || baseUrl.trim()) &&
     (local || apiKey.trim()) &&
@@ -195,6 +216,26 @@ function IntegrationForm({
           onChange={(e) => setName(e.target.value)}
         />
       </div>
+      {custom && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">Fill in for</span>
+          {COMPATIBLE_PRESETS.map((p) => (
+            <Button
+              key={p.label}
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => {
+                setBaseUrl(p.baseUrl);
+                if (!name.trim()) setName(p.label);
+              }}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </div>
+      )}
       {(local || custom) && (
         <div className="space-y-1">
           <Label htmlFor="ai-endpoint">API base URL</Label>
@@ -240,7 +281,25 @@ function IntegrationForm({
           ? "Runs on your computer, so nothing leaves it. Ollama must allow this site: start it with OLLAMA_ORIGINS set to this address."
           : "The key stays in memory until the page reloads. The provider must allow requests from a browser."}
       </p>
-      <div className="flex justify-end gap-2">
+      {test?.sig === sig && (
+        <p
+          role={test.ok ? "status" : "alert"}
+          className={
+            test.ok ? "text-sm text-muted-foreground" : "wrap-break-word text-sm text-destructive"
+          }
+        >
+          {test.message}
+        </p>
+      )}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          variant="outline"
+          className="mr-auto"
+          disabled={!valid || testing}
+          onClick={() => void runTest()}
+        >
+          {testing && <Loader2 className="size-4 animate-spin" />} Test connection
+        </Button>
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
