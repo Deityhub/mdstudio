@@ -13,6 +13,12 @@ async function fakeOllama(page: Page, answer: string) {
   await page.route("http://localhost:11434/**", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    if (request.method() === "GET")
+      return route.fulfill({
+        status: 200,
+        headers: { ...CORS, "content-type": "application/json" },
+        body: JSON.stringify({ data: [{ id: "llama3.2" }, { id: "qwen3" }] }),
+      });
     seen.push(request.postDataJSON());
     const chunk = (delta: object, finish?: string) =>
       `data: ${JSON.stringify({ choices: [{ delta, finish_reason: finish ?? null }] })}\n\n`;
@@ -174,4 +180,66 @@ test("choosing an action sends nothing until the writer presses Run", async ({ p
   await run.click();
   await expect(page.getByLabel("Line differences")).toContainText("Shorter.");
   expect(seen).toHaveLength(1);
+});
+
+test("a flagged check can be fixed with AI, reviewed and applied", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  const seen = await fakeOllama(page, "Hello **world**");
+  await startDraft(page);
+  await selectAll(page);
+  await page.keyboard.insertText("Hello <b>world</b>");
+  await page.getByRole("button", { name: "Fix with AI" }).first().click();
+  await page.getByRole("button", { name: "Set up an integration" }).click();
+  await addOllama(page);
+  expect(seen).toHaveLength(0);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await expect(page.getByLabel("Line differences")).toContainText("Hello **world**");
+  expect(JSON.stringify(seen[0])).toContain("Raw HTML");
+  await page.getByRole("button", { name: "Accept" }).click();
+  await expect(page.locator(".cm-content")).toContainText("Hello **world**");
+  await expect(page.locator(".cm-content")).not.toContainText("<b>");
+});
+
+test("a missing alt text offers to suggest one", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await fakeOllama(page, "![A sunrise over the sea](sunrise.png)");
+  await startDraft(page);
+  await selectAll(page);
+  await page.keyboard.insertText("![](sunrise.png)");
+  await page.getByRole("button", { name: "Suggest alt text" }).click();
+  await page.getByRole("button", { name: "Set up an integration" }).click();
+  await addOllama(page);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.getByRole("button", { name: "Accept" }).click();
+  await expect(page.locator(".cm-content")).toContainText("A sunrise over the sea");
+});
+
+test("refreshing lists the models a local Ollama has, and a connection can be tested", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await fakeOllama(page, "x");
+  await startDraft(page);
+  await page.getByRole("button", { name: "AI writer" }).click();
+  await page.getByRole("button", { name: "Set up an integration" }).click();
+  await page.getByLabel("AI provider").click();
+  await page.getByRole("option", { name: /Ollama/ }).click();
+  await page.getByRole("button", { name: "Test connection" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "It works. 2 models" })).toBeVisible();
+  await page.getByRole("button", { name: "Add integration" }).click();
+  await expect(page.getByRole("combobox", { name: "Model" })).toContainText("No models yet");
+  await page.getByRole("button", { name: "Refresh models" }).click();
+  await page.getByRole("combobox", { name: "Model" }).click();
+  await expect(page.getByRole("option", { name: "qwen3" })).toBeVisible();
+});
+
+test("presets fill in a custom endpoint", async ({ page }) => {
+  await startDraft(page);
+  await page.getByRole("button", { name: "AI writer" }).click();
+  await page.getByRole("button", { name: "Set up an integration" }).click();
+  await page.getByLabel("AI provider").click();
+  await page.getByRole("option", { name: /Custom/ }).click();
+  await page.getByRole("button", { name: "Groq" }).click();
+  await expect(page.getByLabel("API base URL")).toHaveValue("https://api.groq.com/openai/v1");
+  await expect(page.getByLabel("Name (optional)")).toHaveValue("Groq");
 });
