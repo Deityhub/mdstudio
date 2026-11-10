@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 (2026-11-10)
+
+### Features
+
+- account limits, admin role and admin dashboard (#86)
+- add a system option to the theme button (#85)
+- keep AI integrations in the account (#84)
+- fix flagged checks and alt text with AI, test connection, presets (#83)
+- inline AI actions and saved AI integrations
+
 ## 0.4.0 (2026-11-08)
 
 ### Features
