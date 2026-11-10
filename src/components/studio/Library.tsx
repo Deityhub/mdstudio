@@ -194,7 +194,8 @@ export function Library({
 }) {
   const [query, setQuery] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Folders start collapsed (on every load); the ones the writer opens, or just put something in, are listed here.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const keepFocus = useRef(false);
@@ -230,11 +231,13 @@ export function Library({
   const toggleTag = (t: string) =>
     setTags((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
   const toggleFolder = (f: string) =>
-    setCollapsed((cur) => {
+    setExpanded((cur) => {
       const next = new Set(cur);
       if (!next.delete(f)) next.add(f);
       return next;
     });
+  /** Opens a folder the writer just made or put a draft in, so the result is on screen. */
+  const reveal = (f: string | undefined) => f && setExpanded((cur) => new Set(cur).add(f));
 
   const dropOn = (e: React.DragEvent, folder: string | undefined) => {
     if (!e.dataTransfer.types.includes(DRAG_TYPE)) return;
@@ -243,7 +246,10 @@ export function Library({
     const dropped = docs.find((d) => d.id === e.dataTransfer.getData(DRAG_TYPE));
     setDragging(null);
     setDropTarget(null);
-    if (dropped) onMove(dropped, folder);
+    if (dropped) {
+      onMove(dropped, folder);
+      reveal(folder);
+    }
   };
 
   const row = (d: MdDocument) => (
@@ -508,7 +514,10 @@ export function Library({
               e.preventDefault();
               const name = normalizeFolder(newFolder);
               setCreating(false);
-              if (name) onCreateFolder(name);
+              if (name) {
+                onCreateFolder(name);
+                reveal(name);
+              }
             }}
           >
             <Input
@@ -544,7 +553,7 @@ export function Library({
         )}
         {groups.map(({ folder, docs: list }) => {
           if (folder === null) return <div key="">{list.map(row)}</div>;
-          const open = filtering || !collapsed.has(folder);
+          const open = filtering || expanded.has(folder);
           return (
             <div
               key={folder}
@@ -575,7 +584,11 @@ export function Library({
                       e.preventDefault();
                       setRenamingFolder(null);
                       const name = normalizeFolder(folderRename);
-                      if (name && name !== folder) onRenameFolder(folder, name);
+                      if (name && name !== folder) {
+                        onRenameFolder(folder, name);
+                        // a folder that was open stays open under its new name (and under the old one if the rename is refused)
+                        setExpanded((cur) => (cur.has(folder) ? new Set(cur).add(name) : cur));
+                      }
                     }}
                   >
                     <Input
@@ -743,7 +756,11 @@ export function Library({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (moving) onMove(moving, resolveFolder(folderValue, folders));
+              if (moving) {
+                const target = resolveFolder(folderValue, folders);
+                onMove(moving, target);
+                reveal(target);
+              }
               setMoving(null);
             }}
             className="space-y-4"
