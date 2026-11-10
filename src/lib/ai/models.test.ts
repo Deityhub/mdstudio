@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listModels, MODELS } from "./models";
+import { COMPATIBLE_PRESETS, listModels, MODELS, testConnection } from "./models";
+import { checkEndpoint } from "./provider";
 
 const reply = (body: unknown, status = 200) =>
   vi.stubGlobal(
@@ -89,5 +90,43 @@ describe("asking a provider for its models", () => {
     await expect(
       listModels({ provider: "openai", baseUrl: "http://ai.example/v1", apiKey: "k" }, signal),
     ).rejects.toThrow("HTTPS");
+  });
+});
+
+describe("compatible service presets", () => {
+  it("are secure endpoints the app accepts", () => {
+    expect(COMPATIBLE_PRESETS.length).toBeGreaterThan(2);
+    for (const p of COMPATIBLE_PRESETS) expect(() => checkEndpoint(p.baseUrl)).not.toThrow();
+  });
+});
+
+describe("testing a connection", () => {
+  it("asks a hosted provider for its models and says how many it found", async () => {
+    reply({ data: [{ id: "gpt-a" }, { id: "gpt-b" }] });
+    const result = await testConnection(
+      { provider: "openai", baseUrl: "https://api.openai.com/v1", apiKey: "k", model: "" },
+      signal,
+    );
+    expect(result).toEqual({ models: ["gpt-a", "gpt-b"] });
+  });
+  it("sends one tiny request to a custom endpoint, which may have no model list", async () => {
+    const sse = 'data: {"choices":[{"delta":{"content":"OK"},"finish_reason":"stop"}]}\n\n';
+    const fetchMock = vi.fn(async (..._args: unknown[]) => new Response(sse));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await testConnection(
+      { provider: "compatible", baseUrl: "https://ai.example/v1", apiKey: "k", model: "m" },
+      signal,
+    );
+    expect(result).toEqual({ models: [] });
+    expect(fetchMock.mock.calls[0]![0]).toBe("https://ai.example/v1/chat/completions");
+  });
+  it("reports a refused key", async () => {
+    reply({ error: { message: "Bad key" } }, 401);
+    await expect(
+      testConnection(
+        { provider: "openai", baseUrl: "https://api.openai.com/v1", apiKey: "k", model: "" },
+        signal,
+      ),
+    ).rejects.toThrow("Bad key");
   });
 });
