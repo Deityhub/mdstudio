@@ -1,5 +1,6 @@
 import { withVerifiedUser } from "../auth/guard";
 import { getEnv } from "../env";
+import { limitsFor } from "../limits/request";
 import { remoteId } from "@/lib/sync/protocol";
 import { DEFAULT_REVISIONS, type RevisionConfig, getRevision, listRevisions } from "./service";
 
@@ -12,11 +13,11 @@ const whole = (value: string | undefined, fallback: number) => {
 };
 
 /**
- * How much history the server keeps: MAX_REVISIONS versions per draft (10 unless set, 0 switches it
- * off) and at most one automatic version per REVISION_INTERVAL_MINUTES (5 unless set).
+ * How much history the server keeps: `max` versions per draft (an account limit, 0 switches it off)
+ * and at most one automatic version per REVISION_INTERVAL_MINUTES (5 unless set).
  */
-export const revisionConfig = (request: Request): RevisionConfig => ({
-  max: Math.floor(whole(getEnv(request, "MAX_REVISIONS"), DEFAULT_REVISIONS.max)),
+export const revisionConfig = (request: Request, max: number): RevisionConfig => ({
+  max,
   intervalMs:
     whole(getEnv(request, "REVISION_INTERVAL_MINUTES"), DEFAULT_REVISIONS.intervalMs / 60_000) *
     60_000,
@@ -30,7 +31,7 @@ export const listHandler = (request: Request, documentId: string) =>
     if (!own(user.id, documentId)) return json({ revisions: [] });
     return json({
       revisions: await listRevisions(db, user.id, documentId),
-      max: revisionConfig(request).max,
+      max: (await limitsFor(request, db, user.id)).revisions,
     });
   });
 

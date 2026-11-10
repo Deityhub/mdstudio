@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { MAX_CLOUD_INTEGRATIONS, type CloudIntegration } from "@/lib/ai/protocol";
+import { type CloudIntegration } from "@/lib/ai/protocol";
 import { aiIntegrations } from "../../../infra/db/schema";
 import type { Db } from "../db";
 
@@ -33,6 +33,8 @@ export async function putIntegration(
   db: Db,
   userId: string,
   item: CloudIntegration,
+  /** How many the account may keep (an account limit). */
+  limit: number,
 ): Promise<{ ok: true; integration: CloudIntegration } | { ok: false; error: "limit_reached" }> {
   const id = rowId(userId, item.id);
   const [existing] = await db.select().from(aiIntegrations).where(eq(aiIntegrations.id, id));
@@ -53,7 +55,7 @@ export async function putIntegration(
         .from(aiIntegrations)
         .where(eq(aiIntegrations.userId, userId))
     ).length;
-    if (count >= MAX_CLOUD_INTEGRATIONS) return { ok: false, error: "limit_reached" };
+    if (count >= limit) return { ok: false, error: "limit_reached" };
     await db.insert(aiIntegrations).values({ id, userId, ...values });
   }
   return { ok: true, integration: item };

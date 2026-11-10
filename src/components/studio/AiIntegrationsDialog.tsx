@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select";
 import { ai, needsKey, useAi } from "@/lib/ai/integrations";
 import { useAiCloud } from "@/lib/ai/cloud";
-import { MAX_CLOUD_INTEGRATIONS } from "@/lib/ai/protocol";
 import { COMPATIBLE_PRESETS, PROVIDER_LABELS, testConnection } from "@/lib/ai/models";
 import { PROVIDER_URLS, type ProviderId } from "@/lib/ai/provider";
 
@@ -45,7 +44,8 @@ export function AiIntegrationsDialog({
 }) {
   const state = useAi();
   useAiCloud(open);
-  const full = state.cloud === "on" && state.items.length >= MAX_CLOUD_INTEGRATIONS;
+  const full =
+    state.cloud === "on" && state.cloudLimit !== null && state.items.length >= state.cloudLimit;
   const [view, setView] = useState<View>({ kind: "list" });
   // each time it opens: the form for a given integration, a new one when there are none, else the list
   useEffect(() => {
@@ -116,7 +116,7 @@ export function AiIntegrationsDialog({
             <DialogFooter>
               {full && (
                 <p className="mr-auto text-xs text-muted-foreground">
-                  Your account keeps up to {MAX_CLOUD_INTEGRATIONS}. Remove one to add another.
+                  Your account keeps up to {state.cloudLimit}. Remove one to add another.
                 </p>
               )}
               <Button

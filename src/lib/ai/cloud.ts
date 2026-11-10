@@ -10,11 +10,14 @@ const url = (id: string) => `/api/ai/integrations/${encodeURIComponent(id)}`;
 /** The account's AI integrations over the API. Only the setup travels, never an API key. */
 export const aiCloud: Remote = {
   async list() {
-    const { integrations } = await call<{ integrations: unknown[] }>("/api/ai/integrations");
-    return integrations.flatMap((i): Integration[] => {
+    const { integrations, limit } = await call<{ integrations: unknown[]; limit: number }>(
+      "/api/ai/integrations",
+    );
+    const items = integrations.flatMap((i): Integration[] => {
       const parsed = integrationSchema.safeParse(i);
       return parsed.success ? [parsed.data] : [];
     });
+    return { items, limit };
   },
   put: (item) =>
     call(url(item.id), {

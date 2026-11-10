@@ -24,17 +24,19 @@ export type AiState = {
    * account ("on"). Signed in, the account's list is shown and changes are saved to it.
    */
   cloud: "off" | "loading" | "on";
+  /** How many the account may keep, once its list has been read. */
+  cloudLimit: number | null;
 };
 
 /** How the account's list is read and saved (see src/lib/ai/cloud.ts). It never carries a key. */
 export type Remote = {
-  list: () => Promise<Integration[]>;
+  list: () => Promise<{ items: Integration[]; limit: number }>;
   put: (item: Integration) => Promise<unknown>;
   remove: (id: string) => Promise<unknown>;
 };
 
 const KEY = "mdstudio-ai-integrations";
-const EMPTY: AiState = { items: [], keys: {}, selected: null, cloud: "off" };
+const EMPTY: AiState = { items: [], keys: {}, selected: null, cloud: "off", cloudLimit: null };
 
 function stored(): Pick<AiState, "items" | "selected"> {
   try {
@@ -182,7 +184,7 @@ export const ai = {
     const mine = epoch;
     change({ ...state, cloud: "loading" });
     try {
-      const theirs = await r.list();
+      const { items: theirs, limit } = await r.list();
       if (mine !== epoch) return void change({ ...state, cloud: "off" });
       const merged = new Map(theirs.map((i) => [i.id, i]));
       const upload = state.items.filter((i) => (merged.get(i.id)?.updatedAt ?? -1) < i.updatedAt);
@@ -209,6 +211,7 @@ export const ai = {
               ? { id: first.id, model: modelsFor(first)[0] ?? "" }
               : null,
         cloud: "on",
+        cloudLimit: limit,
       });
     } catch (error) {
       change({ ...state, cloud: "off" });
@@ -220,7 +223,7 @@ export const ai = {
     epoch++;
     remote = null;
     if (state.cloud === "off") return;
-    change({ items: [], keys: {}, selected: null, cloud: "off" });
+    change({ items: [], keys: {}, selected: null, cloud: "off", cloudLimit: null });
   },
   /** What a request needs, or null while there is no selection, no model, or the key is missing. */
   connection(): AiConnection | null {

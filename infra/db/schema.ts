@@ -1,6 +1,14 @@
 // Single SQLite schema shared by Cloudflare D1 and self-hosted better-sqlite3.
 // Authoritative table list: docs/SYSTEM_SPEC.md section 6. Timestamps are Unix milliseconds.
-import { index, integer, sqliteTable, text, unique, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  unique,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -12,6 +20,16 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash"),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
+  // Which set of limits applies (see src/server/limits/catalog.ts). Everyone is on "free" today.
+  plan: text("plan").notNull().default("free"),
+  // Limits set for this account alone, on top of its plan: one JSON object of limit key to number or
+  // true/false ("{}" for none). Kept here, not in a table of its own: the row is read at sign-in anyway.
+  limits: text("limits").notNull().default("{}"),
+  // "admin" can use the admin dashboard; everyone else is "user". The first account ever created
+  // is the admin; after that it is changed in the dashboard or with SQL.
+  role: text("role").notNull().default("user"),
+  // When an admin suspended the account (it cannot sign in or use the cloud); NULL when active.
+  suspendedAt: integer("suspended_at"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 });
@@ -253,4 +271,36 @@ export const aiIntegrations = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (t) => [index("idx_ai_integrations_user").on(t.userId)],
+);
+
+/** Plans an admin defines: a name, a label and the limits it changes (JSON). "free" always exists. */
+export const plans = sqliteTable("plans", {
+  name: text("name").primaryKey(),
+  label: text("label").notNull(),
+  limits: text("limits").notNull().default("{}"),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+/** Server-wide settings an admin changes in the dashboard: default limits, sign-ups, the site notice. */
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  /** JSON. */
+  value: text("value").notNull(),
+});
+
+/** What admins did, newest last. The actor and target are kept as text so entries outlive accounts. */
+export const auditLog = sqliteTable(
+  "audit_log",
+  {
+    id: text("id").primaryKey(),
+    at: integer("at").notNull(),
+    actorId: text("actor_id").notNull(),
+    actorEmail: text("actor_email").notNull(),
+    action: text("action").notNull(),
+    targetId: text("target_id"),
+    targetEmail: text("target_email"),
+    /** JSON with the change. */
+    detail: text("detail").notNull().default("{}"),
+  },
+  (t) => [index("idx_audit_at").on(t.at)],
 );

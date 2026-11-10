@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_CLOUD_INTEGRATIONS, integrationSchema } from "./protocol";
+import { integrationSchema } from "./protocol";
 
 const ok = {
   id: "abc123xyz",
@@ -13,7 +13,6 @@ const ok = {
 describe("an integration as the cloud stores it", () => {
   it("accepts a well-formed one", () => {
     expect(integrationSchema.parse(ok)).toEqual(ok);
-    expect(MAX_CLOUD_INTEGRATIONS).toBeGreaterThan(1);
   });
   it("never carries a key, even if one is sent", () => {
     expect(integrationSchema.parse({ ...ok, apiKey: "secret" })).not.toHaveProperty("apiKey");
