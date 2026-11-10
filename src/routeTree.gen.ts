@@ -21,6 +21,7 @@ import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
 import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
+import { Route as ApiAiIntegrationsRouteImport } from './routes/api/ai.integrations'
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
 import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
@@ -37,6 +38,7 @@ import { Route as ApiGithubReposRouteImport } from './routes/api/github.repos'
 import { Route as ApiShareIdRouteImport } from './routes/api/share.$id'
 import { Route as ApiSyncPullRouteImport } from './routes/api/sync/pull'
 import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
+import { Route as ApiAiIntegrationsIdRouteImport } from './routes/api/ai.integrations.$id'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
@@ -108,6 +110,11 @@ const GuidesSlugRoute = GuidesSlugRouteImport.update({
 const SSlugRoute = SSlugRouteImport.update({
   id: '/s/$slug',
   path: '/s/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiIntegrationsRoute = ApiAiIntegrationsRouteImport.update({
+  id: '/api/ai/integrations',
+  path: '/api/ai/integrations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
@@ -190,6 +197,11 @@ const ApiSyncPushRoute = ApiSyncPushRouteImport.update({
   path: '/api/sync/push',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiIntegrationsIdRoute = ApiAiIntegrationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAiIntegrationsRoute,
+} as any)
 const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
@@ -269,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/s/$slug': typeof SSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
@@ -285,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
@@ -311,6 +325,7 @@ export interface FileRoutesByTo {
   '/s/$slug': typeof SSlugRoute
   '/editor': typeof EditorIndexRoute
   '/guides': typeof GuidesIndexRoute
+  '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
@@ -327,6 +342,7 @@ export interface FileRoutesByTo {
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
@@ -354,6 +370,7 @@ export interface FileRoutesById {
   '/s/$slug': typeof SSlugRoute
   '/editor/': typeof EditorIndexRoute
   '/guides/': typeof GuidesIndexRoute
+  '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
@@ -370,6 +387,7 @@ export interface FileRoutesById {
   '/api/share/$id': typeof ApiShareIdRouteWithChildren
   '/api/sync/pull': typeof ApiSyncPullRoute
   '/api/sync/push': typeof ApiSyncPushRoute
+  '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
@@ -398,6 +416,7 @@ export interface FileRouteTypes {
     | '/s/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/ai/integrations'
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
@@ -414,6 +433,7 @@ export interface FileRouteTypes {
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
+    | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
@@ -440,6 +460,7 @@ export interface FileRouteTypes {
     | '/s/$slug'
     | '/editor'
     | '/guides'
+    | '/api/ai/integrations'
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
@@ -456,6 +477,7 @@ export interface FileRouteTypes {
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
+    | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
@@ -482,6 +504,7 @@ export interface FileRouteTypes {
     | '/s/$slug'
     | '/editor/'
     | '/guides/'
+    | '/api/ai/integrations'
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
@@ -498,6 +521,7 @@ export interface FileRouteTypes {
     | '/api/share/$id'
     | '/api/sync/pull'
     | '/api/sync/push'
+    | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
@@ -525,6 +549,7 @@ export interface RootRouteChildren {
   SSlugRoute: typeof SSlugRoute
   EditorIndexRoute: typeof EditorIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
+  ApiAiIntegrationsRoute: typeof ApiAiIntegrationsRouteWithChildren
   ApiAuthForgotRoute: typeof ApiAuthForgotRoute
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
@@ -628,6 +653,13 @@ declare module '@tanstack/react-router' {
       path: '/s/$slug'
       fullPath: '/s/$slug'
       preLoaderRoute: typeof SSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/integrations': {
+      id: '/api/ai/integrations'
+      path: '/api/ai/integrations'
+      fullPath: '/api/ai/integrations'
+      preLoaderRoute: typeof ApiAiIntegrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assets/$id': {
@@ -741,6 +773,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/sync/push'
       preLoaderRoute: typeof ApiSyncPushRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/integrations/$id': {
+      id: '/api/ai/integrations/$id'
+      path: '/$id'
+      fullPath: '/api/ai/integrations/$id'
+      preLoaderRoute: typeof ApiAiIntegrationsIdRouteImport
+      parentRoute: typeof ApiAiIntegrationsRoute
     }
     '/api/auth/github/callback': {
       id: '/api/auth/github/callback'
@@ -889,6 +928,17 @@ const ApiShareRouteWithChildren = ApiShareRoute._addFileChildren(
   ApiShareRouteChildren,
 )
 
+interface ApiAiIntegrationsRouteChildren {
+  ApiAiIntegrationsIdRoute: typeof ApiAiIntegrationsIdRoute
+}
+
+const ApiAiIntegrationsRouteChildren: ApiAiIntegrationsRouteChildren = {
+  ApiAiIntegrationsIdRoute: ApiAiIntegrationsIdRoute,
+}
+
+const ApiAiIntegrationsRouteWithChildren =
+  ApiAiIntegrationsRoute._addFileChildren(ApiAiIntegrationsRouteChildren)
+
 interface ApiAuthGithubRouteChildren {
   ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
 }
@@ -964,6 +1014,7 @@ const rootRouteChildren: RootRouteChildren = {
   SSlugRoute: SSlugRoute,
   EditorIndexRoute: EditorIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,
+  ApiAiIntegrationsRoute: ApiAiIntegrationsRouteWithChildren,
   ApiAuthForgotRoute: ApiAuthForgotRoute,
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
   ApiAuthLoginRoute: ApiAuthLoginRoute,

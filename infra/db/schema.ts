@@ -233,3 +233,24 @@ export const shareComments = sqliteTable(
   },
   (t) => [index("idx_share_comments_share").on(t.shareId, t.createdAt)],
 );
+
+/**
+ * An AI integration kept in an account: which service, its endpoint and the models to offer. The API
+ * key is deliberately not here; keys stay in the browser's memory. `id` is `<userId>:<local id>`.
+ */
+export const aiIntegrations = sqliteTable(
+  "ai_integrations",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    provider: text("provider").notNull(),
+    baseUrl: text("base_url").notNull(),
+    /** JSON array of model ids. */
+    models: text("models").notNull().default("[]"),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [index("idx_ai_integrations_user").on(t.userId)],
+);

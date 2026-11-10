@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ai, needsKey, useAi } from "@/lib/ai/integrations";
+import { useAiCloud } from "@/lib/ai/cloud";
+import { MAX_CLOUD_INTEGRATIONS } from "@/lib/ai/protocol";
 import { COMPATIBLE_PRESETS, PROVIDER_LABELS, testConnection } from "@/lib/ai/models";
 import { PROVIDER_URLS, type ProviderId } from "@/lib/ai/provider";
 
@@ -42,6 +44,8 @@ export function AiIntegrationsDialog({
   returnOnSave?: boolean;
 }) {
   const state = useAi();
+  useAiCloud(open);
+  const full = state.cloud === "on" && state.items.length >= MAX_CLOUD_INTEGRATIONS;
   const [view, setView] = useState<View>({ kind: "list" });
   // each time it opens: the form for a given integration, a new one when there are none, else the list
   useEffect(() => {
@@ -103,11 +107,22 @@ export function AiIntegrationsDialog({
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Names, endpoints and models are remembered on this device. API keys are not: they stay
-              in memory until the page reloads.
+              {state.cloud === "on"
+                ? "Names, endpoints and models are saved in your account and follow you to other devices. API keys are not saved anywhere: they stay in memory until the page reloads."
+                : state.cloud === "loading"
+                  ? "Loading your account's integrations…"
+                  : "Names, endpoints and models are remembered in this browser (sign in to keep them in your account). API keys are not saved: they stay in memory until the page reloads."}
             </p>
             <DialogFooter>
-              <Button onClick={() => setView({ kind: "form", id: null })}>
+              {full && (
+                <p className="mr-auto text-xs text-muted-foreground">
+                  Your account keeps up to {MAX_CLOUD_INTEGRATIONS}. Remove one to add another.
+                </p>
+              )}
+              <Button
+                disabled={full || state.cloud === "loading"}
+                onClick={() => setView({ kind: "form", id: null })}
+              >
                 <Plus className="size-4" /> Add integration
               </Button>
             </DialogFooter>

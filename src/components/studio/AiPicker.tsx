@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { ai, modelsFor, needsKey, useAi } from "@/lib/ai/integrations";
 import { listModels } from "@/lib/ai/models";
+import { useAiCloud } from "@/lib/ai/cloud";
 import { AiIntegrationsDialog } from "./AiIntegrationsDialog";
 
 /**
@@ -19,6 +20,7 @@ import { AiIntegrationsDialog } from "./AiIntegrationsDialog";
  */
 export function AiPicker({ disabled }: { disabled?: boolean }) {
   const state = useAi();
+  useAiCloud();
   const [setup, setSetup] = useState<{ open: boolean; editId: string | null }>({
     open: false,
     editId: null,
@@ -63,6 +65,8 @@ export function AiPicker({ disabled }: { disabled?: boolean }) {
     />
   );
 
+  if (state.cloud === "loading")
+    return <p className="text-sm text-muted-foreground">Loading your AI integrations…</p>;
   if (!item)
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed border-border p-3">
