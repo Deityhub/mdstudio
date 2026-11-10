@@ -6,7 +6,10 @@ import {
   storedTheme,
   THEME_KEY,
   themeInitScript,
-  toggleTheme,
+  nextTheme,
+  setTheme,
+  subscribeTheme,
+  watchSystemTheme,
 } from "./theme";
 
 const mockPrefersDark = (dark: boolean) =>
@@ -54,26 +57,95 @@ describe("applyTheme", () => {
   });
 });
 
-describe("toggleTheme", () => {
-  it("flips the visible theme and remembers the explicit choice", () => {
-    mockPrefersDark(true); // system is dark, so the first toggle goes light
-    applyTheme("system");
-    expect(toggleTheme()).toBe("light");
+describe("nextTheme", () => {
+  it("cycles light, dark, system and round again", () => {
+    expect(nextTheme("light")).toBe("dark");
+    expect(nextTheme("dark")).toBe("system");
+    expect(nextTheme("system")).toBe("light");
+  });
+});
+
+describe("setTheme", () => {
+  it("applies and remembers an explicit choice", () => {
+    mockPrefersDark(true);
+    setTheme("light");
     expect(localStorage.getItem(THEME_KEY)).toBe("light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
-    expect(toggleTheme()).toBe("dark");
+    setTheme("dark");
     expect(storedTheme()).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+  it("goes back to following the system by forgetting the choice", () => {
+    mockPrefersDark(true);
+    setTheme("light");
+    setTheme("system");
+    expect(localStorage.getItem(THEME_KEY)).toBeNull();
+    expect(storedTheme()).toBe("system");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+  it("tells listeners about a change", () => {
+    mockPrefersDark(false);
+    const seen = vi.fn();
+    const off = subscribeTheme(seen);
+    setTheme("dark");
+    expect(seen).toHaveBeenCalledTimes(1);
+    off();
+    setTheme("light");
+    expect(seen).toHaveBeenCalledTimes(1);
   });
   it("survives unavailable storage", () => {
     mockPrefersDark(false);
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("blocked");
     });
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("blocked");
     });
-    expect(() => toggleTheme()).not.toThrow();
+    expect(() => setTheme("dark")).not.toThrow();
+    expect(() => setTheme("system")).not.toThrow();
     expect(storedTheme()).toBe("system");
+  });
+});
+
+describe("watchSystemTheme", () => {
+  function osPreference(initial: boolean) {
+    const query = { matches: initial, handler: null as null | (() => void) };
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      () =>
+        ({
+          get matches() {
+            return query.matches;
+          },
+          addEventListener: (_: string, h: () => void) => (query.handler = h),
+          removeEventListener: () => (query.handler = null),
+        }) as unknown as MediaQueryList,
+    );
+    return {
+      change(dark: boolean) {
+        query.matches = dark;
+        query.handler?.();
+      },
+    };
+  }
+  it("follows the OS while the choice is 'system'", () => {
+    const os = osPreference(false);
+    const stop = watchSystemTheme();
+    os.change(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    os.change(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    stop();
+  });
+  it("ignores the OS once the writer chose light or dark", () => {
+    const os = osPreference(false);
+    localStorage.setItem(THEME_KEY, "light");
+    const stop = watchSystemTheme();
+    os.change(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    stop();
   });
 });
 

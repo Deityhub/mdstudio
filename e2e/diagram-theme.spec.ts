@@ -1,3 +1,4 @@
+import { chooseTheme } from "./theme";
 import { expect, test } from "@playwright/test";
 
 test("Mermaid diagrams re-render when the theme changes", async ({ page }) => {
@@ -11,12 +12,12 @@ test("Mermaid diagrams re-render when the theme changes", async ({ page }) => {
   await expect(diagram).toBeVisible({ timeout: 20_000 });
   const light = await diagram.innerHTML();
 
-  await page.getByRole("button", { name: "Toggle dark mode" }).click();
+  await chooseTheme(page, "Dark");
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect.poll(() => diagram.innerHTML(), { timeout: 20_000 }).not.toBe(light);
   await expect(page.locator(".md-preview .md-mermaid-stale")).toHaveCount(0);
 
   // going back reuses the cached light render
-  await page.getByRole("button", { name: "Toggle dark mode" }).click();
+  await chooseTheme(page, "Light");
   await expect.poll(() => diagram.innerHTML(), { timeout: 20_000 }).toBe(light);
 });
