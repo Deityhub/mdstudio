@@ -13,6 +13,10 @@ Header: the `Logo` (two-pages mark plus the **md**studio wordmark, linking home)
 - **Features** (six cards), **target profiles** (four cards), **About** and **Who it's for**, an eight-question **FAQ** (native `details`, mirrored in FAQPage JSON-LD), a closing call to action, and a footer (copyright and author on the left, GitHub and Changelog on the right).
 - **Theme:** an inline head script applies the saved or OS theme before first paint; the theme button also lives in the studio header. "System" forgets any saved choice and follows the OS, including when it switches while the page is open; Light and Dark are remembered on this device and ignore the OS.
 
+## 1a. Privacy and Terms `/privacy`, `/terms`
+
+Plain text pages in the site layout (header, footer), with the title and "Last updated" date, linked from the footer. Public and indexable.
+
 ## 1b. Guides `/guides` and `/guides/$slug`
 
 Shared `SiteHeader` and `SiteFooter` (the footer links to Guides, the source and the changelog). The index lists every guide with its description and update date. A guide page has breadcrumbs, the title as the single `h1`, an "Updated … · N min read" line, an "On this page" list of section links, the article (`.md-preview`), a call to action to open the editor, and three related guides. Unknown slugs return a real 404. The home page links to the first three guides.

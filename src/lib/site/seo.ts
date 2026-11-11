@@ -2,6 +2,7 @@
 // the sitemap and the IndexNow payload. No Node APIs, so it runs on Workers, Node and the browser.
 
 import { GUIDES, guidePath, type Guide } from "./guides";
+import { LEGAL_PAGES, legalPath } from "./legal";
 import { BRAND, FAQ, FEATURE_LIST, LONG_DESCRIPTION, type Faq } from "./seo-content";
 
 export const SITE = {
@@ -12,6 +13,8 @@ export const SITE = {
   description: BRAND.description,
   author: "Chizoba Jude Ojini",
   authorUrl: "https://judeojini.com",
+  /** Where privacy requests, account deletion and abuse reports go (see the legal pages). */
+  contactEmail: "contact@deityhub.com",
   repo: "https://github.com/Deityhub/mdstudio",
   image: "/og.png",
   imageAlt: BRAND.imageAlt,
@@ -26,6 +29,7 @@ export const SITEMAP_ENTRIES: SitemapEntry[] = [
   { path: "/" },
   { path: "/guides" },
   ...GUIDES.map((g) => ({ path: guidePath(g.slug), lastmod: g.updated })),
+  ...LEGAL_PAGES.map((p) => ({ path: legalPath(p.slug), lastmod: p.updated })),
 ];
 export const INDEXABLE_PATHS: string[] = SITEMAP_ENTRIES.map((e) => e.path);
 
