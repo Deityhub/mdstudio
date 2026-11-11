@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AFileRouteImport } from './routes/a.$file'
 import { Route as ApiAssetsRouteImport } from './routes/api/assets'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -73,6 +75,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -81,6 +88,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AFileRoute = AFileRouteImport.update({
@@ -337,8 +349,10 @@ const ApiGithubReposOwnerRepoBranchesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
@@ -392,8 +406,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
@@ -448,8 +464,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
@@ -505,8 +523,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/privacy'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/terms'
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
@@ -560,8 +580,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/privacy'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/terms'
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
@@ -615,8 +637,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/privacy'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/terms'
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
@@ -671,8 +695,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsRoute: typeof TermsRoute
   AFileRoute: typeof AFileRoute
   ApiAssetsRoute: typeof ApiAssetsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
@@ -723,6 +749,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -735,6 +768,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/a/$file': {
@@ -1259,8 +1299,10 @@ const ApiSSlugCommentsRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsRoute: TermsRoute,
   AFileRoute: AFileRoute,
   ApiAssetsRoute: ApiAssetsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
