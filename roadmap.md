@@ -83,8 +83,5 @@
 - [x] **Local AI models, Ollama:** Ollama (`http://localhost:11434/v1`, no key) is a provider in the AI integrations dialog, with a Refresh that lists the installed models. WebLLM (running a model inside the browser) is not built.
 - [x] **Inline AI Writing Actions:** Rewrite, shorten, expand, proofread, summarize, translate or a custom instruction on the selected text, reviewed as a diff before it is accepted.
 - [x] **AI help for portability issues and image alt-text:** a "Fix with AI" button on a flagged check (raw HTML, math, alerts, highlights, wiki-links, the writer's own rules and more) and "Suggest alt text" for images that lack it, both reviewed as a diff. Alt text comes from the file name and the surrounding words; the model does not see the picture.
-- [ ] **Google Auth** Integrate google signin so we have three means to signup or login, Email/Password, Github and Google
+- [x] **Google Auth** Integrate google signin so we have three means to signup or login, Email/Password, Github and Google
 
-## Decided not to build (for now)
-
-Deferred because they add abuse or cost risk for little gain on the editor path: **view counts** (a database write per public view could use up the free plan's daily write allowance; revisit with sampling or Cloudflare analytics), **custom slugs** (squatting, impersonation, and reused addresses once links expire) and **embeds** (a blogging feature, and an embed dies when its link expires).
