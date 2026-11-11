@@ -8,10 +8,13 @@ export type AccountUser = {
   emailVerified: boolean;
   /** May use the admin dashboard. */
   isAdmin?: boolean;
+  /** The picture of a Google or GitHub account, when there is one. */
+  avatarUrl?: string | null;
 };
 export type Account = {
   user: AccountUser | null;
   github: boolean;
+  google: boolean;
   /** True when this server can publish to GitHub (it has the OAuth app and the key for tokens). */
   githubPublish: boolean;
   /** True when this server can host images (R2 or a disk volume). */
@@ -28,7 +31,8 @@ export type Account = {
 
 const MESSAGES: Record<string, string> = {
   invalid: "Enter a valid email and a password of at least 10 characters.",
-  email_taken: "That email already has an account. Sign in instead.",
+  email_taken:
+    "That email already has an account. Sign in with Google, GitHub or your password, or use Forgot password to get back in.",
   invalid_credentials: "That email and password don't match.",
   forbidden: "The request was refused. Reload the page and try again.",
   github_failed: "GitHub sign-in didn't complete. Try again.",
@@ -39,8 +43,11 @@ const MESSAGES: Record<string, string> = {
   email_unavailable: "This server can't send email.",
   email_failed: "The email couldn't be sent. Try again in a moment.",
   github_unavailable: "GitHub sign-in isn't set up on this server.",
-  no_verified_email: "Your GitHub account has no verified email address.",
-  email_in_use: "That email already has a password account. Sign in with your password instead.",
+  google_failed: "Google sign-in didn't complete. Try again.",
+  google_unavailable: "Google sign-in isn't set up on this server.",
+  google_denied: "Google sign-in was cancelled.",
+  no_verified_email: "That account has no verified email address, so it can't be used to sign in.",
+  email_in_use: "That email is already being used by another sign-in. Try again.",
   suspended: "This account has been suspended.",
   signups_closed: "New accounts aren't being created right now.",
 };
@@ -72,6 +79,7 @@ export async function fetchAccount(): Promise<Account> {
       user?: AccountUser | null;
       providers?: {
         github?: boolean;
+        google?: boolean;
         githubPublish?: boolean;
         images?: boolean;
         email?: boolean;
@@ -84,6 +92,7 @@ export async function fetchAccount(): Promise<Account> {
     return {
       user: body.user ?? null,
       github: body.providers?.github === true,
+      google: body.providers?.google === true,
       githubPublish: body.providers?.githubPublish === true,
       images: body.providers?.images === true,
       email: body.providers?.email === true,
@@ -96,6 +105,7 @@ export async function fetchAccount(): Promise<Account> {
     return {
       user: rememberedUser(),
       github: false,
+      google: false,
       githubPublish: false,
       images: false,
       email: false,

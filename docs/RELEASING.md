@@ -101,6 +101,16 @@ account may keep 10 images and 10 MB by default (`MAX_ASSETS`, `MAX_ASSET_BYTES`
 Image links contain the address of the site that hosted them, so a draft written on a PR preview links to
 that preview, which disappears when the pull request closes.
 
+## Google sign-in
+
+In the Google Cloud console, create an OAuth client (type "Web application") with the authorized
+redirect URI `https://mdstudio.deityhub.com/api/auth/google/callback` and an OAuth consent screen
+with the `openid`, `email` and `profile` scopes (publish it, or only test users can sign in). Store its
+credentials as repository secrets: `gh secret set GOOGLE_CLIENT_ID` and
+`gh secret set GOOGLE_CLIENT_SECRET`. The release workflow sets them on the Worker under the same names.
+Previews do not offer Google sign-in (their addresses change); for local development create a second
+client with `http://localhost:8080/api/auth/google/callback` and export the two values before `bun run dev`.
+
 ## GitHub sign-in
 
 Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) with the homepage
@@ -145,7 +155,7 @@ only the ones that are set.
   ```
   Until `MAIL_FROM` and at least one key are set the server sends no mail, every address counts as
   confirmed, and nothing is blocked. Once they are, an account must click an emailed link before it can store
-  drafts in the cloud (GitHub sign-in counts as confirmed). The link is sent the first time the account tries
+  drafts in the cloud (GitHub and Google sign-in count as confirmed). The link is sent the first time the account tries
   the cloud, not at sign-up, so people who only write locally never use up the free sending allowance.
   Writing, previewing and exporting never need it. `MAIL_PROVIDERS=mailtrap,resend` limits and orders the
   providers, and `MAIL_<ID>_DAILY` / `MAIL_<ID>_MONTHLY` (for example `MAIL_RESEND_DAILY=50`) change the
@@ -162,4 +172,4 @@ only the ones that are set.
 - **One inbox, one account.** `test+shop@gmail.com` and `t.e.s.t@gmail.com` are the same account as
   `test@gmail.com` (a `+tag` is dropped everywhere, dots are ignored for Gmail, `googlemail.com` is `gmail.com`).
 
-Pull request previews send no mail, so confirmation is off there, like GitHub sign-in.
+Pull request previews send no mail, so confirmation is off there, like GitHub and Google sign-in.

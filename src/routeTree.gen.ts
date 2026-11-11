@@ -33,6 +33,7 @@ import { Route as ApiAiIntegrationsRouteImport } from './routes/api/ai.integrati
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
 import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
+import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
@@ -50,6 +51,7 @@ import { Route as ApiAdminPlansNameRouteImport } from './routes/api/admin.plans.
 import { Route as ApiAdminUsersIdRouteImport } from './routes/api/admin.users.$id'
 import { Route as ApiAiIntegrationsIdRouteImport } from './routes/api/ai.integrations.$id'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
 import { Route as ApiGithubPublicationsIdRouteImport } from './routes/api/github.publications.$id'
@@ -185,6 +187,11 @@ const ApiAuthGithubRoute = ApiAuthGithubRouteImport.update({
   path: '/api/auth/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthGoogleRoute = ApiAuthGoogleRouteImport.update({
+  id: '/api/auth/google',
+  path: '/api/auth/google',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   id: '/api/auth/login',
   path: '/api/auth/login',
@@ -269,6 +276,11 @@ const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
   getParentRoute: () => ApiAuthGithubRoute,
+} as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthGoogleRoute,
 } as any)
 const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
   id: '/resend',
@@ -371,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
@@ -388,6 +401,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
@@ -428,6 +442,7 @@ export interface FileRoutesByTo {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
@@ -445,6 +460,7 @@ export interface FileRoutesByTo {
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
@@ -486,6 +502,7 @@ export interface FileRoutesById {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
@@ -503,6 +520,7 @@ export interface FileRoutesById {
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
@@ -545,6 +563,7 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
+    | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
@@ -562,6 +581,7 @@ export interface FileRouteTypes {
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
+    | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
@@ -602,6 +622,7 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
+    | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
@@ -619,6 +640,7 @@ export interface FileRouteTypes {
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
+    | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
@@ -659,6 +681,7 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
+    | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
@@ -676,6 +699,7 @@ export interface FileRouteTypes {
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
+    | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
@@ -716,6 +740,7 @@ export interface RootRouteChildren {
   ApiAiIntegrationsRoute: typeof ApiAiIntegrationsRouteWithChildren
   ApiAuthForgotRoute: typeof ApiAuthForgotRoute
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
+  ApiAuthGoogleRoute: typeof ApiAuthGoogleRouteWithChildren
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
@@ -903,6 +928,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/google': {
+      id: '/api/auth/google'
+      path: '/api/auth/google'
+      fullPath: '/api/auth/google'
+      preLoaderRoute: typeof ApiAuthGoogleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/login': {
       id: '/api/auth/login'
       path: '/api/auth/login'
@@ -1021,6 +1053,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/github/callback'
       preLoaderRoute: typeof ApiAuthGithubCallbackRouteImport
       parentRoute: typeof ApiAuthGithubRoute
+    }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof ApiAuthGoogleRoute
     }
     '/api/auth/verify/resend': {
       id: '/api/auth/verify/resend'
@@ -1246,6 +1285,18 @@ const ApiAuthGithubRouteWithChildren = ApiAuthGithubRoute._addFileChildren(
   ApiAuthGithubRouteChildren,
 )
 
+interface ApiAuthGoogleRouteChildren {
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+}
+
+const ApiAuthGoogleRouteChildren: ApiAuthGoogleRouteChildren = {
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+}
+
+const ApiAuthGoogleRouteWithChildren = ApiAuthGoogleRoute._addFileChildren(
+  ApiAuthGoogleRouteChildren,
+)
+
 interface ApiAuthVerifyRouteChildren {
   ApiAuthVerifyResendRoute: typeof ApiAuthVerifyResendRoute
 }
@@ -1320,6 +1371,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiIntegrationsRoute: ApiAiIntegrationsRouteWithChildren,
   ApiAuthForgotRoute: ApiAuthForgotRoute,
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
+  ApiAuthGoogleRoute: ApiAuthGoogleRouteWithChildren,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,

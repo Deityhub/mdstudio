@@ -17,6 +17,10 @@ env["E2E_MAIL_URL"] ??= `http://localhost:${MAIL_PORT}`;
 const GITHUB_PORT = 4382;
 env["E2E_GITHUB_URL"] ??= `http://localhost:${GITHUB_PORT}`;
 
+// A fake Google for the mail server to sign in with (see e2e/fake-google.ts).
+const GOOGLE_PORT = 4383;
+env["E2E_GOOGLE_URL"] ??= `http://localhost:${GOOGLE_PORT}`;
+
 // A throwaway database per run, so accounts made by the specs never pile up in ./data.
 const data = () => mkdtempSync(join(tmpdir(), "mdstudio-e2e-"));
 // The main server's folder is known to the specs, so one can make an account an admin directly in
@@ -36,6 +40,12 @@ export default defineConfig({
       command: "bun e2e/fake-github.ts",
       url: `http://localhost:${GITHUB_PORT}/__state`,
       env: { PORT: String(GITHUB_PORT) },
+      reuseExistingServer: false,
+    },
+    {
+      command: "bun e2e/fake-google.ts",
+      url: `http://localhost:${GOOGLE_PORT}/ready`,
+      env: { PORT: String(GOOGLE_PORT) },
       reuseExistingServer: false,
     },
     {
@@ -67,6 +77,10 @@ export default defineConfig({
         GH_TOKEN_KEY: Buffer.alloc(32, 5).toString("base64"),
         GITHUB_URL: env["E2E_GITHUB_URL"],
         GITHUB_API_URL: env["E2E_GITHUB_URL"],
+        // signing in with Google, against the fake
+        GOOGLE_CLIENT_ID: "e2e-google",
+        GOOGLE_CLIENT_SECRET: "e2e-google-secret",
+        GOOGLE_URL: env["E2E_GOOGLE_URL"],
       },
       // never reuse: a stray server on this port would answer without mail or the proxy setting
       reuseExistingServer: false,

@@ -139,7 +139,7 @@ export function UserDialog({
                 {a.role === "admin" && <Badge tone="good">admin</Badge>}
                 {a.suspended && <Badge tone="bad">suspended</Badge>}
                 {!a.emailVerified && <Badge tone="warn">email not confirmed</Badge>}
-                {!a.hasPassword && <Badge>GitHub sign-in only</Badge>}
+                {!a.hasPassword && <Badge>Social sign-in only</Badge>}
               </span>
             ) : (
               "Loading…"

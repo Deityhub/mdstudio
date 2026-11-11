@@ -51,6 +51,7 @@ test("the account dialog creates an account, signs out and signs back in", async
   await page.getByRole("button", { name: "Sign in" }).click();
   // GitHub sign-in is only offered when the server has OAuth credentials.
   await expect(page.getByRole("link", { name: /Continue with GitHub/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Continue with Google/ })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Create account" }).click();
   await page.getByLabel("Email").fill(address);
@@ -104,5 +105,20 @@ test("GitHub sign-in fails safely: not configured, or a callback with the wrong 
   const forged = await request.get("/api/auth/github/callback?code=x&state=y", { maxRedirects: 0 });
   expect(forged.status()).toBe(302);
   expect(forged.headers()["location"]).toBe("/editor?auth_error=github_failed");
+  expect(forged.headers()["set-cookie"] ?? "").not.toContain("mdstudio_session=");
+});
+
+test("Google sign-in fails safely: not configured, or a callback with the wrong state", async ({
+  request,
+}) => {
+  const start = await request.get("/api/auth/google", { maxRedirects: 0 });
+  expect(start.status()).toBe(302);
+  expect(start.headers()["location"]).toBe("/editor?auth_error=google_unavailable");
+
+  const forged = await request.get("/api/auth/google/callback?code=x&state=y", {
+    maxRedirects: 0,
+  });
+  expect(forged.status()).toBe(302);
+  expect(forged.headers()["location"]).toBe("/editor?auth_error=google_failed");
   expect(forged.headers()["set-cookie"] ?? "").not.toContain("mdstudio_session=");
 });
