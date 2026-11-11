@@ -10,7 +10,7 @@ COPY . .
 ENV NITRO_PRESET=node-server
 RUN bun run build
 
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production PORT=3000 DATA_DIR=/data
 WORKDIR /app
 COPY --from=build /app/.output ./.output
@@ -21,4 +21,5 @@ VOLUME /data
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
   CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
-CMD ["node", ".output/server/index.mjs"]
+# Node 25+ defines a localStorage of its own that warns on every start; the server has no use for it.
+CMD ["node", "--no-experimental-webstorage", ".output/server/index.mjs"]

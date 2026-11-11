@@ -44,7 +44,7 @@ All backend code lives in or is scaffolded via `infra/` (see `infra/README.md`):
 
 | Component            | Hosted Cloudflare tier ($0/mo)               | Self-hosted Docker container               |
 | :------------------- | :------------------------------------------- | :----------------------------------------- |
-| **Runtime**          | Cloudflare Workers (`workerd`)               | Node.js 22 LTS Alpine                      |
+| **Runtime**          | Cloudflare Workers (`workerd`)               | Node.js 26 LTS Alpine                      |
 | **Database**         | Cloudflare D1 (serverless SQLite)            | Embedded SQLite (`/data/studio.db`)        |
 | **ORM / migrations** | Drizzle ORM (`drizzle-orm/d1`)               | Drizzle ORM (`drizzle-orm/better-sqlite3`) |
 | **Asset storage**    | Cloudflare R2 (S3-compatible, no egress fee) | Local volume (`/data/uploads/`)            |
