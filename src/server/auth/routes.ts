@@ -6,6 +6,7 @@ import { getPublicSettings } from "../settings/service";
 import { canonicalEmail } from "./email";
 import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
 import { authorizeUrl, githubSignIn, pkcePair, randomState } from "./github";
+import { googleAuthorizeUrl, googleSignIn } from "./google";
 import {
   CONNECT_COOKIE,
   OAUTH_COOKIE,
@@ -233,6 +234,7 @@ export async function meHandler(request: Request) {
     notice: site.notice,
     signupsOpen: site.signupsOpen,
     github: githubConfig(request) !== null,
+    google: googleConfig(request) !== null,
     // whether this server can publish to GitHub (needs the OAuth app and a key for the tokens)
     githubPublish: await (await import("../github/routes")).publishingAvailable(request),
     images: await (await import("../assets/routes")).imagesAvailable(request),
@@ -299,6 +301,57 @@ export async function githubCallbackHandler(request: Request) {
     verifier,
     redirectUri: redirectUri(request),
   });
+  if ("error" in result) return fail(result.error);
+  return redirect("/editor", sessionCookie(result.token, protocol(request), SESSION_MS), clear);
+}
+
+// ---- Google sign-in -----------------------------------------------------------------------
+
+const googleConfig = (request: Request) => {
+  const clientId = getEnv(request, "GOOGLE_CLIENT_ID");
+  const clientSecret = getEnv(request, "GOOGLE_CLIENT_SECRET");
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+};
+
+const googleRedirectUri = (request: Request) =>
+  `${getEnv(request, "PUBLIC_URL")?.replace(/\/$/, "") ?? new URL(request.url).origin}/api/auth/google/callback`;
+
+export async function googleStartHandler(request: Request) {
+  const cfg = googleConfig(request);
+  if (!cfg) return redirect("/editor?auth_error=google_unavailable");
+  const { verifier, challenge } = await pkcePair();
+  const state = randomState();
+  return redirect(
+    googleAuthorizeUrl(
+      cfg,
+      googleRedirectUri(request),
+      state,
+      challenge,
+      getEnv(request, "GOOGLE_URL"),
+    ),
+    oauthCookie(`${state}.${verifier}`, protocol(request), 10 * 60 * 1000, "google"),
+  );
+}
+
+export async function googleCallbackHandler(request: Request) {
+  const cfg = googleConfig(request);
+  const clear = oauthCookie("", protocol(request), 0, "google");
+  const fail = (code: string) => redirect(`/editor?auth_error=${code}`, clear);
+  const params = new URL(request.url).searchParams;
+  const [state, verifier] = readCookie(request, OAUTH_COOKIE)?.split(".") ?? [];
+  // The state in the URL must be the one this browser was given, or the callback was forged.
+  if (!cfg || !state || !verifier || params.get("state") !== state) return fail("google_failed");
+  const code = params.get("code");
+  if (params.get("error") === "access_denied") return fail("google_denied");
+  if (!code) return fail("google_failed");
+  const result = await googleSignIn(
+    await getDb(request),
+    cfg,
+    { code, verifier, redirectUri: googleRedirectUri(request) },
+    fetch,
+    Date.now(),
+    getEnv(request, "GOOGLE_URL"),
+  );
   if ("error" in result) return fail(result.error);
   return redirect("/editor", sessionCookie(result.token, protocol(request), SESSION_MS), clear);
 }

@@ -12,11 +12,12 @@ describe("account client", () => {
   it("reads the signed-in user and the available providers", async () => {
     reply({
       user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
-      providers: { github: true, githubPublish: true },
+      providers: { github: true, google: true, githubPublish: true },
     });
     expect(await fetchAccount()).toEqual({
       user: { id: "1", email: "a@b.co", displayName: null, emailVerified: true },
       github: true,
+      google: true,
       githubPublish: true,
       images: false,
       email: false,
@@ -37,6 +38,7 @@ describe("account client", () => {
     expect(await fetchAccount()).toEqual({
       user: null,
       github: false,
+      google: false,
       githubPublish: false,
       images: false,
       email: false,
@@ -70,8 +72,20 @@ describe("account client", () => {
   });
 
   it("explains the OAuth errors the callback can send", () => {
-    for (const code of ["github_failed", "no_verified_email", "email_in_use", "github_unavailable"])
+    for (const code of [
+      "github_failed",
+      "no_verified_email",
+      "email_in_use",
+      "github_unavailable",
+      "google_failed",
+      "google_unavailable",
+      "google_denied",
+    ])
       expect(authMessage(code)).not.toBe(authMessage("anything else"));
+  });
+
+  it("tells someone whose email already has an account how to get back in", () => {
+    expect(authMessage("email_taken")).toMatch(/Forgot password/);
   });
 
   it("signs out", async () => {

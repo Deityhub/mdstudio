@@ -1,16 +1,11 @@
 // GitHub OAuth (authorization code + PKCE). Only the account's id, name, avatar and verified email
 // are used; the access token is never stored, it lives for the two calls made in the callback.
-import { eq, or } from "drizzle-orm";
-import { oauthAccounts, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
-import { canonicalEmail } from "./email";
-import { getPublicSettings } from "../settings/service";
-import { type PublicUser, firstAccountIsAdmin, startSession } from "./service";
+import type { PublicUser } from "./service";
+import { type SocialFailure, socialSignIn } from "./social";
 
 export type GithubConfig = { clientId: string; clientSecret: string };
-type Failure = {
-  error: "github_failed" | "no_verified_email" | "email_in_use" | "suspended" | "signups_closed";
-};
+type Failure = { error: "github_failed" } | SocialFailure;
 
 const b64url = (bytes: Uint8Array) =>
   btoa(String.fromCharCode(...bytes))
@@ -93,78 +88,18 @@ export async function githubSignIn(
   }[];
   if (typeof profile.id !== "number") return { error: "github_failed" };
 
-  const providerUserId = String(profile.id);
-  const [linked] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      displayName: users.displayName,
-      emailVerifiedAt: users.emailVerifiedAt,
-      role: users.role,
-      suspendedAt: users.suspendedAt,
-    })
-    .from(oauthAccounts)
-    .innerJoin(users, eq(users.id, oauthAccounts.userId))
-    .where(eq(oauthAccounts.providerUserId, providerUserId));
-  if (linked) {
-    if (linked.suspendedAt !== null) return { error: "suspended" };
-    return startSession(
-      db,
-      {
-        ...linked,
-        emailVerified: linked.emailVerifiedAt !== null,
-        isAdmin: linked.role === "admin",
-      },
-      now,
-    );
-  }
-
   const verified = emails.filter((e) => e.verified);
-  const email = (verified.find((e) => e.primary) ?? verified[0])?.email.toLowerCase();
-  if (!email) return { error: "no_verified_email" };
-
-  // Never attach to an existing account by email: sign-up does not verify addresses, so someone
-  // could have registered this one first, with a password they know.
-  const emailKey = canonicalEmail(email);
-  if (!emailKey) return { error: "no_verified_email" };
-  const [existing] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(or(eq(users.emailKey, emailKey), eq(users.email, email)));
-  if (existing) return { error: "email_in_use" };
-  // an admin can close sign-ups; GitHub cannot be used to get round that
-  if (!(await getPublicSettings(db)).signupsOpen) return { error: "signups_closed" };
-
-  // GitHub only reports addresses it has verified, so there is nothing left to confirm.
-  const user = {
-    id: crypto.randomUUID(),
-    email,
-    displayName: profile.name ?? profile.login ?? null,
-    emailVerified: true,
-    isAdmin: false,
-  };
-  try {
-    await db.insert(users).values({
-      id: user.id,
+  const email = (verified.find((e) => e.primary) ?? verified[0])?.email ?? null;
+  return socialSignIn(
+    db,
+    "github",
+    {
+      id: String(profile.id),
       email,
-      emailKey,
-      emailVerifiedAt: now,
-      displayName: user.displayName,
-      avatarUrl: profile.avatar_url ?? null,
-      role: firstAccountIsAdmin,
-      createdAt: now,
-      updatedAt: now,
-    });
-    await db.insert(oauthAccounts).values({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      provider: "github",
-      providerUserId,
-      createdAt: now,
-    });
-  } catch {
-    return { error: "email_in_use" };
-  }
-  const [made] = await db.select({ role: users.role }).from(users).where(eq(users.id, user.id));
-  return startSession(db, { ...user, isAdmin: made?.role === "admin" }, now);
+      verified: email !== null, // GitHub only lists addresses it has verified
+      name: profile.name ?? profile.login ?? null,
+      avatar: profile.avatar_url ?? null,
+    },
+    now,
+  );
 }
