@@ -33,6 +33,10 @@ describe("sameOrigin", () => {
 });
 
 describe("oauth state cookie", () => {
+  it("is scoped to the provider's own callback", () => {
+    expect(oauthCookie("s.v", "https:", 600_000, "google")).toContain("Path=/api/auth/google;");
+  });
+
   it("is HttpOnly, Lax, scoped to the OAuth routes and short-lived", () => {
     const cookie = oauthCookie("st.ver", "https:", 600_000);
     for (const part of [

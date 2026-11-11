@@ -77,12 +77,18 @@ describe("githubSignIn", () => {
     expect(await db.select().from(users)).toHaveLength(1);
   });
 
-  it("refuses to attach to an existing password account with the same email", async () => {
-    // Sign-up does not verify email, so linking by email would let someone who pre-registered a
-    // victim's address take over the victim's GitHub sign-in.
-    await signup(db, { email: "ada@example.com", password: "a long enough password" }, now);
-    expect(await githubSignIn(db, cfg, input, github(), now)).toEqual({ error: "email_in_use" });
-    expect(await db.select().from(oauthAccounts)).toHaveLength(0);
+  it("links GitHub to an existing confirmed account with the same email", async () => {
+    const made = await signup(
+      db,
+      { email: "ada@example.com", password: "a long enough password" },
+      now,
+    );
+    if ("error" in made) throw new Error(made.error);
+    const result = await githubSignIn(db, cfg, input, github(), now);
+    if ("error" in result) throw new Error(result.error);
+    expect(result.user.id).toBe(made.user.id);
+    expect(await db.select().from(users)).toHaveLength(1);
+    expect(await db.select().from(oauthAccounts)).toHaveLength(1);
   });
 
   it("only trusts a verified email", async () => {

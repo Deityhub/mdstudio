@@ -14,10 +14,15 @@ export function readCookie(request: Request, name: string) {
 
 export const readToken = (request: Request) => readCookie(request, COOKIE);
 
-/** Holds the OAuth state and PKCE verifier between the redirect to GitHub and the callback. */
+/** Holds the OAuth state and PKCE verifier between the redirect to the provider and the callback. */
 export const OAUTH_COOKIE = "mdstudio_oauth";
-export const oauthCookie = (value: string, protocol: string, maxAgeMs: number) =>
-  `${OAUTH_COOKIE}=${value}; Path=/api/auth/github; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(maxAgeMs / 1000)}${
+export const oauthCookie = (
+  value: string,
+  protocol: string,
+  maxAgeMs: number,
+  provider: "github" | "google" = "github",
+) =>
+  `${OAUTH_COOKIE}=${value}; Path=/api/auth/${provider}; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(maxAgeMs / 1000)}${
     protocol === "https:" ? "; Secure" : ""
   }`;
 
