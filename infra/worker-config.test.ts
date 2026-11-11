@@ -52,6 +52,29 @@ describe("workerConfig", () => {
     ).toMatchObject({ r2_buckets: [{ bucket_name: "mdstudio-preview-assets" }] });
   });
 
+  it("binds the real-time hub, by script name, only when one is named", () => {
+    expect(workerConfig({})).not.toHaveProperty("durable_objects");
+    const bound = (env: Record<string, string>) => workerConfig(env);
+    expect(bound({ REALTIME_SCRIPT: "mdstudio-realtime" })).toMatchObject({
+      durable_objects: {
+        bindings: [
+          { name: "REALTIME", class_name: "RealtimeHub", script_name: "mdstudio-realtime" },
+        ],
+      },
+    });
+    // previews share one hub of their own, so they never touch production's
+    expect(
+      bound({ PREVIEW_WORKER_NAME: "mdstudio-pr-3", REALTIME_SCRIPT: "mdstudio-realtime-preview" }),
+    ).toMatchObject({
+      durable_objects: { bindings: [{ script_name: "mdstudio-realtime-preview" }] },
+    });
+  });
+
+  it("only binds a Worker name that looks like one of ours", () => {
+    for (const bad of ["other", "mdstudio-realtime/../x", "mdstudio-realtime-x y", "mdstudio"])
+      expect(() => workerConfig({ REALTIME_SCRIPT: bad }), bad).toThrow(/REALTIME_SCRIPT/);
+  });
+
   it("treats an empty name as production", () =>
     expect(workerConfig({ PREVIEW_WORKER_NAME: "" })).toHaveProperty("routes"));
 });

@@ -60,6 +60,10 @@ One-time setup, in addition to the secrets above:
   comment links to the workflow run.
 - A preview is a separate Worker bound to a separate preview database, so it never touches production data.
 
+## Real-time hub
+
+The app's live updates run through a Durable Object in its own Worker (`infra/realtime`). The release workflow deploys it as `mdstudio-realtime` **before** the app, and every preview deploys the shared `mdstudio-realtime-preview` before its own Worker, because the app binds to the hub by that name (`REALTIME_SCRIPT` at build, see `infra/worker-config.ts`). Nothing to set up: the same Cloudflare token deploys it, it has no public address and needs no secrets, and it uses a SQLite-backed Durable Object, which Workers Free allows. If it is ever missing, the app still works: browsers fall back to polling. Free-plan limits (100,000 Durable Object requests and 13,000 GB-s a day) are shown in the Cloudflare dashboard under Workers, Durable Objects.
+
 ## Hosted database and storage
 
 Create the databases once, then add their ids as repository **variables** (Settings → Secrets and

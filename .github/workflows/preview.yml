@@ -40,11 +40,19 @@ jobs:
       - run: bun install --frozen-lockfile
       # PREVIEW_WORKER_NAME makes the build name the Worker, leave out the production domain and
       # send a noindex header (see infra/worker-config.ts).
+      # Previews share one real-time hub, like the database, deployed first because each preview
+      # binds to it by name. (Its topics are account ids, so previews on one database see one another.)
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config infra/realtime/wrangler.jsonc --name mdstudio-realtime-preview
       - run: bun run build
         env:
           PREVIEW_WORKER_NAME: ${{ env.WORKER }}
           D1_DATABASE_ID: ${{ vars.D1_PREVIEW_DATABASE_ID }}
           R2_BUCKET: ${{ vars.R2_PREVIEW_BUCKET }}
+          REALTIME_SCRIPT: mdstudio-realtime-preview
       # All previews share one throwaway database; the schema is applied before the Worker ships.
       - name: Apply database migrations
         if: vars.D1_PREVIEW_DATABASE_ID != ''

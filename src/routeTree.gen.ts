@@ -18,6 +18,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AFileRouteImport } from './routes/a.$file'
 import { Route as ApiAssetsRouteImport } from './routes/api/assets'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
 import { Route as ApiShareRouteImport } from './routes/api/share'
 import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
@@ -110,6 +111,11 @@ const ApiAssetsRoute = ApiAssetsRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRealtimeRoute = ApiRealtimeRouteImport.update({
+  id: '/api/realtime',
+  path: '/api/realtime',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiShareRoute = ApiShareRouteImport.update({
@@ -368,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -427,6 +434,7 @@ export interface FileRoutesByTo {
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -487,6 +495,7 @@ export interface FileRoutesById {
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
@@ -548,6 +557,7 @@ export interface FileRouteTypes {
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
+    | '/api/realtime'
     | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
+    | '/api/realtime'
     | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
@@ -666,6 +677,7 @@ export interface FileRouteTypes {
     | '/a/$file'
     | '/api/assets'
     | '/api/health'
+    | '/api/realtime'
     | '/api/share'
     | '/editor/$docId'
     | '/guides/$slug'
@@ -726,6 +738,7 @@ export interface RootRouteChildren {
   AFileRoute: typeof AFileRoute
   ApiAssetsRoute: typeof ApiAssetsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiRealtimeRoute: typeof ApiRealtimeRoute
   ApiShareRoute: typeof ApiShareRouteWithChildren
   EditorDocIdRoute: typeof EditorDocIdRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
@@ -821,6 +834,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/realtime': {
+      id: '/api/realtime'
+      path: '/api/realtime'
+      fullPath: '/api/realtime'
+      preLoaderRoute: typeof ApiRealtimeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/share': {
@@ -1357,6 +1377,7 @@ const rootRouteChildren: RootRouteChildren = {
   AFileRoute: AFileRoute,
   ApiAssetsRoute: ApiAssetsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
+  ApiRealtimeRoute: ApiRealtimeRoute,
   ApiShareRoute: ApiShareRouteWithChildren,
   EditorDocIdRoute: EditorDocIdRoute,
   GuidesSlugRoute: GuidesSlugRoute,

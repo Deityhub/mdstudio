@@ -9,3 +9,10 @@ export function getEnv(request: Request, name: string): string | undefined {
 /** The public address of this site: PUBLIC_URL when a proxy hides it, else the request's own. */
 export const siteOrigin = (request: Request) =>
   getEnv(request, "PUBLIC_URL")?.replace(/\/$/, "") ?? new URL(request.url).origin;
+
+/** A Workers binding (a Durable Object namespace, for one), or undefined on Node. */
+export const getBinding = (request: Request, name: string): unknown =>
+  (request as WithEnv).runtime?.cloudflare?.env?.[name];
+
+/** Whether this request is being served by Workers rather than the Node server. */
+export const onWorkers = (request: Request) => !!(request as WithEnv).runtime?.cloudflare;
