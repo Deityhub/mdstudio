@@ -14,14 +14,18 @@ export async function signUp(request: APIRequestContext, address = email()) {
 }
 
 /**
- * Makes an account an admin straight in the server's database, as the operator would with SQL: the
- * first account made is the admin, which a spec running next to others cannot count on.
+ * Sets an account's role straight in the server's database, as the operator would with SQL. The
+ * first account made on a server is its admin, so a spec running next to others (or first) cannot
+ * count on a new account being an admin or a plain user: it sets the role it needs.
  */
-export function makeAdmin(address: string) {
+function setRole(address: string, role: "admin" | "user") {
   const db = new Database(join(process.env["E2E_DATA_DIR"]!, "studio.db"));
   try {
-    db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run(address);
+    db.prepare("UPDATE users SET role = ? WHERE email = ?").run(role, address);
   } finally {
     db.close();
   }
 }
+
+export const makeAdmin = (address: string) => setRole(address, "admin");
+export const makeUser = (address: string) => setRole(address, "user");
