@@ -33,6 +33,23 @@ const d1 = (env: Env, name: string) => {
 const r2 = (env: Env) =>
   env["R2_BUCKET"] ? { r2_buckets: [{ binding: "IMAGES", bucket_name: env["R2_BUCKET"] }] } : {};
 
+// The real-time hub is a Durable Object in its own Worker (infra/realtime); the app binds to it by
+// that Worker's name, one for production and one shared by previews.
+const REALTIME_SCRIPT = /^mdstudio-realtime(-preview)?$/;
+const realtime = (env: Env) => {
+  const script = env["REALTIME_SCRIPT"];
+  if (!script) return {};
+  if (!REALTIME_SCRIPT.test(script))
+    throw new Error(
+      `REALTIME_SCRIPT must be mdstudio-realtime or mdstudio-realtime-preview, got "${script}"`,
+    );
+  return {
+    durable_objects: {
+      bindings: [{ name: "REALTIME", class_name: "RealtimeHub", script_name: script }],
+    },
+  };
+};
+
 export function workerConfig(env: Env) {
   const preview = env["PREVIEW_WORKER_NAME"];
   if (!preview) {
@@ -41,9 +58,16 @@ export function workerConfig(env: Env) {
       routes: [{ pattern: "mdstudio.deityhub.com", custom_domain: true }],
       ...d1(env, "mdstudio"),
       ...r2(env),
+      ...realtime(env),
     };
   }
   if (!PREVIEW_NAME.test(preview))
     throw new Error(`PREVIEW_WORKER_NAME must look like mdstudio-pr-<number>, got "${preview}"`);
-  return { name: preview, workers_dev: true, ...d1(env, "mdstudio-preview"), ...r2(env) };
+  return {
+    name: preview,
+    workers_dev: true,
+    ...d1(env, "mdstudio-preview"),
+    ...r2(env),
+    ...realtime(env),
+  };
 }

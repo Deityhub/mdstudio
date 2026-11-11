@@ -66,6 +66,9 @@ export default defineConfig(({ command }) => ({
       ? [
           nitro({
             preset,
+            // The self-hosted server holds the sockets itself. On Workers the app forwards the
+            // upgrade to a Durable Object, and nitro's own handler would take it first.
+            ...(preset !== "cloudflare-module" && { features: { websocket: true } }),
             ...(preset === "cloudflare-module" && {
               cloudflare: {
                 nodeCompat: true,

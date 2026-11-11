@@ -47,6 +47,12 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // the real-time socket is not a page or an API call: it is decided in one place
+      if (
+        request.headers.get("upgrade")?.toLowerCase() === "websocket" &&
+        new URL(request.url).pathname === "/api/realtime"
+      )
+        return await (await import("./server/realtime/routes")).realtimeHandler(request);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

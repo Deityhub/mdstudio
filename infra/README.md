@@ -23,6 +23,10 @@ docker compose -f infra/docker-compose.yml up -d    # http://localhost:3000
 
 Data lives in the `mdstudio-data` volume mounted at `/data`. `GET /api/health` is the liveness probe.
 
+## Real-time updates
+
+Changes to cloud drafts reach your other devices as they happen, over a WebSocket on the same port; there is nothing to configure. Behind a reverse proxy it must pass WebSocket upgrades: Caddy does by default, nginx needs `proxy_set_header Upgrade $http_upgrade;` and `proxy_set_header Connection "upgrade";` in the location that serves the app. Without upgrades the app falls back to checking every minute.
+
 ## GitHub sign-in (optional)
 
 Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) with the callback URL
