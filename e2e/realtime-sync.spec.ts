@@ -244,3 +244,27 @@ test("a draft too big for the channel is a hint, and costs one pull", async ({ b
   expect(pulls()).toBe(settled + 1);
   for (const c of contexts) await c.close();
 });
+
+test("an admin raising an account's cloud limit shows in its open tab at once", async ({
+  browser,
+  playwright,
+  baseURL,
+}) => {
+  const address = `limit-${Date.now()}@example.com`;
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await account(page, "Create account", address);
+  await skipPicker(page);
+  await expect(page.getByTestId("cloud-usage")).toHaveText("Cloud: 0 of 5 drafts");
+  await page.waitForTimeout(2500); // the socket is up, so only an event can change it now
+  const { id } = await (await page.request.get("/api/auth/me")).json().then((m) => m.user);
+
+  const admin = await playwright.request.newContext({ baseURL: baseURL! });
+  makeAdmin((await signUp(admin)).address);
+  const res = await admin.patch(`/api/admin/users/${id}`, { data: { limits: { cloud_docs: 8 } } });
+  expect(res.status()).toBe(200);
+  await expect(page.getByTestId("cloud-usage")).toHaveText("Cloud: 0 of 8 drafts", {
+    timeout: 8_000,
+  });
+  await context.close();
+});

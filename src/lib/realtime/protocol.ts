@@ -2,6 +2,7 @@
 // for, what the server sends, and why a socket is closed. Events grow with the features that use
 // them (documents for sync, comments for share pages); see docs/SYSTEM_SPEC.md, "Real-time".
 import { z } from "zod";
+import { shareCommentSchema } from "../share/protocol";
 import { ServerDocSchema } from "../sync/protocol";
 
 /** Private-range WebSocket close codes the client reacts to. */
@@ -42,6 +43,15 @@ export const realtimeEventSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("sync") }),
   /** A cloud draft changed on another device: its whole state, to apply as a pull would. */
   z.object({ t: z.literal("doc"), doc: ServerDocSchema }),
+  /** On a share's topic: a comment was written. `mine` is false; each viewer knows their own. */
+  z.object({ t: z.literal("comment"), comment: shareCommentSchema }),
+  z.object({ t: z.literal("comment_resolved"), id: z.string(), resolved: z.boolean() }),
+  /** A comment was removed, and its replies with it. */
+  z.object({ t: z.literal("comment_deleted"), id: z.string() }),
+  /** On a share's topic: a new copy was published, the link was withdrawn, or its settings changed. */
+  z.object({ t: z.literal("share"), change: z.enum(["updated", "revoked", "settings"]) }),
+  /** On the owner's topic: the account's list of links changed (on another device). */
+  z.object({ t: z.literal("shares") }),
   /** The account's session ended; the socket is closed right after. */
   z.object({
     t: z.literal("bye"),

@@ -9,6 +9,7 @@ import { createRealtime } from "../realtime/client";
 import { type SyncReport, applyPushed, syncOnce } from "./engine";
 import { createSyncMeta } from "./meta";
 import { DEFAULT_CLOUD_LIMIT, fieldsHash } from "./protocol";
+import { refreshSharesIfLoaded } from "../share/hooks";
 import { createPullPolicy } from "./policy";
 import { type SyncStatus, createRunner } from "./runner";
 
@@ -164,10 +165,15 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
           // too much or too big to send: pull
           policy.owePull();
           r.request(0);
+        } else if (event.t === "shares") {
+          // the account's links changed on another device
+          void refreshSharesIfLoaded();
         } else if (event.t === "doc")
           void applyPushed(deps(), [event.doc])
             .then(async (report) => {
               await refreshCloud(userId);
+              // the draft's History (read after each round) has a new version on the server now
+              setStatus((current) => ({ ...current, at: Date.now() }));
               latest.current.onReport(report);
               // a draft with unsaved edits waits: a pull picks it up
               if (report.deferred) {

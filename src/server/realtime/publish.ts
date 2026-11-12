@@ -8,7 +8,8 @@ import { docEvents } from "./events";
 import { nodeHub } from "./hub";
 
 export const userTopic = (userId: string) => `user:${userId}`;
-export const shareTopic = (shareId: string) => `share:${shareId}`;
+/** A link's topic is named by its address (slug), which the owner and every reader know. */
+export const shareTopic = (slug: string) => `share:${slug}`;
 
 type Namespace = {
   idFromName: (name: string) => unknown;

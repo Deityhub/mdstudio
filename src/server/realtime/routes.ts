@@ -51,7 +51,7 @@ export async function authorizeUpgrade(
     // the same rules as reading the link: a private one is for its owner and invited people only
     const viewed = await viewShare(db, topic.id, user, now);
     if (viewed.status !== "ok") return refuse(404, "not_found");
-    key = `share:${viewed.share.id}`;
+    key = `share:${topic.id}`; // the link's address, which everyone who may listen knows
   }
   return { ok: true, topic: key, userId: user.id, clientId, expiresAt: session.expiresAt };
 }

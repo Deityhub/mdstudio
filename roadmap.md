@@ -79,7 +79,7 @@
 ## Milestone 5: Collaboration & Advanced AI (Future)
 
 - [ ] **Edit access through a link:** Letting people named on a link edit the draft. Needs the collaboration engine below, so it waits for it.
-- [x] **Real-time updates (foundation):** a WebSocket channel replaces the one-minute polling: cloud drafts reach other devices as they change, a sign-out or suspension ends open sessions at once, and the timer poll only runs while the socket is down. Hosted on hibernating Durable Objects, self-hosted in process. Share-page comments move onto it next.
+- [x] **Real-time updates (foundation):** a WebSocket channel replaces the one-minute polling: cloud drafts reach other devices as they change, a sign-out or suspension ends open sessions at once, and the timer poll only runs while the socket is down. Hosted on hibernating Durable Objects, self-hosted in process. Review comments (the writer's panel and the reader's page), link changes and an admin's plan changes arrive live too.
 - [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
 - [x] **Local AI models, Ollama:** Ollama (`http://localhost:11434/v1`, no key) is a provider in the AI integrations dialog, with a Refresh that lists the installed models. WebLLM (running a model inside the browser) is not built.
 - [x] **Inline AI Writing Actions:** Rewrite, shorten, expand, proofread, summarize, translate or a custom instruction on the selected text, reviewed as a diff before it is accepted.

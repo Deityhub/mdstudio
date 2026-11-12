@@ -13,6 +13,8 @@ import { type Db, getDb } from "../db";
 import { limitsFor } from "../limits/request";
 import type { Limits } from "../limits/catalog";
 import { siteOrigin } from "../env";
+import { publish, shareTopic, userTopic } from "../realtime/publish";
+import type { RealtimeEvent } from "@/lib/realtime/protocol";
 import { getMailer } from "../mail";
 import { users } from "../../../infra/db/schema";
 import { eq } from "drizzle-orm";
@@ -84,6 +86,13 @@ async function sendQuietly(
   }
 }
 
+// What the open pages and panels on a link are told: its own topic for the readers and the writer's
+// comments panel, and the writer's account topic so their other devices refresh their list of links.
+const tell = (request: Request, slug: string, event: RealtimeEvent) =>
+  publish(request, shareTopic(slug), event);
+const tellOwner = (request: Request, userId: string) =>
+  publish(request, userTopic(userId), { t: "shares" });
+
 // ---- the owner: links -------------------------------------------------------------------------
 
 export const listHandler = (request: Request) =>
@@ -112,7 +121,10 @@ export const publishHandler = (request: Request) =>
       ...(access !== undefined && { access: access as "public" | "people" }),
       ...(comments !== undefined && { comments: comments as boolean }),
     });
-    return r.ok ? json({ share: withUrl(request, r.share), created: r.created }) : fail(r.error);
+    if (!r.ok) return fail(r.error);
+    await tell(request, r.share.slug, { t: "share", change: r.created ? "settings" : "updated" });
+    await tellOwner(request, user.id);
+    return json({ share: withUrl(request, r.share), created: r.created });
   });
 
 /** Changes a live link: `days`, `access` ("public" or "people") and `comments`, any of them. */
@@ -136,13 +148,20 @@ export const updateHandler = (request: Request, localId: string) =>
       },
       shareConfig(limits),
     );
-    return r.ok ? json({ share: withUrl(request, r.share) }) : fail(r.error);
+    if (!r.ok) return fail(r.error);
+    await tell(request, r.share.slug, { t: "share", change: "settings" });
+    await tellOwner(request, user.id);
+    return json({ share: withUrl(request, r.share) });
   });
 
 export const revokeHandler = (request: Request, localId: string) =>
   withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
-    return (await revokeShare(db, user.id, localId)) ? json({ ok: true }) : fail("not_found");
+    const share = await findOwnShare(db, user.id, localId);
+    if (!(await revokeShare(db, user.id, localId))) return fail("not_found");
+    if (share) await tell(request, share.slug, { t: "share", change: "revoked" });
+    await tellOwner(request, user.id);
+    return json({ ok: true });
   });
 
 // ---- the owner: people ------------------------------------------------------------------------
@@ -203,15 +222,19 @@ export const ownerCommentsHandler = (request: Request, localId: string) =>
 export const ownerCommentHandler = (request: Request, localId: string, commentId: string) =>
   withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
-    if (request.method === "DELETE")
-      return (await ownerDeleteComment(db, user.id, localId, commentId))
-        ? json({ ok: true })
-        : fail("not_found");
+    const slug = (await findOwnShare(db, user.id, localId))?.slug;
+    if (request.method === "DELETE") {
+      if (!(await ownerDeleteComment(db, user.id, localId, commentId))) return fail("not_found");
+      if (slug) await tell(request, slug, { t: "comment_deleted", id: commentId });
+      return json({ ok: true });
+    }
     const body = await readBody(request);
     if (typeof body?.["resolved"] !== "boolean") return fail("invalid");
-    return (await ownerResolveComment(db, user.id, localId, commentId, body["resolved"]))
-      ? json({ ok: true })
-      : fail("not_found");
+    const resolved = body["resolved"];
+    if (!(await ownerResolveComment(db, user.id, localId, commentId, resolved)))
+      return fail("not_found");
+    if (slug) await tell(request, slug, { t: "comment_resolved", id: commentId, resolved });
+    return json({ ok: true });
   });
 
 // ---- readers: comments ------------------------------------------------------------------------
@@ -242,15 +265,17 @@ export const commentsAddHandler = (request: Request, address: string) =>
     });
     if (!r.ok) return fail(r.error);
     await notifyOwner(request, db, user, address, r.comment.author);
+    // everyone listening on the link sees it now; "mine" is each viewer's own to work out
+    await tell(request, address, { t: "comment", comment: { ...r.comment, mine: false } });
     return json({ comment: r.comment });
   });
 
 export const commentDeleteHandler = (request: Request, address: string, commentId: string) =>
   withVerifiedUser(request, async (user, db) => {
     if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
-    return (await deleteComment(db, user, address, commentId))
-      ? json({ ok: true })
-      : fail("not_found");
+    if (!(await deleteComment(db, user, address, commentId))) return fail("not_found");
+    await tell(request, address, { t: "comment_deleted", id: commentId });
+    return json({ ok: true });
   });
 
 /** At most one email an hour per link tells the writer something was said, and never what. */

@@ -6,7 +6,7 @@ import type { PublicUser } from "../auth/service";
 import { getStore } from "../assets/store";
 import type { Db } from "../db";
 import { getEnv } from "../env";
-import { endSessions } from "../realtime/publish";
+import { endSessions, publish, userTopic } from "../realtime/publish";
 import { LIMITS, resolveLimits } from "../limits/catalog";
 import { deletePlan, listPlans, savePlan } from "../limits/plans";
 import { getSettings, updateSettings } from "../settings/service";
@@ -98,6 +98,8 @@ export const updateUserHandler = (request: Request, id: string) =>
     await audit(db, who(actor), "user.update", who_ ?? undefined, body);
     // a suspended account's sessions stop working, so its open sockets are closed with them
     if (body["suspended"] === true) await endSessions(r, id, "suspended");
+    // a plan or limit change shows in the account's open tabs (the cloud usage reads it) at once
+    else await publish(r, userTopic(id), { t: "sync" });
     return json({ ...(await userDetail(db, env(r), id)), catalog: catalog(r) });
   })(request);
 
