@@ -54,6 +54,20 @@ describe("seeding", () => {
     expect(room.text()).toBe("");
   });
 
+  it("names each start of a room, so a device holding an older room's state can tell", async () => {
+    expect(room.epoch()).toBeNull();
+    await room.seed("one");
+    const first = room.epoch();
+    expect(first).toMatch(/^[0-9a-f-]{36}$/);
+    await room.destroy();
+    await room.seed("one");
+    expect(room.epoch()).not.toBe(first);
+    // it survives a restart from storage
+    const again = createRoom({ store, now: () => now });
+    await again.open();
+    expect(again.epoch()).toBe(room.epoch());
+  });
+
   it("is forgotten by destroy", async () => {
     await room.seed("x");
     await room.destroy();

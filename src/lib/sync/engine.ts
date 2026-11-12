@@ -32,6 +32,8 @@ export type SyncDeps = {
   snapshot?: (doc: MdDocument) => Promise<unknown>;
   /** Called when a draft leaves this device because it was deleted in the cloud. */
   onGone?: (id: string) => Promise<unknown>;
+  /** Called when a draft stops being edited live here (stopped, deleted, or gone): what the browser kept of the room is forgotten. */
+  onLeaveLive?: (id: string) => Promise<unknown>;
 };
 
 export type SyncReport = {
@@ -135,6 +137,34 @@ function applier(deps: SyncDeps, report: SyncReport) {
         note(report.removed, id);
       }
       await meta.set({ id, version: rd.version, hash: "", deleted: true });
+      if (m?.collab) await deps.onLeaveLive?.(id);
+      return true;
+    }
+
+    if (rd.collab) {
+      // Edited live: the room holds the text. The first time this device hears of it, text it has
+      // that the cloud did not is kept in History; after that the cloud's copy is never applied.
+      if (!m?.collab) {
+        if (local && dirty) {
+          await deps.snapshot?.(local);
+          note(report.replaced, id);
+        }
+        if (!local || localHash !== remoteHash) await writeRemote(local, rd, id);
+      }
+      await meta.set({
+        id,
+        version: rd.version,
+        hash: m?.collab ? m.hash : remoteHash!,
+        collab: true,
+      });
+      return true;
+    }
+    if (m?.collab) {
+      // Live editing stopped: the room's last text is the draft's, whatever this device's copy says.
+      if (local && localHash !== remoteHash) await deps.snapshot?.(local);
+      if (!local || localHash !== remoteHash) await writeRemote(local, rd, id);
+      await meta.set({ id, version: rd.version, hash: remoteHash! });
+      await deps.onLeaveLive?.(id);
       return true;
     }
 
@@ -202,6 +232,7 @@ async function round(deps: SyncDeps, pulls: boolean): Promise<SyncReport> {
     for (const m of metas) {
       if (m.deleted) continue;
       const d = here.get(m.id);
+      if (m.collab && d && !m.unlink) continue; // live: the room carries its text
       if (!d || m.unlink) {
         // Deleted here, or taken out of the cloud on purpose: the cloud copy goes.
         items.push({
@@ -269,6 +300,9 @@ async function round(deps: SyncDeps, pulls: boolean): Promise<SyncReport> {
           await applyRemote(r.server, true);
           const after = await meta.get(id);
           if (after && after.version !== before?.version) again = true;
+        } else if (r.status === "collab") {
+          // this device did not know the draft is live: its text is kept in History, the room's is shown
+          await applyRemote(r.server, true);
         } else if (r.status === "limit_reached") {
           report.limit = r.limit;
           await meta.remove(id);

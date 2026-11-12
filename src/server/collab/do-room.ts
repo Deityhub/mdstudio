@@ -234,7 +234,7 @@ export class CollabRoomLogic {
       server.serializeAttachment(null);
       server.close(CLOSE.full, "full");
     } else {
-      server.send(JSON.stringify({ t: "ready" }));
+      server.send(JSON.stringify({ t: "ready", epoch: this.room.epoch() }));
       this.deliver(joined.effects);
     }
     return this.platform.upgrade(client);

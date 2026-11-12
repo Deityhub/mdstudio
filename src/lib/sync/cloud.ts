@@ -37,7 +37,8 @@ export async function checkSignOut(
   for (const m of await meta.linked()) {
     const d = await store.get(m.id);
     if (!d) continue;
-    if ((await hashOf(d)) !== m.hash) check.unsynced.push(m.id);
+    // a draft edited live is kept by the room, not by this device's last upload
+    if (!m.collab && (await hashOf(d)) !== m.hash) check.unsynced.push(m.id);
     if (Object.keys(d.images).length) check.withImages.push(m.id);
   }
   return check;
@@ -51,13 +52,18 @@ export async function checkSignOut(
 export async function leaveAccount(
   store: Store,
   meta: SyncMeta,
-  opts: { keep?: Set<string>; onGone?: (id: string) => Promise<unknown> } = {},
+  opts: {
+    keep?: Set<string>;
+    onGone?: (id: string) => Promise<unknown>;
+    /** A kept draft that was being edited live is an ordinary local draft now: what was kept of its room goes. */
+    onLeaveLive?: (id: string) => Promise<unknown>;
+  } = {},
 ) {
   for (const m of await meta.list()) {
     if (!m.deleted && !opts.keep?.has(m.id) && (await store.get(m.id))) {
       await store.remove(m.id, { quiet: true });
       await opts.onGone?.(m.id);
-    }
+    } else if (m.collab) await opts.onLeaveLive?.(m.id);
     await meta.remove(m.id);
   }
   await meta.setCursor(0);

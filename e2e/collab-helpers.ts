@@ -8,6 +8,7 @@ import { account as mailAccount } from "./review-helpers";
 
 const MAIN = "http://localhost:4173";
 const MSG_SYNC = 0;
+const MSG_AWARENESS = 1;
 export const TEXT = "md";
 
 export const unique = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -95,6 +96,14 @@ export class Collab {
       this.ws.onopen = () => {
         resolve(true);
         this.send(this.frame((e) => syncProtocol.writeSyncStep1(e, this.doc)));
+        // say that this person is here, as a browser does (the room fills in their name)
+        const a = encoding.createEncoder();
+        encoding.writeVarUint(a, MSG_AWARENESS);
+        encoding.writeVarUint(a, 1);
+        encoding.writeVarUint(a, this.doc.clientID);
+        encoding.writeVarUint(a, 1);
+        encoding.writeVarString(a, "{}");
+        this.send(encoding.toUint8Array(a));
       };
       this.ws.onerror = () => resolve(false);
     });

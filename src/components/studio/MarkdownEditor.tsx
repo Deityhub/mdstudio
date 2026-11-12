@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { EditorState } from "@codemirror/state";
+import { EditorState, type Extension } from "@codemirror/state";
 import {
   EditorView,
   keymap,
@@ -51,8 +51,15 @@ export type EditorHandle = {
   focus: () => void;
 };
 
+/** A live draft's binding (see lib/collab/session.ts): the text then lives in the shared document, not in `value`. */
+export type CollabBinding = { extension: Extension; undo: () => void; redo: () => void };
+
 type Props = {
   value: string;
+  /** Edited live with other people: the editor shows and changes the shared text, and Undo is only this person's own. */
+  collab?: CollabBinding;
+  /** Shown but not editable (a live draft whose text has not arrived yet). */
+  readOnly?: boolean;
   onChange: (v: string) => void;
   /** The editor scrolled: the line at the top (with a fraction), how far down, and whether it is at the end. */
   onScroll?: (position: { line: number; ratio: number; atEnd: boolean; top: number }) => void;
@@ -118,7 +125,9 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         highlightActiveLine(),
         highlightActiveLineGutter(),
         drawSelection(),
-        history(),
+        // each person undoes only their own edits: a live draft's undo history is the binding's
+        ...(props.collab ? [props.collab.extension] : [history()]),
+        ...(props.readOnly ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : []),
         search({ top: true }),
         highlightSelectionMatches(),
         EditorView.lineWrapping,
@@ -145,7 +154,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
           { key: "Tab", run: (v) => tabInStructure(v, 1) },
           { key: "Shift-Tab", run: (v) => tabInStructure(v, -1) },
           ...searchKeymap,
-          ...historyKeymap,
+          ...(props.collab ? [] : historyKeymap),
           indentWithTab,
           ...defaultKeymap,
         ]),
@@ -214,10 +223,11 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // External value changes (import, front matter form, switching docs)
+  // External value changes (import, front matter form, switching docs). A live draft's text is the
+  // shared document's: changes made from outside go into it directly (Studio), never through here.
   useEffect(() => {
     const v = view.current;
-    if (!v) return;
+    if (!v || cb.current.collab) return;
     const cur = v.state.doc.toString();
     if (cur !== props.value) {
       silent.current = true;
@@ -229,6 +239,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
   const api: EditorHandle = {
     run(command) {
       const v = view.current!;
+      if (v.state.readOnly) return;
       const edit = runCommand(snapshot(v.state), command);
       if (edit)
         v.dispatch({ changes: edit.changes, selection: { anchor: edit.from, head: edit.to } });
@@ -236,22 +247,26 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
     },
     undo() {
       const v = view.current!;
-      undo(v);
+      if (cb.current.collab) cb.current.collab.undo();
+      else undo(v);
       v.focus();
     },
     redo() {
       const v = view.current!;
-      redo(v);
+      if (cb.current.collab) cb.current.collab.redo();
+      else redo(v);
       v.focus();
     },
     getSnapshot: () => snapshot(view.current!.state),
     apply(edit) {
       const v = view.current!;
+      if (v.state.readOnly) return;
       v.dispatch({ changes: edit.changes, selection: { anchor: edit.from, head: edit.to } });
       v.focus();
     },
     insert(text) {
       const v = view.current!;
+      if (v.state.readOnly) return;
       v.dispatch(v.state.replaceSelection(text));
       v.focus();
     },

@@ -17,11 +17,14 @@ import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { ReviewComments } from "@/components/studio/ReviewComments";
 import { PUBLISH_AFTER_CONNECT, PublishDialog } from "@/components/studio/PublishDialog";
+import { CollabStatus } from "@/components/studio/CollabStatus";
+import { useCollabSession, useSessionState } from "@/lib/collab/hooks";
 import { ShareDialog } from "@/components/studio/ShareDialog";
 import { clearShares, useShares } from "@/lib/share/hooks";
 import {
   addToCloud,
   removeFromCloud,
+  requestSync,
   syncLabel,
   syncNow,
   useCloud,
@@ -161,6 +164,7 @@ import {
 } from "@/components/ui/dialog";
 
 const NO_IMAGES: Record<string, string> = {};
+const noop = () => undefined;
 const NO_CONTEXT: Context = {
   bold: false,
   italic: false,
@@ -530,6 +534,46 @@ export function Studio({ docId }: { docId: string }) {
     },
   });
   const cloudDrafts = useCloud();
+  // A draft shared for editing is live: its text is a shared document the room holds, and this
+  // browser edits it through a session. Until the text has arrived the draft is shown, not editable.
+  const liveTarget =
+    cloudOn && account && doc && cloudDrafts.live.has(doc.id)
+      ? { ownerId: account.id, draftId: doc.id }
+      : null;
+  const openSession = useCollabSession(liveTarget, (text) => {
+    // this browser kept state of an earlier room: its text is not lost, it is in History
+    if (doc) void historyStore.save({ ...doc, content: text }, Date.now(), "replaced");
+  });
+  // the session of the draft on screen, not of the one just left (it closes a moment later)
+  const collab = openSession && openSession.draftId === doc?.id ? openSession : null;
+  const collabState = useSessionState(collab);
+  const collabReady = !!collab && collabState.ready;
+  // The live editor opens once the draft's saved copy shows the room's text (see below).
+  const [mirrored, setMirrored] = useState(false);
+  const waiting = !!liveTarget && !(collabReady && mirrored);
+  useEffect(() => {
+    if (!collab || !collabReady) return;
+    const id = collab.draftId;
+    const mirror = (text: string) =>
+      setDoc((d) => {
+        if (!d || d.id !== id || d.content === text) return d;
+        const next = { ...d, content: text, updatedAt: Date.now() };
+        next.title = docTitle(next);
+        return next;
+      });
+    mirror(collab.text());
+    setMirrored(true);
+    // the saved copy follows everyone's edits, so the library, the preview and export keep working offline
+    const stop = collab.observe(mirror);
+    return () => {
+      stop();
+      setMirrored(false);
+    };
+  }, [collab, collabReady]);
+  // not shared any more (stopped, removed, deleted): the cloud is asked what became of it
+  useEffect(() => {
+    if (collabState.status === "ended") requestSync(0);
+  }, [collabState.status]);
   // The account's share links are read when something asks for them (the Share dialog, the
   // Comments panel), never in the background, so they cost nothing until used.
   useEffect(() => {
@@ -570,7 +614,13 @@ export function Studio({ docId }: { docId: string }) {
       return next;
     });
   }, []);
-  const setContent = useCallback((content: string) => update({ content }), [update]);
+  // In a live draft a new text (a restored version, the front matter form, an AI edit) is a small
+  // edit of the shared one, so what others typed meanwhile is kept.
+  const setContent = useCallback(
+    (content: string) =>
+      collabReady && collab ? collab.replaceText(content) : update({ content }),
+    [update, collab, collabReady],
+  );
 
   const content = doc?.content ?? "";
   const deferred = useDeferredValue(content);
@@ -815,7 +865,10 @@ export function Studio({ docId }: { docId: string }) {
     };
     next.title = docTitle(next);
     await documentStore.save(next);
-    if (d.id === doc?.id) setDoc(next);
+    if (d.id === doc?.id) {
+      setDoc(next);
+      if (collabReady && collab) collab.replaceText(next.content);
+    }
     await refreshList();
     toast.success(`Hosted ${done} image${done === 1 ? "" : "s"}`, {
       description: "The draft now links to them by address. Ctrl/⌘+Z undoes the text change.",
@@ -1628,9 +1681,19 @@ export function Studio({ docId }: { docId: string }) {
                     <ClientOnly fallback={<EditorFallback />}>
                       <Suspense fallback={<EditorFallback />}>
                         <MarkdownEditor
+                          // a live draft gets its own editor, bound to the shared text
+                          key={
+                            waiting
+                              ? `wait:${doc.id}`
+                              : collabReady && collab
+                                ? `live:${doc.id}`
+                                : "solo"
+                          }
                           ref={editor}
                           value={content}
-                          onChange={setContent}
+                          {...(collabReady && collab && !waiting ? { collab } : {})}
+                          readOnly={waiting}
+                          onChange={collabReady && !waiting ? noop : setContent}
                           onScroll={onEditorScroll}
                           onPaste={onPaste}
                           onFiles={onFiles}
@@ -1671,6 +1734,7 @@ export function Studio({ docId }: { docId: string }) {
               <span>{stats.minutes} min read</span>
               <span>{Object.keys(images).length} images</span>
               {!online && <span>Offline, your drafts are still saved here</span>}
+              {liveTarget && <CollabStatus state={collabState} waiting={waiting} />}
               {account && syncStatus.state !== "idle" && (
                 <span
                   data-testid="sync-status"

@@ -73,7 +73,7 @@ describe("a room in this process", () => {
     const b = await client({ userId: "u2", name: "Bea" });
     expect(a.text.toString()).toBe("# Notes");
     expect(b.text.toString()).toBe("# Notes");
-    expect(a.log.texts).toContain('{"t":"ready"}');
+    expect(a.log.texts.some((t) => /^\{"t":"ready","epoch":"[0-9a-f-]{36}"\}$/.test(t))).toBe(true);
   });
 
   it("carries edits between people, and answers a ping", async () => {
