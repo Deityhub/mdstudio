@@ -5,9 +5,12 @@ import { documentStore, indexedDbStore } from "@/lib/storage/documentStore";
 import { historyStore } from "@/lib/storage/history";
 import { AuthExpiredError, UnverifiedError, httpApi } from "./api";
 import { type SignOutCheck, checkSignOut, leaveAccount, linkDrafts, unlinkDraft } from "./cloud";
-import { type SyncReport, syncOnce } from "./engine";
+import { createRealtime } from "../realtime/client";
+import { type SyncReport, applyPushed, syncOnce } from "./engine";
 import { createSyncMeta } from "./meta";
 import { DEFAULT_CLOUD_LIMIT, fieldsHash } from "./protocol";
+import { refreshSharesIfLoaded } from "../share/hooks";
+import { createPullPolicy } from "./policy";
 import { type SyncStatus, createRunner } from "./runner";
 
 const metaFor = (userId: string) => createSyncMeta(indexedDbStore, userId);
@@ -69,7 +72,8 @@ export async function removeFromCloud(userId: string, id: string) {
 
 /** Runs a round now and waits for it, so something that needs the cloud up to date can rely on it. */
 export async function syncNow(userId: string) {
-  const report = await syncOnce(depsFor(userId));
+  // pushes only: what needs the cloud up to date is what this device wrote
+  const report = await syncOnce(depsFor(userId), { pull: false });
   if (report.limit !== undefined) setCloud({ limit: report.limit });
   await refreshCloud(userId);
   return report;
@@ -81,7 +85,7 @@ export async function syncNow(userId: string) {
 export async function prepareSignOut(userId: string) {
   let synced = true;
   try {
-    await syncOnce(depsFor(userId));
+    await syncOnce(depsFor(userId), { pull: false });
   } catch (error) {
     if (!(error instanceof AuthExpiredError)) console.error(error);
     synced = false;
@@ -123,9 +127,15 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
       void refreshCloud(undefined);
       return;
     }
+    const deps = () => depsFor(userId, (id) => latest.current.isBusy(id));
+    const policy = createPullPolicy();
     const r = createRunner({
       run: async () => {
-        const report = await syncOnce(depsFor(userId, (id) => latest.current.isBusy(id)));
+        // With the live channel up a round only pushes: other devices' changes arrive by themselves.
+        const report = await syncOnce(deps(), { pull: policy.nextRoundPulls() }).catch((error) => {
+          policy.owePull(); // a pull that did not happen is still owed
+          throw error;
+        });
         if (report.limit !== undefined) setCloud({ limit: report.limit });
         await refreshCloud(userId);
         latest.current.onReport(report);
@@ -140,17 +150,65 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
     });
     runner = r;
     void refreshCloud(userId);
-    const wake = () => document.visibilityState === "visible" && r.request(0);
+    // Live updates: another device's change arrives over the socket and is applied without a
+    // pull. While it is up the timer poll is off; if it drops, polling comes back by itself.
+    const live = createRealtime({
+      topic: "user",
+      onConnected: (connected) => {
+        policy.setConnected(connected);
+        r.setPolling(!connected);
+        // once it is up, one pull catches up on whatever came before it was ready
+        if (connected) r.request(0);
+      },
+      onEvent: (event) => {
+        if (event.t === "sync") {
+          // too much or too big to send: pull
+          policy.owePull();
+          r.request(0);
+        } else if (event.t === "shares") {
+          // the account's links changed on another device
+          void refreshSharesIfLoaded();
+        } else if (event.t === "doc")
+          void applyPushed(deps(), [event.doc])
+            .then(async (report) => {
+              await refreshCloud(userId);
+              // the draft's History (read after each round) has a new version on the server now
+              setStatus((current) => ({ ...current, at: Date.now() }));
+              latest.current.onReport(report);
+              // a draft with unsaved edits waits: a pull picks it up
+              if (report.deferred) {
+                policy.owePull();
+                r.request();
+              }
+            })
+            .catch((error) => {
+              console.error(error);
+              policy.owePull();
+              r.request(0);
+            });
+      },
+      // signed out elsewhere, suspended, deleted, or the session ran out: look at the account
+      // again. If it is signed out this effect ends and stops the socket.
+      onEnded: () => accountStore.refresh(),
+    });
+    const nudge = (kind: "focus" | "online") =>
+      document.visibilityState === "visible" && policy.nudgeWorthIt(kind) && r.request(0);
+    const onFocus = () => nudge("focus");
+    const onOnline = () => nudge("online");
     const offs = [r.subscribe(() => setStatus(r.get())), documentStore.onChange(() => r.request())];
-    window.addEventListener("online", wake);
-    window.addEventListener("focus", wake);
-    document.addEventListener("visibilitychange", wake);
-    r.start();
+    window.addEventListener("online", onOnline);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    live.start();
+    // The first round waits a moment: if the socket is ready by then, its one catch-up pull is
+    // the first pull, instead of that and one more.
+    r.start(1000);
     return () => {
       for (const off of offs) off();
-      window.removeEventListener("online", wake);
-      window.removeEventListener("focus", wake);
-      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      live.stop();
       r.stop();
       if (runner === r) runner = null;
       setStatus({ state: "idle" });

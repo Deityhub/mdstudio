@@ -1,16 +1,20 @@
 import { Check, RotateCcw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { type SharedLink, ShareError, ownerApi } from "@/lib/share/api";
+import { useRealtime } from "@/lib/realtime/hooks";
+import type { RealtimeEvent } from "@/lib/realtime/protocol";
 import { ensureShares } from "@/lib/share/hooks";
+import { applyCommentEvent } from "@/lib/share/live";
 import { shareDate } from "@/lib/share/page";
 import type { ShareComment } from "@/lib/share/protocol";
 
 /**
  * What reviewers said on the draft's link, for the writer: open ones first, each with the line it
  * is about (click to go there), and the writer may resolve or delete any of them. It reads once
- * when it is opened, and again only after the writer changes something.
+ * when it is opened (once the live connection is up, or a moment later without one), and after
+ * that listens: a comment, a resolving or a removal anywhere shows here as it happens.
  */
 export function ReviewComments({
   draftId,
@@ -36,17 +40,40 @@ export function ReviewComments({
     }
   }, [draftId]);
 
+  // what the link's readers do reaches this panel over the link's live topic
+  const live = useRealtime(share?.slug ? `share:${share.slug}` : null, (event: RealtimeEvent) =>
+    setItems((current) => (current ? applyCommentEvent(current, event) : current)),
+  );
+
+  const loaded = useRef(false);
   useEffect(() => {
+    loaded.current = false;
     setItems(null);
     void ensureShares();
-    void load();
-  }, [load]);
+  }, [draftId]);
+  // One read: when the live connection is ready (it also catches up after a reconnect), or after
+  // a moment if there is none. Nothing reads again while it is up.
+  useEffect(() => {
+    if (live) {
+      loaded.current = true;
+      void load();
+      return;
+    }
+    const wait = setTimeout(() => {
+      if (!loaded.current) {
+        loaded.current = true;
+        void load();
+      }
+    }, 1000);
+    return () => clearTimeout(wait);
+  }, [load, live]);
 
-  async function act(id: string, work: () => Promise<unknown>) {
+  async function act(id: string, work: () => Promise<unknown>, event: RealtimeEvent) {
     setBusy(id);
     try {
       await work();
-      await load();
+      // what the writer did is on screen at once; the event that follows changes nothing more
+      setItems((current) => (current ? applyCommentEvent(current, event) : current));
     } catch {
       toast.error("Couldn't change that comment. Try again.");
     } finally {
@@ -106,7 +133,13 @@ export function ReviewComments({
             size="sm"
             className="h-7 px-2"
             pending={busy === c.id}
-            onClick={() => void act(c.id, () => ownerApi.resolve(draftId, c.id, !c.resolved))}
+            onClick={() =>
+              void act(c.id, () => ownerApi.resolve(draftId, c.id, !c.resolved), {
+                t: "comment_resolved",
+                id: c.id,
+                resolved: !c.resolved,
+              })
+            }
           >
             {c.resolved ? <RotateCcw className="size-3.5" /> : <Check className="size-3.5" />}
             {c.resolved ? "Reopen" : "Resolve"}
@@ -118,7 +151,9 @@ export function ReviewComments({
           size="sm"
           className="h-7 px-2 text-destructive"
           pending={busy === c.id}
-          onClick={() => void act(c.id, () => ownerApi.remove(draftId, c.id))}
+          onClick={() =>
+            void act(c.id, () => ownerApi.remove(draftId, c.id), { t: "comment_deleted", id: c.id })
+          }
         >
           <Trash2 className="size-3.5" />
           Delete

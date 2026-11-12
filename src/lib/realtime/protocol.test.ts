@@ -34,6 +34,61 @@ describe("events", () => {
       expect(parseEvent(bad), bad).toBeNull();
   });
 
+  it("carries a whole document for the device to apply, and refuses a malformed one", () => {
+    const doc = {
+      id: "u:d1",
+      version: 3,
+      title: "T",
+      name: null,
+      folder: "f",
+      content: "# T",
+      createdAt: 1,
+      updatedAt: 2,
+      editedAt: 2,
+      deleted: false,
+    };
+    expect(parseEvent(JSON.stringify({ t: "doc", doc }))).toEqual({ t: "doc", doc });
+    for (const bad of [
+      { ...doc, version: 0 },
+      { ...doc, content: 5 },
+      { ...doc, deleted: "no" },
+      { id: "u:d1" },
+    ])
+      expect(parseEvent(JSON.stringify({ t: "doc", doc: bad })), JSON.stringify(bad)).toBeNull();
+  });
+
+  it("carries a comment, its resolving and removal, and what happened to a share", () => {
+    const comment = {
+      id: "c1",
+      parentId: null,
+      author: "Bea",
+      mine: false,
+      line: 3,
+      snippet: "Intro",
+      body: "Tighten this",
+      outdated: false,
+      resolved: false,
+      createdAt: 5,
+    };
+    const events = [
+      { t: "comment", comment },
+      { t: "comment_resolved", id: "c1", resolved: true },
+      { t: "comment_deleted", id: "c1" },
+      { t: "share", change: "updated" },
+      { t: "share", change: "revoked" },
+      { t: "share", change: "settings" },
+      { t: "shares" },
+    ];
+    for (const e of events) expect(parseEvent(JSON.stringify(e)), e.t).toEqual(e);
+    for (const bad of [
+      { t: "comment", comment: { ...comment, body: 7 } },
+      { t: "comment_resolved", id: "c1" },
+      { t: "comment_deleted" },
+      { t: "share", change: "other" },
+    ])
+      expect(parseEvent(JSON.stringify(bad)), JSON.stringify(bad)).toBeNull();
+  });
+
   it("has distinct close codes in the private range, and a size cap", () => {
     const codes = Object.values(CLOSE);
     expect(new Set(codes).size).toBe(codes.length);

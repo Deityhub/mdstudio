@@ -7,7 +7,13 @@
   "compatibility_date": "2026-11-01",
   "workers_dev": false,
   "preview_urls": false,
+  // logs and sampled traces; the same block as the app Worker's (OBSERVABILITY in infra/worker-config.ts)
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 },
+  },
   "durable_objects": { "bindings": [{ "name": "REALTIME", "class_name": "RealtimeHub" }] },
   // Workers Free only offers SQLite-backed Durable Objects
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RealtimeHub"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RealtimeHub"] }],
 }

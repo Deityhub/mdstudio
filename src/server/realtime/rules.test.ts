@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { SOCKET_CAPS, fanout, hasRoom, incoming, topicKind, type Attachment } from "./rules";
+import {
+  SOCKET_CAPS,
+  fanout,
+  hasRoom,
+  incoming,
+  replyCloseCode,
+  topicKind,
+  type Attachment,
+} from "./rules";
 
 const sock = (clientId: string, expiresAt = 1000): { id: string; attachment: Attachment } => ({
   id: clientId,
@@ -40,5 +48,22 @@ describe("incoming", () => {
     expect(incoming("ping")).toBe("ping");
     for (const bad of ["", "pong", "ping ", '{"t":"sync"}', new ArrayBuffer(4), "x".repeat(2000)])
       expect(incoming(bad)).toBe("close");
+  });
+});
+
+describe("replyCloseCode", () => {
+  it("answers a normal close with the same code, including our own private ones", () => {
+    for (const code of [1000, 1001, 1002, 1003, 1007, 1008, 1011, 3000, 4001, 4004, 4999])
+      expect(replyCloseCode(code), String(code)).toBe(code);
+  });
+
+  it("never sends a code that may only be reported: 1004, 1005, 1006 and 1015 (a WebSocket refuses them)", () => {
+    for (const code of [1004, 1005, 1006, 1015])
+      expect(replyCloseCode(code), String(code)).toBe(1000);
+  });
+
+  it("falls back to a normal close for a missing or out-of-range code", () => {
+    for (const code of [undefined, 0, 999, 1016, 2999, 5000, 65535, -1, 1000.5, NaN])
+      expect(replyCloseCode(code as number | undefined), String(code)).toBe(1000);
   });
 });

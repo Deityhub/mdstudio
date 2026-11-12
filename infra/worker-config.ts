@@ -50,6 +50,17 @@ const realtime = (env: Env) => {
   };
 };
 
+/**
+ * Logs and traces, per Worker (a Worker without this block writes none). Every log is kept, so an
+ * error is never sampled away; traces are sampled to stay inside the free allowance. The real-time
+ * Worker's own config (infra/realtime/wrangler.jsonc) carries the same block, and a test keeps them equal.
+ */
+export const OBSERVABILITY = {
+  enabled: true,
+  head_sampling_rate: 1,
+  traces: { enabled: true, head_sampling_rate: 0.05 },
+};
+
 export function workerConfig(env: Env) {
   const preview = env["PREVIEW_WORKER_NAME"];
   if (!preview) {
@@ -59,6 +70,7 @@ export function workerConfig(env: Env) {
       ...d1(env, "mdstudio"),
       ...r2(env),
       ...realtime(env),
+      observability: OBSERVABILITY,
     };
   }
   if (!PREVIEW_NAME.test(preview))
@@ -69,5 +81,6 @@ export function workerConfig(env: Env) {
     ...d1(env, "mdstudio-preview"),
     ...r2(env),
     ...realtime(env),
+    observability: OBSERVABILITY,
   };
 }

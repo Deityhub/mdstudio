@@ -1,4 +1,5 @@
 // What the browser and the server agree on for share links (see src/server/share).
+import { z } from "zod";
 
 /** How long a new link lasts when the writer does not choose, and the longest it may last. */
 export const DEFAULT_SHARE_DAYS = 4;
@@ -26,19 +27,21 @@ export const MAX_SHARE_COMMENTS = 100;
 export const MAX_COMMENT_LENGTH = 2000;
 
 /** A comment as a reader sees it: the author is a display name, never an address. */
-export type ShareComment = {
-  id: string;
-  parentId: string | null;
-  author: string;
-  mine: boolean;
-  line: number;
-  snippet: string;
-  body: string;
+export const shareCommentSchema = z.object({
+  id: z.string(),
+  parentId: z.string().nullable(),
+  author: z.string(),
+  /** Whether the viewer wrote it. Events carry false: each viewer works this out for themselves. */
+  mine: z.boolean(),
+  line: z.number().int(),
+  snippet: z.string(),
+  body: z.string(),
   /** Written on an older published copy than the current one. */
-  outdated: boolean;
-  resolved: boolean;
-  createdAt: number;
-};
+  outdated: z.boolean(),
+  resolved: z.boolean(),
+  createdAt: z.number().int(),
+});
+export type ShareComment = z.infer<typeof shareCommentSchema>;
 
 /** The public address of a link. */
 export const shareUrl = (origin: string, slug: string) => `${origin.replace(/\/$/, "")}/s/${slug}`;

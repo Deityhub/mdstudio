@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createNodeDb } from "../../../infra/db/node";
 import { users } from "../../../infra/db/schema";
 import type { Db } from "../db";
-import { parsePush, pullDocs, pushDocs } from "./service";
+import { parsePush, pullDocs, pushDocs, type ServerDoc } from "./service";
+import { DEFAULT_REVISIONS } from "../revisions/service";
 
 let db: Db;
 const t0 = 1_700_000_000_000;
@@ -235,5 +236,53 @@ describe("parsePush", () => {
       { docs: Array.from({ length: 51 }, (_, i) => item({ id: `a:d${i}` })) },
     ])
       expect(parsePush(bad)).toBeNull();
+  });
+});
+
+describe("pushDocs reports what it changed, for other devices to hear about", () => {
+  const push = async (items: ReturnType<typeof item>[], now = t0) => {
+    const changed: ServerDoc[] = [];
+    const results = await pushDocs(db, "a", items, now, 5, DEFAULT_REVISIONS, changed);
+    return { results, changed };
+  };
+
+  it("gives the new draft and the update, as a pull would", async () => {
+    const first = await push([item()]);
+    expect(first.changed).toEqual([
+      expect.objectContaining({ id: "a:d1", version: 1, content: "# Hello", deleted: false }),
+    ]);
+    const second = await push([item({ baseVersion: 1, content: "# Hello\n\nMore" })], t0 + 5);
+    expect(second.changed).toEqual([
+      expect.objectContaining({ version: 2, content: "# Hello\n\nMore", updatedAt: t0 + 5 }),
+    ]);
+    // the same state a pull returns, so a device applying it ends where a pull would put it
+    const { docs } = await pullDocs(db, "a", 0);
+    expect(second.changed[0]).toEqual(docs[0]);
+  });
+
+  it("says nothing for a push that changed nothing, a conflict or a refusal", async () => {
+    await push([item()]);
+    expect((await push([item({ baseVersion: 1 })], t0 + 1)).changed).toEqual([]); // same text
+    // stale base and an older edit: the server's copy wins, so nothing changed
+    await push([item({ baseVersion: 1, content: "# Newer", editedAt: t0 + 100 })], t0 + 100);
+    const stale = await push(
+      [item({ baseVersion: 1, content: "# Old", editedAt: t0 + 1 })],
+      t0 + 2,
+    );
+    expect(stale.results[0]).toMatchObject({ status: "conflict" });
+    expect(stale.changed).toEqual([]);
+    expect((await push([item({ id: "b:d1" })])).changed).toEqual([]); // another account's id
+  });
+
+  it("gives a deleted draft as a tombstone, without its text", async () => {
+    await push([item()]);
+    const gone = await push([item({ baseVersion: 1, deleted: true })], t0 + 3);
+    expect(gone.changed).toEqual([
+      expect.objectContaining({ id: "a:d1", version: 2, deleted: true, content: "" }),
+    ]);
+  });
+
+  it("is optional: pushing without it works as before", async () => {
+    expect(await pushDocs(db, "a", [item()], t0)).toMatchObject([{ status: "ok" }]);
   });
 });

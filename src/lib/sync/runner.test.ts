@@ -78,4 +78,36 @@ describe("runner", () => {
     expect(run).toHaveBeenCalledTimes(2);
     expect(r.get().state).toBe("idle");
   });
+
+  it("can switch polling off while a live connection tells it about changes, and back on", async () => {
+    const run = vi.fn(async () => {});
+    const r = make(run);
+    r.start();
+    await vi.advanceTimersByTimeAsync(0);
+    r.setPolling(false);
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(run).toHaveBeenCalledTimes(1); // no polling
+    r.request(0); // a requested round still runs
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(2);
+    r.setPolling(true);
+    await vi.advanceTimersByTimeAsync(60_010);
+    expect(run).toHaveBeenCalledTimes(3);
+    r.setPolling(true); // already on: no second timer
+    await vi.advanceTimersByTimeAsync(60_010);
+    expect(run).toHaveBeenCalledTimes(4);
+  });
+
+  it("can wait before its first round, so a connection that is about to be ready can ask for it instead", async () => {
+    const run = vi.fn(async () => {});
+    const r = make(run);
+    r.start(1500);
+    await vi.advanceTimersByTimeAsync(1499);
+    expect(run).not.toHaveBeenCalled();
+    r.request(0); // merged into the same round
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
 });

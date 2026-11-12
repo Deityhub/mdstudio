@@ -61,25 +61,35 @@ const quiet = { quiet: true };
 
 // A sign-out and the background runner must never sync at the same time.
 let chain: Promise<unknown> = Promise.resolve();
-export const syncOnce = (deps: SyncDeps): Promise<SyncReport> => {
-  const next = chain.then(() => round(deps));
+export const syncOnce = (
+  deps: SyncDeps,
+  /** `pull: false` pushes only: for when another device's changes are arriving by themselves. */
+  opts: { pull?: boolean } = {},
+): Promise<SyncReport> => {
+  const next = chain.then(() => round(deps, opts.pull !== false));
   chain = next.catch(() => undefined);
   return next;
 };
 
-async function round(deps: SyncDeps): Promise<SyncReport> {
-  const { userId, store, meta, api } = deps;
-  const report: SyncReport = {
-    applied: [],
-    removed: [],
-    replaced: [],
-    detached: [],
-    pushed: 0,
-    deferred: 0,
-    tooLarge: [],
-    overLimit: [],
-    rejected: 0,
-  };
+/** Starts a report with nothing in it. */
+const emptyReport = (): SyncReport => ({
+  applied: [],
+  removed: [],
+  replaced: [],
+  detached: [],
+  pushed: 0,
+  deferred: 0,
+  tooLarge: [],
+  overLimit: [],
+  rejected: 0,
+});
+
+/**
+ * Brings a draft from the cloud into this device, writing what happens into `report`. Shared by a
+ * round (which pulls) and by a draft that another device's change delivers directly.
+ */
+function applier(deps: SyncDeps, report: SyncReport) {
+  const { userId, store, meta } = deps;
   const note = (list: string[], v: string) => void (list.includes(v) || list.push(v));
 
   async function writeRemote(local: MdDocument | undefined, rd: ServerDoc, id: string) {
@@ -141,6 +151,32 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
     await meta.set({ id, version: rd.version, hash: remoteHash! });
     return true;
   }
+
+  return { applyRemote, note };
+}
+
+/**
+ * Applies drafts another device just changed, delivered over the real-time channel, without a
+ * pull. It is the same rule as a pull applies (a version already seen is skipped, an edit made
+ * here that is later is kept, one with unsaved edits waits), so a late, repeated or echoed event is
+ * harmless. The pull cursor is not touched: only a real pull moves it, so no gap can open.
+ * `deferred` in the report means a draft had to wait; the caller asks for a pull then.
+ */
+export function applyPushed(deps: SyncDeps, docs: ServerDoc[]): Promise<SyncReport> {
+  const next = chain.then(async () => {
+    const report = emptyReport();
+    const { applyRemote } = applier(deps, report);
+    for (const rd of docs) await applyRemote(rd);
+    return report;
+  });
+  chain = next.catch(() => undefined);
+  return next;
+}
+
+async function round(deps: SyncDeps, pulls: boolean): Promise<SyncReport> {
+  const { userId, store, meta, api } = deps;
+  const report = emptyReport();
+  const { applyRemote, note } = applier(deps, report);
 
   async function pull() {
     let since = await meta.cursor();
@@ -246,7 +282,7 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
   }
 
   for (let n = 0; n < MAX_ROUNDS; n++) {
-    await pull();
+    if (pulls) await pull();
     if (!(await push())) break;
   }
   return report;

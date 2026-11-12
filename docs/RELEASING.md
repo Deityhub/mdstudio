@@ -64,6 +64,10 @@ One-time setup, in addition to the secrets above:
 
 The app's live updates run through a Durable Object in its own Worker (`infra/realtime`). The release workflow deploys it as `mdstudio-realtime` **before** the app, and every preview deploys the shared `mdstudio-realtime-preview` before its own Worker, because the app binds to the hub by that name (`REALTIME_SCRIPT` at build, see `infra/worker-config.ts`). Nothing to set up: the same Cloudflare token deploys it, it has no public address and needs no secrets, and it uses a SQLite-backed Durable Object, which Workers Free allows. If it is ever missing, the app still works: browsers fall back to polling. Free-plan limits (100,000 Durable Object requests and 13,000 GB-s a day) are shown in the Cloudflare dashboard under Workers, Durable Objects.
 
+## Logs and traces
+
+Both Workers (the app and the real-time hub) have `observability` set: every log is kept (`head_sampling_rate: 1`, so an error is never sampled away) and 1 request in 20 is traced. The app's block is `OBSERVABILITY` in `infra/worker-config.ts`; the hub's is in `infra/realtime/wrangler.jsonc`, and a test keeps them equal. See them in the Cloudflare dashboard under Workers & Pages, the Worker, Observability (filter on errors; a trace follows a request from the app into the Durable Object), or live with `npx wrangler tail mdstudio` and `npx wrangler tail mdstudio-realtime`. The hub logs a socket it could not write to or close, and an upgrade that arrives without who is asking; the app logs a failed publish and server errors. Free-plan limits: 200,000 log events a day, kept 3 days (paid: 7 days); traces are kept 7 days; from 1 December 2026 both move to Cloudflare Observability pricing. Logpush needs the paid plan; OpenTelemetry export to Grafana, Honeycomb or Axiom is set up in the dashboard and then named under `observability.traces.destinations` and `observability.logs.destinations`.
+
 ## Hosted database and storage
 
 Create the databases once, then add their ids as repository **variables** (Settings → Secrets and

@@ -68,6 +68,7 @@ async function pushOne(
   now: number,
   limit: number,
   revisions: RevisionConfig,
+  changedDocs: ServerDoc[],
 ): Promise<PushResult> {
   const name = it.name ?? null;
   const folder = it.folder ?? null;
@@ -75,7 +76,8 @@ async function pushOne(
   const content = deleted ? "" : it.content;
   const contentHash = await fieldsHash({ title: it.title, name, folder, content });
   const editedAt = Math.min(it.editedAt, now + FUTURE_SKEW_MS);
-  const fields = { title: it.title, name, folder, content, contentHash, editedAt };
+  const text = { title: it.title, name, folder, content, editedAt };
+  const fields = { ...text, contentHash };
 
   const conflictOrRejected = async (): Promise<PushResult> => {
     const row = await find(db, it.id);
@@ -101,6 +103,14 @@ async function pushOne(
         createdAt: it.createdAt,
         updatedAt: now,
         deletedAt: deleted ? now : null,
+      });
+      changedDocs.push({
+        id: it.id,
+        version: 1,
+        ...text,
+        createdAt: it.createdAt,
+        updatedAt: now,
+        deleted,
       });
       return { id: it.id, status: "ok", version: 1, updatedAt: now };
     } catch {
@@ -130,6 +140,14 @@ async function pushOne(
     .where(and(eq(documents.id, it.id), eq(documents.version, existing.version)))
     .returning({ id: documents.id });
   if (changed.length === 0) return conflictOrRejected();
+  changedDocs.push({
+    id: it.id,
+    version: existing.version + 1,
+    ...text,
+    createdAt: existing.createdAt,
+    updatedAt,
+    deleted,
+  });
   if (deleted) {
     // A deleted draft takes its history with it, so the text does not linger.
     await deleteRevisions(db, it.id);
@@ -159,9 +177,11 @@ export async function pushDocs(
   now = Date.now(),
   limit = DEFAULT_CLOUD_LIMIT,
   revisions: RevisionConfig = DEFAULT_REVISIONS,
+  changed: ServerDoc[] = [],
 ) {
   const results: PushResult[] = [];
-  for (const it of items) results.push(await pushOne(db, userId, it, now, limit, revisions));
+  for (const it of items)
+    results.push(await pushOne(db, userId, it, now, limit, revisions, changed));
   return results;
 }
 
