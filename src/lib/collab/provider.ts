@@ -44,8 +44,15 @@ type Options = {
 };
 
 /** Edits wait this long for company, and never longer than the second figure, before they are sent. */
-export const BATCH_MS = 150;
-export const MAX_BATCH_MS = 500;
+export const BATCH_MS = 50;
+export const MAX_BATCH_MS = 150;
+/**
+ * While connected, the room is asked for what this browser may have missed this often. Frames are
+ * not acknowledged, so a missed one (a connection that failed to deliver) would otherwise leave this
+ * copy of the text quietly behind until the next reconnect. An answer to this is a few bytes when
+ * nothing is missing.
+ */
+export const RESYNC_MS = 30_000;
 /** Cursor moves are sent at most four times a second. */
 export const AWARENESS_MS = 250;
 const MIN_WAIT = 1000;
@@ -86,6 +93,7 @@ export function createProvider(opts: Options) {
   let queued: Uint8Array[] = [];
   let firstQueued = 0;
   let cursorTimer: ReturnType<typeof setTimeout> | undefined;
+  let resync: ReturnType<typeof setInterval> | undefined;
   let cursorSentAt = 0;
 
   const setStatus = (next: Status) => {
@@ -168,6 +176,8 @@ export function createProvider(opts: Options) {
     clearTimeout(pong);
     clearTimeout(batch);
     clearTimeout(cursorTimer);
+    clearInterval(resync);
+    resync = undefined;
     ping = pong = batch = cursorTimer = undefined;
     queued = [];
     firstQueued = 0;
@@ -201,8 +211,10 @@ export function createProvider(opts: Options) {
     if (code === CLOSE.sessionEnded || code === CLOSE.expired) {
       await opts.onEnded?.(code);
       schedule(MIN_WAIT);
-    } else if (code === CLOSE.full || code === CLOSE.badMessage || code === 1008 || code === 1009)
+    } else if (code === CLOSE.full || code === CLOSE.badMessage || code === 1009)
       schedule(MAX_WAIT);
+    // asked to slow down: a short pause, not a minute of being cut off from everyone
+    else if (code === 1008) schedule(Math.max(backoff(), 5000));
     else schedule(backoff());
   }
 
@@ -223,7 +235,9 @@ export function createProvider(opts: Options) {
     ready = true;
     setStatus("live");
     // ask for what is missing; the room asks back for what it is missing (this is how offline edits arrive)
-    send(frame(MSG_SYNC, (e) => syncProtocol.writeSyncStep1(e, doc)));
+    const askAgain = () => send(frame(MSG_SYNC, (e) => syncProtocol.writeSyncStep1(e, doc)));
+    askAgain();
+    resync = setInterval(askAgain, RESYNC_MS);
     awareness.setLocalState(awareness.getLocalState() ?? {});
     sendCursor();
   }

@@ -14,8 +14,11 @@ import { step1Frame, updateFrame } from "./testing";
 class FakeSocket implements DoSocket {
   sent: (string | Uint8Array)[] = [];
   closed: { code: number; reason?: string } | null = null;
+  /** The client vanished: the runtime still lists the socket until it has run the close handler. */
+  listed = false;
   private attachment: unknown = null;
   send(data: string | ArrayBuffer | Uint8Array) {
+    if (this.closed) throw new TypeError("Can't call WebSocket send() after close().");
     this.sent.push(typeof data === "string" ? data : new Uint8Array(data as ArrayBuffer));
   }
   close(code: number, reason?: string) {
@@ -38,7 +41,7 @@ function world() {
   const pending: Promise<void>[] = [];
   const ctx: DoState = {
     acceptWebSocket: (ws) => void sockets.push(ws as FakeSocket),
-    getWebSockets: () => sockets.filter((s) => !s.closed),
+    getWebSockets: () => sockets.filter((s) => !s.closed || s.listed),
     blockConcurrencyWhile: (work) => {
       const p = work();
       pending.push(p);
@@ -220,6 +223,31 @@ describe("a room in a Durable Object", () => {
     expect(await (await woken.fetch(new Request("https://room/text"))).json()).toEqual({
       text: ">Hello!",
     });
+  });
+
+  it("keeps delivering to everyone else when a connection has just dropped but is still listed", async () => {
+    const logic = await w.make();
+    await logic.fetch(post("/seed", { text: "Hello" }));
+    const a = await open(logic, w);
+    const b = await open(logic, w, { "x-rt-user": "u2", "x-rt-client": "tab-bbbbbbbb" });
+    const c = await open(logic, w, { "x-rt-user": "u3", "x-rt-client": "tab-cccccccc" });
+    await a.hello();
+    await b.hello();
+    await c.hello();
+    // b's browser went away: sending to it now throws, and the runtime has not told us yet
+    b.socket.closed = { code: 1006 };
+    b.socket.listed = true;
+    a.text.insert(5, " there");
+    await new Promise((r) => setTimeout(r, 0));
+    await c.pump();
+    expect(c.text.toString()).toBe("Hello there"); // not lost because b came first
+    // and when the close arrives, the others hear that b left, again without anything throwing
+    await logic.webSocketClose(b.socket, 1006);
+    b.socket.listed = false;
+    c.text.insert(0, ">");
+    await new Promise((r) => setTimeout(r, 0));
+    await a.pump();
+    expect(a.text.toString()).toBe(">Hello there");
   });
 
   it("folds everything into a snapshot when the last person leaves", async () => {

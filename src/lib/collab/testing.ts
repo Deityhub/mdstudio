@@ -38,6 +38,8 @@ export class FakeSocket implements SocketLike {
   onclose: ((e: { code: number }) => void) | null = null;
   joined = false;
   closed = false;
+  /** Frames from the room are lost on the way to this browser (a connection that failed to deliver). */
+  deaf = false;
   texts: string[] = [];
   constructor(
     private wire: Wire,
@@ -54,6 +56,7 @@ export class FakeSocket implements SocketLike {
     });
   }
   toBrowser(data: string | Uint8Array) {
+    if (this.deaf && typeof data !== "string") return;
     this.onmessage?.({ data: typeof data === "string" ? data : data.slice().buffer });
   }
   send(data: string | Uint8Array) {

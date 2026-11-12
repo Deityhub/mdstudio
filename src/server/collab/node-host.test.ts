@@ -136,6 +136,19 @@ describe("a room in this process", () => {
     expect(peers.every((p) => p.log.closed.length === 0)).toBe(true);
   });
 
+  it("keeps delivering to everyone else when one connection's socket throws on send", async () => {
+    await host.ensureSeeded(DOC, async () => "Hello");
+    const a = await client();
+    const b = await client({ userId: "u2", name: "Bea" });
+    const c = await client({ userId: "u3", name: "Cy" });
+    b.peer.send = () => {
+      throw new TypeError("Can't call WebSocket send() after close().");
+    };
+    a.text.insert(5, " there");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(c.text.toString()).toBe("Hello there");
+  });
+
   it("closes a connection that sends something that is not a message", async () => {
     await host.ensureSeeded(DOC, async () => "x");
     const a = await client();

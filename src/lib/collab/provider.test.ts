@@ -5,7 +5,7 @@ import * as Y from "yjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLOSE } from "../realtime/protocol";
 import { TEXT_KEY } from "./protocol";
-import { BATCH_MS, type Peer, type Status, createProvider } from "./provider";
+import { BATCH_MS, RESYNC_MS, type Peer, type Status, createProvider } from "./provider";
 import { Wire } from "./testing";
 
 vi.stubGlobal("location", { protocol: "http:", host: "localhost" });
@@ -72,6 +72,34 @@ describe("createProvider", () => {
     expect(b.text.toString()).toBe(">Hello there!");
   });
 
+  it("catches up on a frame the room's connection never delivered, by asking again", async () => {
+    const wire = new Wire();
+    await wire.room.seed("Hello");
+    const a = browser(wire);
+    const b = browser(wire);
+    a.provider.start();
+    b.provider.start();
+    await flush();
+    wire.sockets[1]!.deaf = true; // what the room sends to b is lost
+    a.text.insert(5, " there");
+    await tick(BATCH_MS + 1);
+    expect(b.text.toString()).toBe("Hello"); // b is quietly behind
+    wire.sockets[1]!.deaf = false;
+    await tick(RESYNC_MS + 100);
+    expect(b.text.toString()).toBe("Hello there");
+  });
+
+  it("is back within seconds after the room asked it to slow down, not a minute", async () => {
+    const wire = new Wire();
+    await wire.room.seed("x");
+    const a = browser(wire);
+    a.provider.start();
+    await flush();
+    wire.sockets[0]!.closeFromServer(1008);
+    await tick(9000);
+    expect(a.provider.status).toBe("live");
+  });
+
   it("sends even a steady stream of edits within the longest wait", async () => {
     const wire = new Wire();
     await wire.room.seed("");
@@ -80,7 +108,7 @@ describe("createProvider", () => {
     await flush();
     for (let i = 0; i < 10; i++) {
       a.text.insert(a.text.length, "x");
-      await tick(100); // never quiet for 150 ms
+      await tick(30); // never quiet for the batch wait
     }
     expect(wire.room.text().length).toBeGreaterThanOrEqual(5);
   });

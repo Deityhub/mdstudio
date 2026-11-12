@@ -129,10 +129,22 @@ export function nodeCollab(db: Db, opts: { fresh?: boolean } = {}): NodeCollabHo
     if (live.members.size === 0) rooms.delete(live.docId);
   }
 
+  /** One connection's trouble is never another's: a socket that just closed must not stop the frame reaching the rest. */
+  function sendTo(peer: Peer, data: Uint8Array) {
+    try {
+      peer.send(data);
+    } catch {
+      // closing: its own close hook removes it
+    }
+  }
+
   function deliver(live: Live, fx: Effects) {
-    for (const s of fx.send) live.members.get(s.to)?.peer.send(s.data);
+    for (const s of fx.send) {
+      const m = live.members.get(s.to);
+      if (m) sendTo(m.peer, s.data);
+    }
     for (const b of fx.broadcast)
-      for (const [id, m] of live.members) if (id !== b.except) m.peer.send(b.data);
+      for (const [id, m] of live.members) if (id !== b.except) sendTo(m.peer, b.data);
   }
 
   /** Ends one connection from our side, and tells the rest its cursor is gone. */
