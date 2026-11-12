@@ -11,9 +11,9 @@
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
-    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 },
   },
   "durable_objects": { "bindings": [{ "name": "REALTIME", "class_name": "RealtimeHub" }] },
   // Workers Free only offers SQLite-backed Durable Objects
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RealtimeHub"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RealtimeHub"] }],
 }

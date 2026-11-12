@@ -8,7 +8,7 @@
 //   publish   POST /publish { event, exclude? } from the app after a change is saved
 import { DurableObject } from "cloudflare:workers";
 import { CLOSE, MAX_EVENT_BYTES } from "../../src/lib/realtime/protocol";
-import { fanout, hasRoom, incoming } from "../../src/server/realtime/rules";
+import { fanout, hasRoom, incoming, replyCloseCode } from "../../src/server/realtime/rules";
 
 export class RealtimeHub extends DurableObject {
   constructor(ctx, env) {
@@ -83,7 +83,7 @@ export class RealtimeHub extends DurableObject {
 
   webSocketClose(ws, code) {
     // without this the close handshake is never finished
-    ws.close(code && code >= 1000 && code < 5000 && code !== 1005 ? code : 1000);
+    ws.close(replyCloseCode(code));
   }
 }
 

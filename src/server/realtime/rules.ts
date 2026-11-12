@@ -32,3 +32,17 @@ export function fanout<T extends { attachment: Attachment }>(
 /** Clients send nothing but a keep-alive ping; anything else ends the connection. */
 export const incoming = (message: unknown): "ping" | "close" =>
   message === "ping" ? "ping" : "close";
+
+/**
+ * The code to answer a client's close with. A WebSocket may only send 1000 to 1003, 1007 to 1014
+ * and 3000 to 4999; 1004, 1005, 1006 (closed abnormally) and 1015 are for reporting what happened
+ * and throw if sent. Anything else is answered with a normal close.
+ */
+export const replyCloseCode = (code: number | undefined) =>
+  code !== undefined &&
+  Number.isInteger(code) &&
+  ((code >= 1000 && code <= 1003) ||
+    (code >= 1007 && code <= 1014) ||
+    (code >= 3000 && code <= 4999))
+    ? code
+    : 1000;
