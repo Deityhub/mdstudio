@@ -46,8 +46,10 @@ export function createHub(now: () => number = Date.now) {
         try {
           entry.peer.send(data);
           sent += 1;
-        } catch {
-          drop(topic, entry); // a socket that cannot be written to is gone
+        } catch (error) {
+          // a socket that cannot be written to is gone; the logs say it happened
+          console.error(`realtime: could not send to a socket on ${topic}`, error);
+          drop(topic, entry);
         }
       }
       if (event.t === "bye")

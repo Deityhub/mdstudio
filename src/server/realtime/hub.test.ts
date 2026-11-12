@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CLOSE } from "@/lib/realtime/protocol";
 import { createHub } from "./hub";
 import type { Attachment } from "./rules";
@@ -75,7 +75,8 @@ describe("in-process hub", () => {
     expect(hub.count("user:u")).toBe(0);
   });
 
-  it("keeps going when one socket throws on send", () => {
+  it("keeps going when one socket throws on send, and says so in the logs", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const hub = createHub(() => 1000);
     const good = peer();
     hub.connect(
@@ -92,5 +93,10 @@ describe("in-process hub", () => {
     expect(hub.publish("user:u", { t: "sync" })).toBe(1);
     expect(good.log.sent).toHaveLength(1);
     expect(hub.count("user:u")).toBe(1); // the broken one was dropped
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining("could not send"),
+      expect.any(Error),
+    );
+    logged.mockRestore();
   });
 });

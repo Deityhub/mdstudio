@@ -27,8 +27,11 @@ export class RealtimeHub extends DurableObject {
     const userId = request.headers.get("x-rt-user");
     const clientId = request.headers.get("x-rt-client");
     const expiresAt = Number(request.headers.get("x-rt-expires"));
-    if (!topic || !userId || !clientId || !Number.isFinite(expiresAt))
+    if (!topic || !userId || !clientId || !Number.isFinite(expiresAt)) {
+      // only the app Worker reaches this object, so this is a bug there
+      console.error("realtime: an upgrade arrived without who is asking");
       return new Response("missing details", { status: 400 });
+    }
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
     // said through the socket, as the self-hosted hub does, so the browser can tell "full" from a
@@ -56,8 +59,9 @@ export class RealtimeHub extends DurableObject {
     for (const { ws } of send) {
       try {
         ws.send(data);
-      } catch {
-        // a socket that cannot be written to is gone
+      } catch (error) {
+        // a socket that cannot be written to is gone; the logs say it happened
+        console.error("realtime: could not send to a socket", String(error));
       }
     }
     // after a bye the account's sockets are closed, so a signed-out tab cannot keep listening
@@ -66,8 +70,8 @@ export class RealtimeHub extends DurableObject {
         if (expired.some((e) => e.ws === ws)) continue;
         try {
           ws.close(CLOSE.sessionEnded, event.reason);
-        } catch {
-          // already closed
+        } catch (error) {
+          console.error("realtime: could not close a socket after bye", String(error));
         }
       }
     return new Response(null, { status: 204 });
