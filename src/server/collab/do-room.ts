@@ -139,13 +139,29 @@ export class CollabRoomLogic {
       .find((ws) => (ws.deserializeAttachment() as Attachment | null)?.peerId === peerId);
   }
 
+  /**
+   * One connection's trouble is never another's. A browser that has just gone away is still listed
+   * until the runtime runs its close handler, and sending to it throws: without this, everyone
+   * after it in the list would miss the frame, and their copy of the text would quietly fall behind.
+   */
+  private sendTo(ws: DoSocket, data: Uint8Array) {
+    try {
+      ws.send(data);
+    } catch {
+      // closing: its own close handler removes it
+    }
+  }
+
   private deliver(fx: Effects) {
-    for (const s of fx.send) this.socketOf(s.to)?.send(s.data);
+    for (const s of fx.send) {
+      const ws = this.socketOf(s.to);
+      if (ws) this.sendTo(ws, s.data);
+    }
     if (fx.broadcast.length)
       for (const ws of this.ctx.getWebSockets()) {
         const id = (ws.deserializeAttachment() as Attachment | null)?.peerId;
         if (!id) continue;
-        for (const b of fx.broadcast) if (id !== b.except) ws.send(b.data);
+        for (const b of fx.broadcast) if (id !== b.except) this.sendTo(ws, b.data);
       }
   }
 
