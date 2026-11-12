@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { checkBundle, measureBundle } from "./bundle-size";
+import { LIMITS, checkBundle, measureBundle } from "./bundle-size";
 
 let dir = "";
 beforeEach(() => {
@@ -76,5 +76,12 @@ describe("checkBundle", () => {
     const problems = checkBundle(measureBundle(dir), limits).join("\n");
     expect(problems).toContain("mermaid");
     expect(problems).toContain("katex");
+  });
+});
+
+describe("the production list", () => {
+  it("keeps live editing's libraries out of the app Worker (they run in the browser and in the real-time Worker)", () => {
+    for (const name of ["yjs", "y-protocols", "lib0", "y-codemirror"])
+      expect(LIMITS.forbidden, name).toContain(name);
   });
 });

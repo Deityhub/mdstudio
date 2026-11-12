@@ -338,6 +338,18 @@ Cloud drafts and share pages are told about changes as they happen, over a WebSo
 - **Falls back to polling.** Where the socket is not available (a Workers build without the hub, a proxy that drops upgrades, the free quota used up) clients keep the 60-second poll; real-time only ever removes requests.
 - **Cost on the free tier.** A tab costs one Durable Object request to connect, nothing while idle, and a change costs one request to publish. Incoming messages (pings aside) are billed 20 to 1; outgoing are free.
 
+### 5.7 Live editing
+
+Several people typing in one Markdown draft, online or offline, converge without a central order, using Yjs (a CRDT: `yjs`, `y-protocols`, `y-codemirror.next`, all MIT, about 33 KB gzipped in the browser). Only drafts the owner shares for editing use it; every other cloud draft keeps the whole-document sync of 5.5. The room core below is built first; the Durable Object, the routes and the editor come in later units.
+
+- **The room** (`src/server/collab/room.ts`) is the shared document of one draft and who is in it, with no runtime in it: input is a binary frame from a connection, output is `Effects` (frames to send, frames for everyone else, a connection to close, a "reload" request), so the Durable Object and the self-hosted in-process hub are thin adapters. It keeps its state in a `CollabStore` (`store.ts`: a snapshot plus a log of updates; the Durable Object's SQLite, a database table, or memory in tests).
+- **Frames** are y-protocols frames: type 0 sync (step 1, step 2, update) and type 1 awareness (cursors). The shared constants and limits are in `src/lib/collab/protocol.ts`.
+- **Seeded once, on the server.** `seed(text)` starts a room from the draft's plain text; editors always start from an empty document and join by the sync handshake. Merging two documents each built from the same text would double it.
+- **Limits on every connection:** a frame at most 256 KB, 30 frames and 512 KB a second, awareness at most 1 KB, the room at most 3 MB of encoded state, updates that wait for missing ones at most 512 KB, at most 12 connections in a room and 3 per person. A frame that does not decode (Yjs itself only logs those, so the room reads each update first) closes the connection (1007) and asks the adapter to reload the document from storage; an oversized one closes with 1009, a flood with 1008.
+- **Cursors are the server's word.** The name and colour in a cursor come from the signed-in account (`colorFor(userId)`), whatever the client sends; a person can speak for at most three cursor ids, never one that another connection already uses, and only a newer clock replaces an older one. A person who may only watch (`canWrite: false`) can ask for state but their changes are ignored.
+- **Writing it down:** edits are merged in memory and written as one row at most every 5 seconds after the first unwritten change (`nextFlushAt`); when the log passes 100 rows or 256 KB, or on request (the last person leaves), it is folded into one snapshot. Garbage collection stays on.
+- **Tests:** a simulated editor and network (`testing.ts`) drive the room; seeded fuzz runs of 4 and 5 editors, with random edits, going offline and back, and room restarts, check that everyone ends with the room's text.
+
 ## 6. Authoritative Database Schema (SQLite / Drizzle)
 
 The database schema is defined in `infra/db/schema.ts` and runs identically on Cloudflare D1 and `better-sqlite3`:
