@@ -36,13 +36,20 @@ export async function getServerLimits(db: Db): Promise<Partials> {
   return out;
 }
 
-export type ServerSettings = { limits: Partials; signupsOpen: boolean; notice: string | null };
+export type ServerSettings = {
+  limits: Partials;
+  signupsOpen: boolean;
+  /** The kill switch for live editing: closed, no new connections to any room (open ones end in minutes). */
+  collabOpen: boolean;
+  notice: string | null;
+};
 
 /** Whether new accounts may be made, the site-wide notice, and the server-wide limit defaults. */
 export async function getSettings(db: Db): Promise<ServerSettings> {
   return {
     limits: await getServerLimits(db),
     signupsOpen: (await read<unknown>(db, "signups_open", true)) !== false,
+    collabOpen: (await read<unknown>(db, "collab_open", true)) !== false,
     notice: (await read<string | null>(db, "notice", null)) || null,
   };
 }
@@ -59,7 +66,12 @@ export const getPublicSettings = async (db: Db) => {
  */
 export async function updateSettings(
   db: Db,
-  patch: { limits?: Record<string, unknown>; signupsOpen?: unknown; notice?: unknown },
+  patch: {
+    limits?: Record<string, unknown>;
+    signupsOpen?: unknown;
+    collabOpen?: unknown;
+    notice?: unknown;
+  },
 ): Promise<{ ok: true } | { ok: false; error: "invalid" }> {
   const limits: [string, LimitValue | null][] = [];
   for (const [k, v] of Object.entries(patch.limits ?? {})) {
@@ -68,6 +80,8 @@ export async function updateSettings(
     limits.push([k, parsed]);
   }
   if (patch.signupsOpen !== undefined && typeof patch.signupsOpen !== "boolean")
+    return { ok: false, error: "invalid" };
+  if (patch.collabOpen !== undefined && typeof patch.collabOpen !== "boolean")
     return { ok: false, error: "invalid" };
   const notice = patch.notice;
   if (
@@ -85,6 +99,7 @@ export async function updateSettings(
     await write(db, "limits", current);
   }
   if (patch.signupsOpen !== undefined) await write(db, "signups_open", patch.signupsOpen);
+  if (patch.collabOpen !== undefined) await write(db, "collab_open", patch.collabOpen);
   if (notice !== undefined) await write(db, "notice", (notice as string | null)?.trim() || null);
   forgetSharedLimits(db);
   return { ok: true };

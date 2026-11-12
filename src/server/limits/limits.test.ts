@@ -59,6 +59,9 @@ describe("resolving a limit", () => {
       "private_links",
       "invites_per_day",
       "github_publish",
+      "collab_people",
+      "collab_docs",
+      "collab_enabled",
       "share_changes_per_hour",
       "comments_per_hour",
       "github_publishes_per_hour",
@@ -220,5 +223,13 @@ describe("plans and server settings are read once a minute", () => {
       .values({ id: "a", email: "a@x.co", plan: "pro", createdAt: 1, updatedAt: 1 });
     expect((await getLimits(db, noEnv, "a", t0)).values.cloud_docs).toBe(50);
     expect((await getLimits(other, noEnv, "a", t0)).values.cloud_docs).toBe(5);
+  });
+});
+
+describe("live editing limits", () => {
+  it("are on for everyone with small caps, and can be changed by env, plan or account", () => {
+    expect(LIMITS.collab_enabled).toMatchObject({ type: "boolean", fallback: true });
+    expect(LIMITS.collab_people).toMatchObject({ type: "number", fallback: 3 });
+    expect(LIMITS.collab_docs).toMatchObject({ type: "number", fallback: 2 });
   });
 });

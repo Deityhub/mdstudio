@@ -45,7 +45,11 @@ const realtime = (env: Env) => {
     );
   return {
     durable_objects: {
-      bindings: [{ name: "REALTIME", class_name: "RealtimeHub", script_name: script }],
+      bindings: [
+        // live updates (infra/realtime) and the rooms of drafts edited together
+        { name: "REALTIME", class_name: "RealtimeHub", script_name: script },
+        { name: "COLLAB", class_name: "CollabRoom", script_name: script },
+      ],
     },
   };
 };

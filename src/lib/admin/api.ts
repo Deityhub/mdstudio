@@ -64,6 +64,7 @@ export type Plan = { name: string; label: string; limits: Record<string, LimitVa
 export type Settings = {
   limits: Record<string, LimitValue>;
   signupsOpen: boolean;
+  collabOpen: boolean;
   notice: string | null;
 };
 export type AuditEntry = {

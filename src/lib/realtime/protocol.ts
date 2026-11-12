@@ -15,21 +15,28 @@ export const CLOSE = {
   badMessage: 4003,
   /** The session this socket was opened with has run out: renew it, then reconnect. */
   expired: 4004,
+  /** The draft is no longer shared with this person (removed, stopped, or deleted). */
+  gone: 4005,
 } as const;
 
 /** An event larger than this is not pushed; a small `sync` hint is sent in its place. */
 export const MAX_EVENT_BYTES = 128 * 1024;
 
-export type Topic = { kind: "user" } | { kind: "share"; id: string };
+export type Topic =
+  { kind: "user" } | { kind: "share"; id: string } | { kind: "doc"; ownerId: string; id: string };
 
 /**
  * What a socket subscribes to, from its `topic` query parameter. A user's own topic is just
- * `user` (the server knows who is asking); a share's is `share:<id>`.
+ * `user` (the server knows who is asking); a share's is `share:<slug>`; a draft's room is
+ * `doc:<ownerId>:<draftId>`.
  */
 export function parseTopic(raw: string | null): Topic | null {
   if (raw === "user") return { kind: "user" };
   const id = raw?.match(/^share:([A-Za-z0-9_-]{1,64})$/)?.[1];
-  return id ? { kind: "share", id } : null;
+  if (id) return { kind: "share", id };
+  // a draft's room: its owner, then its id (both as the browser knows them)
+  const doc = raw?.match(/^doc:([A-Za-z0-9_-]{1,64}):([A-Za-z0-9_-]{1,64})$/);
+  return doc ? { kind: "doc", ownerId: doc[1]!, id: doc[2]! } : null;
 }
 
 /** A tab's random name, so the server can leave it out of the events its own changes cause. */

@@ -7,6 +7,13 @@ describe("parseTopic", () => {
     expect(parseTopic("share:3f2a-bc_9")).toEqual({ kind: "share", id: "3f2a-bc_9" });
   });
 
+  it("knows a draft's room by its owner and its id", () => {
+    expect(parseTopic("doc:owner-1:d_9")).toEqual({ kind: "doc", ownerId: "owner-1", id: "d_9" });
+    for (const bad of ["doc:", "doc:a", "doc:a:", "doc::b", "doc:a:b:c", "doc:a b:c", "doc:a:../x"])
+      expect(parseTopic(bad), bad).toBeNull();
+    expect(parseTopic(`doc:${"a".repeat(65)}:x`)).toBeNull();
+  });
+
   it("refuses anything else, including another user's topic written out", () => {
     for (const bad of [null, "", "user:abc", "users", "share:", "share:a b", "share:../x", "doc:1"])
       expect(parseTopic(bad), String(bad)).toBeNull();

@@ -1,6 +1,7 @@
 import { withVerifiedUser } from "../auth/guard";
 import { sameOrigin } from "../auth/http";
 import { limitsFor } from "../limits/request";
+import { endCollab } from "../collab/routes";
 import { publishDocs } from "../realtime/publish";
 import { revisionConfig } from "../revisions/routes";
 import { type ServerDoc, parsePush, pullDocs, pushDocs } from "./service";
@@ -38,6 +39,8 @@ export const pushHandler = (request: Request) =>
     );
     // the account's other devices hear about it now, instead of at their next poll
     await publishDocs(request, user.id, changed);
+    // a live draft that was deleted: its room, and everyone invited, end with it
+    for (const doc of changed) if (doc.deleted && doc.collab) await endCollab(request, db, doc.id);
     return json({ results });
   });
 

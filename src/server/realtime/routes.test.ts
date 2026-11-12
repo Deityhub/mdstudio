@@ -7,6 +7,7 @@ import { signup } from "../auth/service";
 import type { Db } from "../db";
 import { addPerson } from "../share/people";
 import { DEFAULT_SHARE, publishShare, updateShare } from "../share/service";
+import { addEditor, enableCollab } from "../collab/service";
 import { pushDocs } from "../sync/service";
 import { authorizeUpgrade } from "./routes";
 
@@ -183,5 +184,92 @@ describe("share topics follow who may read the link", () => {
       ok: false,
       status: 404,
     });
+  });
+});
+
+describe("a draft's room", () => {
+  async function room() {
+    const owner = await account("owner");
+    await pushDocs(
+      db,
+      owner.user.id,
+      [
+        {
+          id: `${owner.user.id}:d1`,
+          baseVersion: 0,
+          title: "Notes",
+          content: "# Notes",
+          createdAt: now,
+          editedAt: now,
+        },
+      ],
+      now,
+    );
+    const on = await enableCollab(db, owner.user.id, "d1", { docs: 2 }, now);
+    if (!on.ok) throw new Error(on.error);
+    return owner;
+  }
+  const doc = (owner: { user: { id: string } }) => `topic=doc:${owner.user.id}:d1&client=${client}`;
+  const ask2 = (request: Request, over: Record<string, unknown> = {}) =>
+    authorizeUpgrade(request, { db, mailEnabled: false, now, ...over });
+
+  it("opens for the owner, and for a person they invited, as a connection that may write", async () => {
+    const owner = await room();
+    const bea = await account("bea");
+    const added = await addEditor(db, owner.user, "d1", "bea@x.co", 3, now);
+    if (!added.ok) throw new Error(added.error);
+    const a = await ask2(upgrade(owner.token, doc(owner)));
+    const b = await ask2(upgrade(bea.token, doc(owner)));
+    expect(a).toMatchObject({
+      ok: true,
+      topic: `doc:${owner.user.id}:d1`,
+      doc: { isOwner: true, canWrite: true },
+    });
+    expect(b).toMatchObject({
+      ok: true,
+      topic: `doc:${owner.user.id}:d1`,
+      doc: { isOwner: false, name: "bea" },
+    });
+  });
+
+  it("is not found for anyone else, for an unconfirmed invitee, and when the draft is not live", async () => {
+    const owner = await room();
+    const cy = await account("cy");
+    expect(await ask2(upgrade(cy.token, doc(owner)))).toMatchObject({ ok: false, status: 404 });
+    expect(
+      await ask2(upgrade(owner.token, `topic=doc:${owner.user.id}:nope&client=${client}`)),
+    ).toMatchObject({ ok: false, status: 404 });
+    // the owner's account cannot be used to ask for someone else's draft by writing their id
+    expect(
+      await ask2(upgrade(cy.token, `topic=doc:${cy.user.id}:d1&client=${client}`)),
+    ).toMatchObject({ ok: false, status: 404 });
+  });
+
+  it("gives a short life, so a removal, a suspension or the kill switch takes effect within minutes", async () => {
+    const owner = await room();
+    const result = await ask2(upgrade(owner.token, doc(owner)));
+    if (!result.ok) throw new Error(result.error);
+    expect(result.expiresAt).toBe(now + 15 * 60_000);
+  });
+
+  it("is closed by the kill switch, and by the owner's limits", async () => {
+    const owner = await room();
+    expect(await ask2(upgrade(owner.token, doc(owner)), { collabOpen: false })).toMatchObject({
+      ok: false,
+      status: 503,
+      error: "collab_closed",
+    });
+    const off = async () => ({ collab_enabled: false, collab_people: 3 });
+    expect(await ask2(upgrade(owner.token, doc(owner)), { ownerLimits: off })).toMatchObject({
+      ok: false,
+      status: 404,
+    });
+  });
+
+  it("says how many people the room takes, from the owner's limit", async () => {
+    const owner = await room();
+    const limits = async () => ({ collab_enabled: true, collab_people: 5 });
+    const result = await ask2(upgrade(owner.token, doc(owner)), { ownerLimits: limits });
+    expect(result).toMatchObject({ ok: true, doc: { people: 5 } });
   });
 });

@@ -26,6 +26,8 @@ const data = () => mkdtempSync(join(tmpdir(), "mdstudio-e2e-"));
 // The main server's folder is known to the specs, so one can make an account an admin directly in
 // its database (the first account made is the admin, which a spec running alongside others cannot rely on).
 env["E2E_DATA_DIR"] ??= data();
+// and the mail server's, for the specs that need an admin there (a server-wide switch must not be thrown while other specs run)
+env["E2E_MAIL_DATA_DIR"] ??= data();
 
 export default defineConfig({
   testDir: "e2e",
@@ -67,7 +69,7 @@ export default defineConfig({
       env: {
         PORT: String(MAIL_PORT),
         NODE_ENV: "production",
-        DATA_DIR: data(),
+        DATA_DIR: env["E2E_MAIL_DATA_DIR"],
         MAIL_FROM: "mdstudio <noreply@example.com>",
         MAIL_OUTBOX_DIR: env["E2E_MAIL_DIR"],
         TRUST_PROXY: "1",

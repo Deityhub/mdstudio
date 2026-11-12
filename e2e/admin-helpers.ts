@@ -18,8 +18,8 @@ export async function signUp(request: APIRequestContext, address = email()) {
  * first account made on a server is its admin, so a spec running next to others (or first) cannot
  * count on a new account being an admin or a plain user: it sets the role it needs.
  */
-function setRole(address: string, role: "admin" | "user") {
-  const db = new Database(join(process.env["E2E_DATA_DIR"]!, "studio.db"));
+function setRole(address: string, role: "admin" | "user", dir = process.env["E2E_DATA_DIR"]!) {
+  const db = new Database(join(dir, "studio.db"));
   try {
     db.prepare("UPDATE users SET role = ? WHERE email = ?").run(role, address);
   } finally {
@@ -27,5 +27,8 @@ function setRole(address: string, role: "admin" | "user") {
   }
 }
 
-export const makeAdmin = (address: string) => setRole(address, "admin");
+export const makeAdmin = (address: string, dir?: string) => setRole(address, "admin", dir);
+/** The same on the server that sends mail. */
+export const makeMailAdmin = (address: string) =>
+  setRole(address, "admin", process.env["E2E_MAIL_DATA_DIR"]!);
 export const makeUser = (address: string) => setRole(address, "user");

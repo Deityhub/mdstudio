@@ -25,7 +25,7 @@ Data lives in the `mdstudio-data` volume mounted at `/data`. `GET /api/health` i
 
 ## Real-time updates
 
-Changes to cloud drafts reach your other devices as they happen, over a WebSocket on the same port; there is nothing to configure. Behind a reverse proxy it must pass WebSocket upgrades: Caddy does by default, nginx needs `proxy_set_header Upgrade $http_upgrade;` and `proxy_set_header Connection "upgrade";` in the location that serves the app. Without upgrades the app falls back to checking every minute.
+Changes to cloud drafts reach your other devices as they happen, over a WebSocket on the same port; there is nothing to configure. Behind a reverse proxy it must pass WebSocket upgrades: Caddy does by default, nginx needs `proxy_set_header Upgrade $http_upgrade;` and `proxy_set_header Connection "upgrade";` in the location that serves the app. Without upgrades the app falls back to checking every minute. Live editing (several people in one draft) runs in the same process and keeps its state in the database (tables `collab_snapshots` and `collab_updates`); there is nothing to configure, and `COLLAB_ENABLED=false` turns it off. It needs the same proxy upgrades, since there is no polling fallback for a shared draft.
 
 ## GitHub sign-in (optional)
 

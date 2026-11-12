@@ -13,6 +13,7 @@ import {
   tooManyResponse as tooMany,
 } from "../auth/http";
 import { hit } from "../auth/limits";
+import { refreshCollabText } from "../collab/routes";
 import { limitsFor } from "../limits/request";
 import { redirectUri } from "../auth/routes";
 import { userForToken } from "../auth/service";
@@ -184,6 +185,8 @@ export const publishHandler = (request: Request) =>
     // publishing is limited per account, so a script cannot churn commits
     const t = await hit(db, `ghpublish:${user.id}`, limits.github_publishes_per_hour, HOUR);
     if (!t.allowed) return tooMany(t.retryAfter);
+    // a draft edited live is published as its room has it now, not as the last saved copy
+    if (typeof body["id"] === "string") await refreshCollabText(request, db, user.id, body["id"]);
     const r =
       body["target"] === "file"
         ? await publishFile(db, cfg.key, cfg.urls, user.id, body as never)

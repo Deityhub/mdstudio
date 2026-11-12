@@ -39,6 +39,12 @@ export default defineConfig(({ command }) => ({
               ),
             },
             {
+              find: "@/server/node-collab",
+              replacement: fileURLToPath(
+                new URL("./src/server/node-collab.stub.ts", import.meta.url),
+              ),
+            },
+            {
               find: "@/server/node-driver",
               replacement: fileURLToPath(
                 new URL("./src/server/node-driver.stub.ts", import.meta.url),
