@@ -170,7 +170,7 @@ describe("a room in a Durable Object", () => {
     const logic = await w.make();
     await logic.fetch(post("/seed", { text: "# Notes" }));
     const a = await open(logic, w);
-    expect(a.socket.sent[0]).toBe('{"t":"ready"}');
+    expect(a.socket.sent[0]).toMatch(/^\{"t":"ready","epoch":"[0-9a-f-]{36}"\}$/);
     await a.hello();
     expect(a.text.toString()).toBe("# Notes");
   });

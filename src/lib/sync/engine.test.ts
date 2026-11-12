@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createNodeDb } from "../../../infra/db/node";
 import { users } from "../../../infra/db/schema";
 import type { Db } from "@/server/db";
+import { applyCollabText, enableCollab, disableCollab } from "@/server/collab/service";
+import { DEFAULT_REVISIONS } from "@/server/revisions/service";
 import { pullDocs, pushDocs } from "@/server/sync/service";
 import { createDocumentStore, type KeyValueStore, type MdDocument } from "../storage/documentStore";
 import { checkSignOut, leaveAccount, linkDrafts, unlinkDraft } from "./cloud";
@@ -37,6 +39,7 @@ function device(userId = U, api?: Partial<SyncApi>) {
   };
   const busy = new Set<string>();
   const kept: MdDocument[] = [];
+  const left: string[] = [];
   const pulls: number[] = [];
   const deps = {
     userId,
@@ -49,12 +52,13 @@ function device(userId = U, api?: Partial<SyncApi>) {
     },
     isBusy: (id: string) => busy.has(id),
     snapshot: async (d: MdDocument) => void kept.push(d),
+    onLeaveLive: async (id: string) => void left.push(id),
   };
   const run = (opts?: { pull?: boolean }) => syncOnce(deps, opts);
   /** What the real-time channel does when another device's change arrives. */
   const pushed = (docs: ServerDoc[]) => applyPushed(deps, docs);
   const link = (...ids: string[]) => linkDrafts(meta, ids);
-  return { kv, store, meta, run, pushed, busy, kept, link, pulls };
+  return { kv, store, meta, run, pushed, busy, kept, left, link, pulls };
 }
 type Device = ReturnType<typeof device>;
 
@@ -490,5 +494,97 @@ describe("a round that does not pull (the real-time channel is up)", () => {
     a.pulls.length = 0;
     await a.run();
     expect(a.pulls.length).toBeGreaterThan(0);
+  });
+});
+
+describe("a draft edited live with other people", () => {
+  /** The owner switches the shared draft to live editing, and the room later writes a new text copy. */
+  const goLive = async () => enableCollab(db, U, "d1", { docs: 2 }, ++clock);
+  const roomWrites = (text: string) =>
+    applyCollabText(db, remoteId(U, "d1"), text, ++clock, DEFAULT_REVISIONS);
+
+  it("is marked live on a device that pulls, and its text is left to the room from then on", async () => {
+    const { a, b } = await shared();
+    await goLive();
+    await b.run();
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+    // the room's later copies are not applied to this device's text, and a local edit is not pushed
+    await roomWrites("# From the room");
+    await edit(b, "d1", "# Typed here", 500);
+    await b.run();
+    expect((await b.store.get("d1"))?.content).toBe("# Typed here");
+    expect((await cloud())[0]?.content).toBe("# From the room");
+    expect((await b.meta.get("d1"))?.version).toBe((await cloud())[0]?.version);
+    expect(b.pulls.length).toBeGreaterThan(0);
+  });
+
+  it("keeps unsynced text of this device in history when the draft goes live, and shows the cloud copy", async () => {
+    const { a, b } = await shared();
+    await edit(b, "d1", "# Edited offline", 400); // not pushed yet
+    await goLive();
+    await b.run();
+    expect(b.kept.map((d) => d.content)).toEqual(["# Edited offline"]);
+    expect((await b.store.get("d1"))?.content).toBe("# Hello");
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+    expect(a).toBeDefined();
+  });
+
+  it("is refused a push of its text, learns it is live, and loses nothing", async () => {
+    const { a, b } = await shared();
+    await goLive();
+    // b has not heard yet, and pushes an edit: the cloud says it is live instead of taking it
+    await edit(b, "d1", "# Stale device", 900);
+    const report = await b.run({ pull: false });
+    expect(report.rejected).toBe(0);
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+    expect(b.kept.map((d) => d.content)).toEqual(["# Stale device"]);
+    expect((await cloud())[0]?.content).toBe("# Hello");
+    void a;
+  });
+
+  it("is applied from the real-time channel the same way", async () => {
+    const { b } = await shared();
+    const live = await goLive();
+    if (!live.ok) throw new Error("not live");
+    await b.pushed([live.doc]);
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+  });
+
+  it("returns to ordinary sync when live editing stops, taking the room's last text", async () => {
+    const { b } = await shared();
+    await goLive();
+    await b.run();
+    await roomWrites("# Final text");
+    const stopped = await disableCollab(db, U, "d1", ++clock);
+    expect(stopped?.collab).toBe(false);
+    await edit(b, "d1", "# Mirror that lagged", 700);
+    await b.run();
+    expect((await b.store.get("d1"))?.content).toBe("# Final text");
+    expect((await b.meta.get("d1"))?.collab).toBeUndefined();
+    expect(b.left).toEqual(["d1"]);
+    // and from now on an edit goes up as usual
+    await edit(b, "d1", "# Normal again", 800);
+    await b.run();
+    expect((await cloud())[0]?.content).toBe("# Normal again");
+  });
+
+  it("is not counted as unsynced when signing out", async () => {
+    const { b } = await shared();
+    await goLive();
+    await b.run();
+    await edit(b, "d1", "# More typed", 600);
+    const check = await checkSignOut(b.store, b.meta, fieldsHash);
+    expect(check.unsynced).toEqual([]);
+  });
+
+  it("is told to the engine as gone when the owner deletes it elsewhere", async () => {
+    const { a, b } = await shared();
+    await goLive();
+    await a.run();
+    await b.run();
+    await a.store.remove("d1");
+    await a.run();
+    await b.run();
+    expect(b.left).toContain("d1");
   });
 });

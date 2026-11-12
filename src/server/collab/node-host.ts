@@ -226,7 +226,7 @@ export function nodeCollab(db: Db, opts: { fresh?: boolean } = {}): NodeCollabHo
             Math.max(0, connection.expiresAt - Date.now()),
           ),
         });
-        peer.send(JSON.stringify({ t: "ready" }));
+        peer.send(JSON.stringify({ t: "ready", epoch: live.room.epoch() }));
         deliver(live, joined.effects);
       }
 

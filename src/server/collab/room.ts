@@ -273,6 +273,8 @@ export function createRoom(opts: {
 
     /** Whether the room has ever been set up (even from an empty draft). */
     exists: () => existing,
+    /** Names this start of the room; a device that kept state of an earlier one must not merge it. */
+    epoch: () => (doc.getMap("meta").get("epoch") as string | undefined) ?? null,
     text: () => text().toString(),
     peerCount: () => peers.size,
     dirty: () => pending.length > 0,
@@ -288,7 +290,8 @@ export function createRoom(opts: {
       if (existing || text().length > 0) return false;
       doc.transact(() => {
         if (initial) text().insert(0, initial);
-        doc.getMap("meta").set("seeded", 1); // so an empty draft still leaves something stored
+        // so an empty draft still leaves something stored; and each start of a room has its own name
+        doc.getMap("meta").set("epoch", crypto.randomUUID());
       }, "server");
       await flush();
       return true;

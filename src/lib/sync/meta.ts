@@ -13,6 +13,11 @@ export type DocMeta = {
   deleted?: boolean;
   /** Asked to leave the cloud: the next round deletes the cloud copy and keeps the local draft. */
   unlink?: boolean;
+  /**
+   * The draft is being edited live with other people: its text is the room's. This device neither
+   * pushes it nor takes the cloud's copy of it; `hash` stays what it was when the draft went live.
+   */
+  collab?: boolean;
 };
 
 export function createSyncMeta(kv: KeyValueStore, userId: string) {

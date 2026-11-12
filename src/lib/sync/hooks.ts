@@ -3,6 +3,7 @@ import { accountStore } from "@/lib/account/store";
 import { signOut } from "@/lib/account/client";
 import { documentStore, indexedDbStore } from "@/lib/storage/documentStore";
 import { historyStore } from "@/lib/storage/history";
+import { forgetKept } from "@/lib/collab/kept";
 import { AuthExpiredError, UnverifiedError, httpApi } from "./api";
 import { type SignOutCheck, checkSignOut, leaveAccount, linkDrafts, unlinkDraft } from "./cloud";
 import { createRealtime } from "../realtime/client";
@@ -24,13 +25,21 @@ const depsFor = (userId: string, isBusy?: (id: string) => boolean) => ({
   // The text a newer edit replaces stays reachable in the draft's version history.
   snapshot: (doc: { id: string; title: string; content: string }) =>
     historyStore.save(doc, Date.now(), "replaced"),
-  onGone: (id: string) => historyStore.clear(id),
+  onGone: (id: string) =>
+    Promise.all([historyStore.clear(id), forgetKept(indexedDbStore, userId, id)]),
+  // what the browser kept of a live draft's room is no use once the draft is not live
+  onLeaveLive: (id: string) => forgetKept(indexedDbStore, userId, id),
 });
 
 // ---- Which drafts are in the cloud ---------------------------------------------------------
 
-type CloudState = { linked: ReadonlySet<string>; limit: number };
-let cloudState: CloudState = { linked: new Set(), limit: DEFAULT_CLOUD_LIMIT };
+type CloudState = {
+  linked: ReadonlySet<string>;
+  /** The linked drafts being edited live with other people (their text is the room's). */
+  live: ReadonlySet<string>;
+  limit: number;
+};
+let cloudState: CloudState = { linked: new Set(), live: new Set(), limit: DEFAULT_CLOUD_LIMIT };
 const cloudListeners = new Set<() => void>();
 const setCloud = (next: Partial<CloudState>) => {
   cloudState = { ...cloudState, ...next };
@@ -49,8 +58,11 @@ export const useCloud = () =>
   );
 
 async function refreshCloud(userId: string | undefined) {
-  const linked = userId ? (await metaFor(userId).linked()).map((m) => m.id) : [];
-  setCloud({ linked: new Set(linked) });
+  const metas = userId ? await metaFor(userId).linked() : [];
+  setCloud({
+    linked: new Set(metas.map((m) => m.id)),
+    live: new Set(metas.filter((m) => m.collab).map((m) => m.id)),
+  });
 }
 
 let runner: ReturnType<typeof createRunner> | null = null;
@@ -101,11 +113,15 @@ export async function prepareSignOut(userId: string) {
 export async function completeSignOut(userId: string, keep: Set<string> | "all") {
   const meta = metaFor(userId);
   const ids = keep === "all" ? new Set((await meta.linked()).map((m) => m.id)) : keep;
-  await leaveAccount(documentStore, meta, { keep: ids, onGone: (id) => historyStore.clear(id) });
+  await leaveAccount(documentStore, meta, {
+    keep: ids,
+    onGone: (id) => Promise.all([historyStore.clear(id), forgetKept(indexedDbStore, userId, id)]),
+    onLeaveLive: (id) => forgetKept(indexedDbStore, userId, id),
+  });
   await signOut();
   runner?.stop();
   accountStore.set((a) => ({ ...a, user: null }));
-  setCloud({ linked: new Set() });
+  setCloud({ linked: new Set(), live: new Set() });
 }
 
 // ---- The background round ------------------------------------------------------------------
