@@ -2,7 +2,7 @@
 // reconnects by itself with a growing wait. It does not know what the events mean. While it is not
 // connected the owner keeps polling, so a broken socket costs speed, never correctness.
 import { CLOSE, type RealtimeEvent, parseEvent } from "./protocol";
-import { tabId } from "./tab";
+import { getTabId } from "./tab";
 
 export type SocketLike = {
   send(data: string): void;
@@ -84,7 +84,7 @@ export function createRealtime(opts: Options) {
   function connect() {
     retry = undefined;
     if (!running || socket) return;
-    const s = open(socketUrl(opts.topic, tabId));
+    const s = open(socketUrl(opts.topic, getTabId()));
     socket = s;
     s.onopen = () => {
       ping = setInterval(() => {

@@ -1,4 +1,4 @@
-import { tabId } from "../realtime/tab";
+import { getTabId } from "../realtime/tab";
 import type { SyncApi } from "./engine";
 import type { PullPage, PushResult } from "./protocol";
 
@@ -44,7 +44,7 @@ export const httpApi: SyncApi = {
     const { results } = await call<{ results: PushResult[] }>("/api/sync/push", {
       method: "POST",
       // the server leaves this tab out of the real-time events its own push causes
-      headers: { "content-type": "application/json", "x-client-id": tabId },
+      headers: { "content-type": "application/json", "x-client-id": getTabId() },
       body: JSON.stringify({ docs }),
     });
     return results;

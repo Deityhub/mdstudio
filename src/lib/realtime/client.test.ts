@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLOSE } from "./protocol";
-import { tabId } from "./tab";
+import { getTabId } from "./tab";
 import { createRealtime, type SocketLike } from "./client";
 
 beforeEach(() => {
@@ -66,7 +66,7 @@ describe("realtime client", () => {
     rt.start();
     const url = new URL(last().url);
     expect(url.pathname).toBe("/api/realtime");
-    expect(Object.fromEntries(url.searchParams)).toEqual({ topic: "user", client: tabId });
+    expect(Object.fromEntries(url.searchParams)).toEqual({ topic: "user", client: getTabId() });
     expect(url.protocol).toMatch(/^wss?:$/);
     last().open();
     expect(states).toEqual([]); // open is not enough: the server may still refuse the topic
