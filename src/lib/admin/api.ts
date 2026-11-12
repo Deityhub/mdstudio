@@ -17,6 +17,9 @@ export type Overview = {
   unverified: number;
   newThisWeek: number;
   drafts: number;
+  /** Drafts being edited together, and the people invited to them. */
+  liveDrafts: number;
+  collaborators: number;
   shares: number;
   images: number;
   imageBytes: number;

@@ -22,6 +22,8 @@ import {
   Trash2,
   X,
   Share2,
+  Users,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +52,16 @@ import {
 import { cn } from "@/lib/utils";
 
 const DRAG_TYPE = "application/x-mdstudio-draft";
+
+/** A draft someone else owns that this account was invited to edit. */
+export type SharedRow = {
+  ownerId: string;
+  id: string;
+  title: string;
+  ownerName: string | null;
+  /** Its copy on this device, once opened. */
+  localId?: string;
+};
 
 /** A text field that lists the existing folders under it while focused; clicking one fills it in. */
 function FolderCombobox({
@@ -158,6 +170,7 @@ export function Library({
   onDelete,
   onMove,
   cloud,
+  sharedWithMe,
 }: {
   /** Every draft, with the open one as it is on screen right now. */
   docs: MdDocument[];
@@ -190,8 +203,18 @@ export function Library({
     sharedPrivately?: ReadonlySet<string>;
     /** Present when this server hosts images: moves a draft's local images to hosting. */
     onHostImages?: (d: MdDocument) => void;
+    /** Opens the dialog for editing a cloud draft together; `live` holds those already shared that way. */
+    onCollab?: (d: MdDocument) => void;
+    live?: ReadonlySet<string>;
+  };
+  /** Drafts others invited this account to edit; `docs` does not include these. */
+  sharedWithMe?: {
+    rows: SharedRow[];
+    onOpen: (row: SharedRow) => void;
+    onLeave: (row: SharedRow) => void;
   };
 }) {
+  const [leaving, setLeaving] = useState<SharedRow | null>(null);
   const [query, setQuery] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   // Folders start collapsed (on every load); the ones the writer opens, or just put something in, are listed here.
@@ -327,6 +350,12 @@ export function Library({
                   aria-label="Stored in your cloud"
                 />
               )}
+              {cloud?.live?.has(d.id) && (
+                <Users
+                  className="size-3 shrink-0 text-primary"
+                  aria-label="Edited together with other people"
+                />
+              )}
               {cloud?.shared?.has(d.id) &&
                 (cloud.sharedPrivately?.has(d.id) ? (
                   <Lock
@@ -395,6 +424,11 @@ export function Library({
               {cloud?.onShare && cloud.ids.has(d.id) && (
                 <DropdownMenuItem onSelect={() => cloud.onShare?.(d)}>
                   <Share2 className="size-3.5" /> Share…
+                </DropdownMenuItem>
+              )}
+              {cloud?.onCollab && cloud.ids.has(d.id) && (
+                <DropdownMenuItem onSelect={() => cloud.onCollab?.(d)}>
+                  <Users className="size-3.5" /> Edit together…
                 </DropdownMenuItem>
               )}
               {cloud?.onPublish && cloud.ids.has(d.id) && (
@@ -715,9 +749,82 @@ export function Library({
           </p>
         )}
       </nav>
+      {sharedWithMe && sharedWithMe.rows.length > 0 && (
+        <section
+          aria-label="Shared with you"
+          className="max-h-48 shrink-0 overflow-y-auto border-t border-sidebar-border px-2 py-2"
+        >
+          <h2 className="px-2 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Shared with you
+          </h2>
+          {sharedWithMe.rows.map((r) => (
+            <div
+              key={`${r.ownerId}:${r.id}`}
+              className={cn(
+                "group flex items-center rounded-md",
+                r.localId && r.localId === activeId
+                  ? "bg-sidebar-accent"
+                  : "hover:bg-sidebar-accent/60",
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  sharedWithMe.onOpen(r);
+                  onOpen();
+                }}
+                className="min-w-0 flex-1 px-2 py-2 text-left"
+              >
+                <div className="flex items-center gap-1 text-sm font-medium">
+                  <Users className="size-3 shrink-0 text-primary" aria-hidden />
+                  <span className="truncate">{r.title}</span>
+                </div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {r.ownerName ? `From ${r.ownerName}` : "Shared with you"}
+                </div>
+              </button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mr-1 size-10 shrink-0"
+                aria-label={`Leave ${r.title}`}
+                onClick={() => setLeaving(r)}
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </div>
+          ))}
+        </section>
+      )}
       <p className="border-t border-sidebar-border px-3 py-2 text-xs text-muted-foreground">
         Saved in this browser
       </p>
+
+      <Dialog open={leaving !== null} onOpenChange={(o) => !o && setLeaving(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave “{leaving?.title}”?</DialogTitle>
+            <DialogDescription>
+              You will stop editing it and it leaves this list. The copy on this device is removed.
+              {leaving?.ownerName ? ` ${leaving.ownerName} can invite you again.` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLeaving(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (leaving) sharedWithMe?.onLeave(leaving);
+                setLeaving(null);
+              }}
+            >
+              Leave draft
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={folderToDelete !== null} onOpenChange={(o) => !o && setFolderToDelete(null)}>
         <DialogContent>

@@ -5,6 +5,7 @@ import {
   aiIntegrations,
   assets,
   auditLog,
+  documentEditors,
   documents,
   githubConnections,
   sessions,
@@ -98,6 +99,13 @@ export async function overview(db: Db, now = Date.now()) {
         .from(shareLinks)
         .where(sql`${shareLinks.expiresAt} > ${now}`),
     ),
+    liveDrafts: await one(
+      db
+        .select({ n: count })
+        .from(documents)
+        .where(and(eq(documents.collab, 1), isNull(documents.deletedAt))),
+    ),
+    collaborators: await one(db.select({ n: count }).from(documentEditors)),
     images: await one(db.select({ n: count }).from(assets)),
     imageBytes: bytes?.n ?? 0,
     integrations: await one(db.select({ n: count }).from(aiIntegrations)),

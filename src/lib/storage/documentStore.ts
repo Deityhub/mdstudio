@@ -12,6 +12,8 @@ export type MdDocument = {
   images: Record<string, string>;
   createdAt: number;
   updatedAt: number;
+  /** A draft someone else owns and invited this account to edit: where it lives (see lib/collab/shared.ts). */
+  shared?: { ownerId: string; id: string; userId: string; ownerName: string | null };
 };
 
 /** Minimal key-value backend. IndexedDB in the browser, a Map in tests. */

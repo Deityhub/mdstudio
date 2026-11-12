@@ -4,6 +4,7 @@ import { signOut } from "@/lib/account/client";
 import { documentStore, indexedDbStore } from "@/lib/storage/documentStore";
 import { historyStore } from "@/lib/storage/history";
 import { forgetKept } from "@/lib/collab/kept";
+import { removeSharedFor } from "@/lib/collab/shared";
 import { AuthExpiredError, UnverifiedError, httpApi } from "./api";
 import { type SignOutCheck, checkSignOut, leaveAccount, linkDrafts, unlinkDraft } from "./cloud";
 import { createRealtime } from "../realtime/client";
@@ -118,6 +119,8 @@ export async function completeSignOut(userId: string, keep: Set<string> | "all")
     onGone: (id) => Promise.all([historyStore.clear(id), forgetKept(indexedDbStore, userId, id)]),
     onLeaveLive: (id) => forgetKept(indexedDbStore, userId, id),
   });
+  // drafts others shared with this account leave the device with it
+  await removeSharedFor(documentStore, indexedDbStore, userId, (id) => historyStore.clear(id));
   await signOut();
   runner?.stop();
   accountStore.set((a) => ({ ...a, user: null }));

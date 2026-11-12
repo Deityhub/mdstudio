@@ -16,6 +16,7 @@ export function OverviewTab() {
     ["Suspended", o.suspended],
     ["Email not confirmed", o.unverified],
     ["Cloud drafts", o.drafts],
+    ["Edited together", o.liveDrafts, `${o.collaborators} people invited`],
     ["Live share links", o.shares],
     ["Hosted images", o.images, bytes(o.imageBytes)],
     ["AI integrations", o.integrations],
