@@ -17,8 +17,13 @@ import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { ReviewComments } from "@/components/studio/ReviewComments";
 import { PUBLISH_AFTER_CONNECT, PublishDialog } from "@/components/studio/PublishDialog";
+import { CollabDialog } from "@/components/studio/CollabDialog";
 import { CollabStatus } from "@/components/studio/CollabStatus";
+import type { SharedRow } from "@/components/studio/Library";
+import { CollabError, collabApi } from "@/lib/collab/api";
 import { useCollabSession, useSessionState } from "@/lib/collab/hooks";
+import { detachShared, openShared, removeShared } from "@/lib/collab/shared";
+import { useSharedWithMe } from "@/lib/collab/sharedHooks";
 import { ShareDialog } from "@/components/studio/ShareDialog";
 import { clearShares, useShares } from "@/lib/share/hooks";
 import {
@@ -31,7 +36,7 @@ import {
   useSync,
 } from "@/lib/sync/hooks";
 import { type CloudRevision, fetchCloudRevision, listCloudRevisions } from "@/lib/sync/revisions";
-import { cloudOwners, isVisible } from "@/lib/sync/meta";
+import { cloudOwners, isVisibleDoc } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -360,6 +365,8 @@ export function Studio({ docId }: { docId: string }) {
   const cloudOn = cloudReady(accountState);
   const visibleTo = useRef<string | undefined>(undefined);
   visibleTo.current = account?.id;
+  const docIdRef = useRef(docId);
+  docIdRef.current = docId;
   const refreshList = useCallback(
     () =>
       Promise.all([
@@ -367,7 +374,7 @@ export function Studio({ docId }: { docId: string }) {
         documentStore.folders.list(),
         cloudOwners(indexedDbStore),
       ]).then(([d, f, owners]) => {
-        setDocs(d.filter((x) => isVisible(owners, x.id, visibleTo.current)));
+        setDocs(d.filter((x) => isVisibleDoc(owners, x, visibleTo.current)));
         setFolderNames(f);
       }),
     [],
@@ -394,7 +401,7 @@ export function Studio({ docId }: { docId: string }) {
         cloudOwners(indexedDbStore),
         documentStore.hadDraft(),
       ]).then(([all, owners, had]) => {
-        const own = all.find((x) => isVisible(owners, x.id, account?.id));
+        const own = all.find((x) => isVisibleDoc(owners, x, account?.id));
         if (own) {
           example.current = null;
           go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
@@ -410,7 +417,7 @@ export function Studio({ docId }: { docId: string }) {
     }
     example.current = null;
     Promise.all([documentStore.get(docId), cloudOwners(indexedDbStore)]).then(([d, owners]) => {
-      if (d && isVisible(owners, d.id, account?.id)) setDoc(d);
+      if (d && isVisibleDoc(owners, d, account?.id)) setDoc(d);
       else {
         setDoc(null);
         setMissing(true);
@@ -425,7 +432,7 @@ export function Studio({ docId }: { docId: string }) {
     if (docId !== NEW_DOC_ID || !docs[0] || !doc || example.current?.doc !== doc) return;
     let live = true;
     Promise.all([documentStore.list(), cloudOwners(indexedDbStore)]).then(([all, owners]) => {
-      const own = all.find((x) => isVisible(owners, x.id, visibleTo.current));
+      const own = all.find((x) => isVisibleDoc(owners, x, visibleTo.current));
       if (!live || !own || example.current?.doc !== doc) return;
       example.current = null;
       go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
@@ -536,24 +543,37 @@ export function Studio({ docId }: { docId: string }) {
   const cloudDrafts = useCloud();
   // A draft shared for editing is live: its text is a shared document the room holds, and this
   // browser edits it through a session. Until the text has arrived the draft is shown, not editable.
+  // (a draft someone else owns is live as long as this account is invited to it)
   const liveTarget =
-    cloudOn && account && doc && cloudDrafts.live.has(doc.id)
-      ? { ownerId: account.id, draftId: doc.id }
+    cloudOn && account && doc
+      ? doc.shared
+        ? doc.shared.userId === account.id
+          ? { ownerId: doc.shared.ownerId, draftId: doc.shared.id }
+          : null
+        : cloudDrafts.live.has(doc.id)
+          ? { ownerId: account.id, draftId: doc.id }
+          : null
       : null;
   const openSession = useCollabSession(liveTarget, (text) => {
     // this browser kept state of an earlier room: its text is not lost, it is in History
     if (doc) void historyStore.save({ ...doc, content: text }, Date.now(), "replaced");
   });
   // the session of the draft on screen, not of the one just left (it closes a moment later)
-  const collab = openSession && openSession.draftId === doc?.id ? openSession : null;
+  const collab =
+    openSession &&
+    openSession.draftId === liveTarget?.draftId &&
+    openSession.ownerId === liveTarget.ownerId
+      ? openSession
+      : null;
   const collabState = useSessionState(collab);
   const collabReady = !!collab && collabState.ready;
   // The live editor opens once the draft's saved copy shows the room's text (see below).
   const [mirrored, setMirrored] = useState(false);
   const waiting = !!liveTarget && !(collabReady && mirrored);
+  const mirrorId = doc?.id;
   useEffect(() => {
-    if (!collab || !collabReady) return;
-    const id = collab.draftId;
+    if (!collab || !collabReady || !mirrorId) return;
+    const id = mirrorId;
     const mirror = (text: string) =>
       setDoc((d) => {
         if (!d || d.id !== id || d.content === text) return d;
@@ -569,11 +589,95 @@ export function Studio({ docId }: { docId: string }) {
       stop();
       setMirrored(false);
     };
-  }, [collab, collabReady]);
-  // not shared any more (stopped, removed, deleted): the cloud is asked what became of it
+  }, [collab, collabReady, mirrorId]);
+
+  // Drafts others invited this account to edit. One no longer on the list (removed, stopped,
+  // deleted) stays on this device as an ordinary draft, and the person is told.
+  const tellDetached = useCallback(
+    (gone: MdDocument[]) => {
+      void refreshList();
+      for (const d of gone) {
+        // the open draft is shown as it is on screen (what is saved may be a moment behind)
+        if (d.id === docIdRef.current)
+          setDoc((prev) => {
+            if (!prev || prev.id !== d.id) return d;
+            const { shared: _ended, ...plain } = prev;
+            return plain;
+          });
+        toast.info(`You can no longer edit “${d.title}”`, {
+          id: `shared-ended-${d.id}`,
+          description: "A copy of its latest text stays on this device, as a draft of your own.",
+        });
+      }
+    },
+    [refreshList],
+  );
+  const { items: sharedItems, refresh: refreshShared } = useSharedWithMe(
+    cloudOn ? account?.id : undefined,
+    tellDetached,
+  );
+  // the room says it is over (removed while editing, or it was stopped): settle it now
   useEffect(() => {
-    if (collabState.status === "ended") requestSync(0);
+    if (collabState.status !== "ended" || !doc) return;
+    if (doc.shared) {
+      void detachShared(documentStore, indexedDbStore, doc.id).then((plain) => {
+        if (plain) tellDetached([plain]);
+        void refreshShared();
+      });
+    } else requestSync(0); // the owner's own draft: the cloud is asked what became of it
+    // only when the connection ends, not on every keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collabState.status]);
+  const sharedRows = useMemo<SharedRow[]>(() => {
+    const local = new Map(
+      docs.flatMap((d) => (d.shared ? [[`${d.shared.ownerId}:${d.shared.id}`, d] as const] : [])),
+    );
+    const rows: SharedRow[] = sharedItems.map((i) => {
+      const d = local.get(`${i.ownerId}:${i.id}`);
+      local.delete(`${i.ownerId}:${i.id}`);
+      return { ...i, title: d?.title ?? i.title, ...(d && { localId: d.id }) };
+    });
+    // opened before and not on the list that was read (offline): shown from what this device has
+    for (const d of local.values())
+      rows.push({
+        ownerId: d.shared!.ownerId,
+        id: d.shared!.id,
+        title: d.title,
+        ownerName: d.shared!.ownerName,
+        localId: d.id,
+      });
+    return rows.sort((a, b) => a.title.localeCompare(b.title));
+  }, [docs, sharedItems]);
+  const openSharedRow = async (row: SharedRow) => {
+    if (!account) return;
+    const id = await openShared(documentStore, account.id, row);
+    await refreshList();
+    go.current({ to: "/editor/$docId", params: { docId: id } });
+  };
+  const leaveSharedRow = async (row: SharedRow) => {
+    try {
+      await collabApi.leave(row.ownerId, row.id);
+    } catch (error) {
+      // already gone is the same as left; anything else leaves things as they are
+      if (!(error instanceof CollabError && error.code === "not_found")) {
+        toast.error("Couldn't leave the draft", {
+          description: "Check your connection and try again.",
+        });
+        return;
+      }
+    }
+    if (row.localId) {
+      if (row.localId === docId) pending.current = null;
+      await removeShared(documentStore, indexedDbStore, row.localId, (id) =>
+        historyStore.clear(id),
+      );
+      if (row.localId === docId)
+        go.current({ to: "/editor/$docId", params: { docId: NEW_DOC_ID } });
+    }
+    await refreshList();
+    await refreshShared();
+    toast.success(`You left “${row.title}”`);
+  };
   // The account's share links are read when something asks for them (the Share dialog, the
   // Comments panel), never in the background, so they cost nothing until used.
   useEffect(() => {
@@ -1042,6 +1146,8 @@ export function Studio({ docId }: { docId: string }) {
     () => docs.map((d) => (d.id === doc?.id ? { ...d, ...doc } : d)),
     [docs, doc],
   );
+  // drafts other people own are listed apart, under "Shared with you"
+  const ownDocs = useMemo(() => libraryDocs.filter((d) => !d.shared), [libraryDocs]);
   /** Applies a library-only change to a draft, on screen or in storage. */
   const patchDraft = async (d: MdDocument, patch: Partial<MdDocument>) => {
     if (d.id === doc?.id) return update(patch);
@@ -1078,6 +1184,7 @@ export function Studio({ docId }: { docId: string }) {
   };
   // the draft whose share dialog is open
   const [shareTarget, setShareTarget] = useState<MdDocument | null>(null);
+  const [collabTarget, setCollabTarget] = useState<MdDocument | null>(null);
   // the draft whose publish-to-GitHub dialog is open
   const [publishTarget, setPublishTarget] = useState<MdDocument | null>(null);
   // Back from GitHub after connecting, the dialog the writer left is opened again on its draft.
@@ -1249,7 +1356,8 @@ export function Studio({ docId }: { docId: string }) {
   ));
   const libraryContent = (
     <Library
-      docs={libraryDocs}
+      docs={ownDocs}
+      sharedWithMe={{ rows: sharedRows, onOpen: openSharedRow, onLeave: leaveSharedRow }}
       folders={folderNames}
       activeId={docId}
       onCreateFolder={createFolder}
@@ -1273,6 +1381,8 @@ export function Studio({ docId }: { docId: string }) {
             onShare: (d: MdDocument) => setShareTarget(d),
             shared: sharedIds,
             sharedPrivately: privateIds,
+            onCollab: (d: MdDocument) => setCollabTarget(d),
+            live: cloudDrafts.live,
           }),
           ...(cloudOn && githubPublish && { onPublish: (d: MdDocument) => setPublishTarget(d) }),
           ...(hostingOn && cloudOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
@@ -1692,7 +1802,8 @@ export function Studio({ docId }: { docId: string }) {
                           ref={editor}
                           value={content}
                           {...(collabReady && collab && !waiting ? { collab } : {})}
-                          readOnly={waiting}
+                          // (a shared draft that cannot be live right now is only shown)
+                          readOnly={waiting || (!!doc.shared && !liveTarget)}
                           onChange={collabReady && !waiting ? noop : setContent}
                           onScroll={onEditorScroll}
                           onPaste={onPaste}
@@ -1788,6 +1899,12 @@ export function Studio({ docId }: { docId: string }) {
           open={shareTarget !== null}
           onOpenChange={(open) => !open && setShareTarget(null)}
           beforePublish={bringCloudUpToDate}
+        />
+        <CollabDialog
+          draft={collabTarget && doc && collabTarget.id === doc.id ? doc : collabTarget}
+          open={collabTarget !== null}
+          onOpenChange={(open) => !open && setCollabTarget(null)}
+          beforeStart={bringCloudUpToDate}
         />
         <PublishDialog
           draft={publishTarget && doc && publishTarget.id === doc.id ? doc : publishTarget}

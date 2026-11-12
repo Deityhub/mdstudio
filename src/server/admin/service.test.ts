@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createNodeDb } from "../../../infra/db/node";
 import { assets, sessions, users } from "../../../infra/db/schema";
 import { login, signup, userForToken } from "../auth/service";
+import { addEditor, enableCollab } from "../collab/service";
 import type { Db } from "../db";
 import { DEFAULT_SHARE, getPublicShare, publishShare } from "../share/service";
 import { pushDocs } from "../sync/service";
@@ -192,6 +193,10 @@ describe("the account list and overview", () => {
       ],
       t0,
     );
+    const before = await overview(db, t0 + 10);
+    expect(before).toMatchObject({ liveDrafts: 0, collaborators: 0 });
+    await enableCollab(db, a.user.id, "d1", { docs: 2 }, t0 + 5);
+    await addEditor(db, a.user, "d1", "b@x.co", 3, t0 + 6);
     const o = await overview(db, t0 + 10);
     expect(o).toMatchObject({
       accounts: 2,
@@ -200,6 +205,8 @@ describe("the account list and overview", () => {
       drafts: 1,
       shares: 0,
       images: 0,
+      liveDrafts: 1,
+      collaborators: 1,
     });
     expect(o.newThisWeek).toBe(2);
   });

@@ -369,6 +369,13 @@ Several people typing in one Markdown draft, online or offline, converge without
 - **Whole-text changes** (restoring a version, the front matter form, an AI edit, hosting images) are turned into the smallest edit (`diff.ts`, common prefix and suffix) and applied to the shared text, so what others typed around them is kept. They are not part of Undo.
 - **Where it shows.** The footer of a live draft says Live, Offline (edits kept here, will merge) or Opening, with the people in it (`CollabStatus`).
 
+**Sharing screens**
+
+- **Owner:** `CollabDialog` calls `collabApi` (`src/lib/collab/api.ts`) for state, start, stop, invite and remove. Starting first brings the cloud up to date (the room is seeded from the server's copy).
+- **Invited person:** `GET /api/collab` lists drafts shared with the account (`useSharedWithMe`: read when the studio opens, when the window returns after 30 s or more, and on request). Opening one makes a local `MdDocument` with `shared: { ownerId, id, userId, ownerName }` and the id `sh-<owner prefix>-<id>` (`src/lib/collab/shared.ts`); it has no sync entry, so it is never uploaded, and it is hidden from any other account using the browser (`isVisibleDoc`). The studio gives it a session on `doc:<ownerId>:<id>` as for an owner.
+- **When access ends** (the list no longer has it, or the socket closes with 4005): the draft is detached, that is `shared` and what the browser kept of the room are dropped and it stays as an ordinary local draft with the text on screen; the person is told. A list that failed to load changes nothing. Leaving, and signing out, remove the local copy, its kept room state and its saved versions.
+- **Admin:** the overview counts `liveDrafts` and `collaborators`; the Server tab edits `collab_open`.
+
 ## 6. Authoritative Database Schema (SQLite / Drizzle)
 
 The database schema is defined in `infra/db/schema.ts` and runs identically on Cloudflare D1 and `better-sqlite3`:
