@@ -34,12 +34,16 @@ export const ServerDocSchema = z.object({
   /** The edit time the server kept (see PushItem.editedAt). */
   editedAt: z.number().int().min(0),
   deleted: z.boolean(),
+  /** Being edited live with other people: its text is the room's, and a device must not push or apply text. */
+  collab: z.boolean().optional(),
 });
 export type ServerDoc = z.infer<typeof ServerDocSchema>;
 
 export type PushResult =
   | { id: string; status: "ok"; version: number; updatedAt: number }
   | { id: string; status: "conflict"; server: ServerDoc }
+  /** The draft is edited live: its text is not taken from a device. */
+  | { id: string; status: "collab"; server: ServerDoc }
   | { id: string; status: "limit_reached"; limit: number }
   | { id: string; status: "rejected" };
 

@@ -8,6 +8,7 @@
 //   publish   POST /publish { event, exclude? } from the app after a change is saved
 import { DurableObject } from "cloudflare:workers";
 import { CLOSE, MAX_EVENT_BYTES } from "../../src/lib/realtime/protocol";
+import { CollabRoomLogic } from "../../src/server/collab/do-room";
 import { fanout, hasRoom, incoming, replyCloseCode } from "../../src/server/realtime/rules";
 
 export class RealtimeHub extends DurableObject {
@@ -84,6 +85,42 @@ export class RealtimeHub extends DurableObject {
   webSocketClose(ws, code) {
     // without this the close handshake is never finished
     ws.close(replyCloseCode(code));
+  }
+}
+
+// One room per draft edited together: the Yjs document and who is in it (src/server/collab/room.ts),
+// persisted in this object's own SQLite. All the logic is in CollabRoomLogic; this is the shell.
+export class CollabRoom extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+    this.logic = new CollabRoomLogic(ctx, {
+      pair: () => {
+        const pair = new WebSocketPair();
+        return { client: pair[0], server: pair[1] };
+      },
+      upgrade: (client) => new Response(null, { status: 101, webSocket: client }),
+    });
+  }
+
+  fetch(request) {
+    return this.logic.fetch(request);
+  }
+
+  webSocketMessage(ws, message) {
+    return this.logic.webSocketMessage(ws, message);
+  }
+
+  webSocketClose(ws, code) {
+    return this.logic.webSocketClose(ws, code);
+  }
+
+  webSocketError(ws) {
+    return this.logic.webSocketError(ws);
+  }
+
+  alarm() {
+    return this.logic.alarm();
   }
 }
 

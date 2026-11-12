@@ -65,6 +65,7 @@ describe("workerConfig", () => {
       durable_objects: {
         bindings: [
           { name: "REALTIME", class_name: "RealtimeHub", script_name: "mdstudio-realtime" },
+          { name: "COLLAB", class_name: "CollabRoom", script_name: "mdstudio-realtime" },
         ],
       },
     });
@@ -72,8 +73,27 @@ describe("workerConfig", () => {
     expect(
       bound({ PREVIEW_WORKER_NAME: "mdstudio-pr-3", REALTIME_SCRIPT: "mdstudio-realtime-preview" }),
     ).toMatchObject({
-      durable_objects: { bindings: [{ script_name: "mdstudio-realtime-preview" }] },
+      durable_objects: {
+        bindings: [
+          { script_name: "mdstudio-realtime-preview" },
+          { script_name: "mdstudio-realtime-preview" },
+        ],
+      },
     });
+  });
+
+  it("migrates both Durable Object classes in the real-time Worker, as SQLite classes (all the free plan has)", () => {
+    const text = readFileSync("infra/realtime/wrangler.jsonc", "utf8")
+      .replace(/^\s*\/\/.*$/gm, "")
+      .replace(/,(\s*[}\]])/g, "$1");
+    const config = JSON.parse(text);
+    expect(
+      config.durable_objects.bindings.map((b: { class_name: string }) => b.class_name),
+    ).toEqual(["RealtimeHub", "CollabRoom"]);
+    expect(config.migrations).toEqual([
+      { tag: "v1", new_sqlite_classes: ["RealtimeHub"] },
+      { tag: "v2", new_sqlite_classes: ["CollabRoom"] },
+    ]);
   });
 
   it("only binds a Worker name that looks like one of ours", () => {

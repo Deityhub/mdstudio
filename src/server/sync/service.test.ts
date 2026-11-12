@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest";
 import { createNodeDb } from "../../../infra/db/node";
-import { users } from "../../../infra/db/schema";
+import { documents, users } from "../../../infra/db/schema";
+import { eq } from "drizzle-orm";
 import type { Db } from "../db";
 import { parsePush, pullDocs, pushDocs, type ServerDoc } from "./service";
 import { DEFAULT_REVISIONS } from "../revisions/service";
@@ -284,5 +285,52 @@ describe("pushDocs reports what it changed, for other devices to hear about", ()
 
   it("is optional: pushing without it works as before", async () => {
     expect(await pushDocs(db, "a", [item()], t0)).toMatchObject([{ status: "ok" }]);
+  });
+});
+
+describe("a draft that is being edited live", () => {
+  const live = async () => {
+    await pushDocs(db, "a", [item()], t0);
+    await db.update(documents).set({ collab: 1 }).where(eq(documents.id, "a:d1"));
+  };
+
+  it("is marked in what a pull returns", async () => {
+    await live();
+    await pushDocs(db, "a", [item({ id: "a:d2", content: "solo" })], t0);
+    const { docs } = await pullDocs(db, "a", 0);
+    expect(docs.map((d) => [d.id, d.collab])).toEqual([
+      ["a:d1", true],
+      ["a:d2", false],
+    ]);
+  });
+
+  it("does not take text from a device: the room is the text, so a stale device cannot undo it", async () => {
+    await live();
+    const [r] = await pushDocs(
+      db,
+      "a",
+      [item({ baseVersion: 1, content: "# stale device" })],
+      t0 + 5,
+    );
+    expect(r).toMatchObject({ id: "a:d1", status: "collab", server: { collab: true } });
+    const [row] = await db.select().from(documents).where(eq(documents.id, "a:d1"));
+    expect(row?.content).toBe("# Hello");
+    expect(row?.version).toBe(1);
+  });
+
+  it("can still be deleted by its owner", async () => {
+    await live();
+    const changed: ServerDoc[] = [];
+    const [r] = await pushDocs(
+      db,
+      "a",
+      [item({ baseVersion: 1, deleted: true })],
+      t0 + 5,
+      5,
+      DEFAULT_REVISIONS,
+      changed,
+    );
+    expect(r).toMatchObject({ status: "ok" });
+    expect(changed[0]).toMatchObject({ deleted: true, collab: true }); // the caller can end the room
   });
 });

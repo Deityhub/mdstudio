@@ -134,8 +134,50 @@ export const documents = sqliteTable(
     // When the text was last edited on a device; the later edit wins a sync conflict.
     editedAt: integer("edited_at").notNull().default(0),
     deletedAt: integer("deleted_at"),
+    // 1 while the draft is edited live with other people: its text then lives in a room (see
+    // src/server/collab), and this column holds a copy that is refreshed from it.
+    collab: integer("collab").notNull().default(0),
   },
   (t) => [index("idx_documents_user_updated").on(t.userId, t.updatedAt)],
+);
+
+/** People the owner invited to edit a draft together, by address (they may not have an account yet). */
+export const documentEditors = sqliteTable(
+  "document_editors",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    emailKey: text("email_key").notNull(),
+    invitedBy: text("invited_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("document_editors_doc_email").on(t.documentId, t.emailKey),
+    index("idx_document_editors_email").on(t.emailKey),
+  ],
+);
+
+/**
+ * A live room's state on a self-hosted server: a snapshot and the updates since (base64). Hosted,
+ * rooms keep this in their Durable Object instead, and these tables stay empty.
+ */
+export const collabSnapshots = sqliteTable("collab_snapshots", {
+  documentId: text("document_id").primaryKey(),
+  data: text("data").notNull(),
+});
+export const collabUpdates = sqliteTable(
+  "collab_updates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    documentId: text("document_id").notNull(),
+    data: text("data").notNull(),
+  },
+  (t) => [index("idx_collab_updates_doc").on(t.documentId)],
 );
 
 export const documentRevisions = sqliteTable(

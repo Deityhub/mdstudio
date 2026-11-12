@@ -45,7 +45,7 @@ const liveCount = async (db: Db, userId: string) =>
       .where(and(eq(documents.userId, userId), isNull(documents.deletedAt)))
   )[0]?.n ?? 0;
 
-const toServerDoc = (r: Row): ServerDoc => ({
+export const toServerDoc = (r: Row): ServerDoc => ({
   id: r.id,
   version: r.version,
   title: r.title,
@@ -56,6 +56,7 @@ const toServerDoc = (r: Row): ServerDoc => ({
   updatedAt: r.updatedAt,
   editedAt: r.editedAt,
   deleted: r.deletedAt !== null,
+  collab: r.collab === 1,
 });
 
 const find = async (db: Db, id: string) =>
@@ -111,6 +112,7 @@ async function pushOne(
         createdAt: it.createdAt,
         updatedAt: now,
         deleted,
+        collab: false,
       });
       return { id: it.id, status: "ok", version: 1, updatedAt: now };
     } catch {
@@ -119,6 +121,9 @@ async function pushOne(
   }
 
   if (existing.userId !== userId) return { id: it.id, status: "rejected" };
+  // a live draft's text is the room's; a device may delete it, not overwrite it
+  if (existing.collab === 1 && !deleted)
+    return { id: it.id, status: "collab", server: toServerDoc(existing) };
   const wasDeleted = existing.deletedAt !== null;
   // The same text on both sides is never a conflict, however far apart the versions are.
   if (existing.contentHash === contentHash && wasDeleted === deleted)
@@ -147,6 +152,7 @@ async function pushOne(
     createdAt: existing.createdAt,
     updatedAt,
     deleted,
+    collab: existing.collab === 1,
   });
   if (deleted) {
     // A deleted draft takes its history with it, so the text does not linger.
