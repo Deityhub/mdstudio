@@ -8,6 +8,7 @@ import {
   replaceText,
   skipPicker,
   toCloud,
+  listening,
   twoBrowsers,
 } from "./sync-helpers";
 
@@ -253,10 +254,11 @@ test("an admin raising an account's cloud limit shows in its open tab at once", 
   const address = `limit-${Date.now()}@example.com`;
   const context = await browser.newContext();
   const page = await context.newPage();
+  const heard = listening(page);
   await account(page, "Create account", address);
   await skipPicker(page);
   await expect(page.getByTestId("cloud-usage")).toHaveText("Cloud: 0 of 5 drafts");
-  await page.waitForTimeout(2500); // the socket is up, so only an event can change it now
+  await heard; // the socket is up, so only an event can change it now
   const { id } = await (await page.request.get("/api/auth/me")).json().then((m) => m.user);
 
   const admin = await playwright.request.newContext({ baseURL: baseURL! });

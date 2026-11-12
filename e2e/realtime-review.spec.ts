@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { cloudDraft, openShare, password, signIn } from "./draft";
+import { listening } from "./sync-helpers";
 
 // Review comments and the link's own changes over the real-time channel: what a reader does shows
 // in the writer's open panel, and what the writer does shows on the reader's open page, with no
@@ -41,8 +42,10 @@ test("a reader's comment, and its removal, show in the writer's open panel at on
 }) => {
   const slug = await sharedWithComments(page, "Live review", "Intro paragraph");
   const guest = await reader(browser);
+  const heard = listening(guest.page);
   await guest.page.goto(`/s/${slug}`);
   await expect(guest.page.locator(".md-preview")).toContainText("Intro paragraph");
+  await heard;
 
   const panel = page.getByRole("complementary");
   await expect(panel.getByText("No comments yet")).toBeVisible();
@@ -61,7 +64,9 @@ test("the writer resolving and deleting a comment reaches the reader's open page
 }) => {
   const slug = await sharedWithComments(page, "Live replies", "Intro paragraph");
   const guest = await reader(browser);
+  const heard = listening(guest.page);
   await guest.page.goto(`/s/${slug}`);
+  await heard;
   const aside = guest.page.getByRole("complementary", { name: "Comments" });
   await say(guest.page, slug, "Is this still right?");
   const panel = page.getByRole("complementary");
@@ -80,7 +85,9 @@ test("two readers see each other's comments as they are written", async ({ page,
   const slug = await sharedWithComments(page, "Two readers", "Intro paragraph");
   const one = await reader(browser);
   const two = await reader(browser);
+  const heard = [one, two].map((r) => listening(r.page));
   for (const r of [one, two]) await r.page.goto(`/s/${slug}`);
+  await Promise.all(heard);
   await say(one.page, slug, "From the first reader");
   await expect(
     two.page.getByRole("complementary", { name: "Comments" }).getByText("From the first reader"),
@@ -95,7 +102,9 @@ test("publishing an update tells the reader's open page and marks the comments a
 }) => {
   const slug = await sharedWithComments(page, "Updated post", "Intro paragraph");
   const guest = await reader(browser);
+  const heard = listening(guest.page);
   await guest.page.goto(`/s/${slug}`);
+  await heard;
   await say(guest.page, slug, "A note on the first copy");
   const panel = page.getByRole("complementary");
   await expect(panel.getByText("A note on the first copy")).toBeVisible({ timeout: 8_000 });
@@ -117,8 +126,10 @@ test("publishing an update tells the reader's open page and marks the comments a
 test("withdrawing a link tells the reader's open page", async ({ page, browser }) => {
   const slug = await sharedWithComments(page, "Withdrawn post", "Intro paragraph");
   const guest = await reader(browser);
+  const heard = listening(guest.page);
   await guest.page.goto(`/s/${slug}`);
   await expect(guest.page.locator(".md-preview")).toContainText("Intro paragraph");
+  await heard;
   const shares = (await (await page.request.get("/api/share")).json()).shares as { id: string }[];
   expect((await page.request.delete(`/api/share/${shares[0]!.id}`)).status()).toBe(200);
   await expect(guest.page.getByText("The writer has stopped sharing this page.")).toBeVisible({
@@ -136,6 +147,7 @@ test("a link published on one device shows as shared on the writer's other devic
   // the second device: the same account, its list of links read once (by opening Share)
   const other = await browser.newContext({ storageState: await page.context().storageState() });
   const second = await other.newPage();
+  const heard = listening(second);
   await second.goto("/editor");
   await expect(
     second.getByRole("navigation", { name: "Drafts" }).getByText("Two devices"),
@@ -144,6 +156,7 @@ test("a link published on one device shows as shared on the writer's other devic
   await expect(looked.getByRole("button", { name: "Publish" })).toBeVisible();
   await looked.getByRole("button", { name: "Close" }).first().click();
   await expect(second.getByLabel("Shared publicly")).toHaveCount(0);
+  await heard;
 
   const dialog = await openShare(page, "Two devices");
   await dialog.getByRole("button", { name: "Publish" }).click();

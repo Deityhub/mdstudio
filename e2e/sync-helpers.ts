@@ -51,3 +51,19 @@ export async function twoBrowsers(browser: Browser) {
   const contexts: BrowserContext[] = [await browser.newContext(), await browser.newContext()];
   return { a: await contexts[0]!.newPage(), b: await contexts[1]!.newPage(), contexts };
 }
+
+/**
+ * Call before opening the page: resolves once the page's real-time socket is subscribed. An event
+ * sent before that is missed (the lists catch up when the socket is ready, a one-off notice does
+ * not), so a spec that acts on something else waits for this first.
+ */
+export function listening(page: Page) {
+  return new Promise<void>((resolve) => {
+    page.on("websocket", (socket) => {
+      if (!socket.url().includes("/api/realtime")) return;
+      socket.on("framereceived", (frame) => {
+        if (String(frame.payload).includes('"ready"')) resolve();
+      });
+    });
+  });
+}
