@@ -97,4 +97,17 @@ describe("runner", () => {
     await vi.advanceTimersByTimeAsync(60_010);
     expect(run).toHaveBeenCalledTimes(4);
   });
+
+  it("can wait before its first round, so a connection that is about to be ready can ask for it instead", async () => {
+    const run = vi.fn(async () => {});
+    const r = make(run);
+    r.start(1500);
+    await vi.advanceTimersByTimeAsync(1499);
+    expect(run).not.toHaveBeenCalled();
+    r.request(0); // merged into the same round
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
 });

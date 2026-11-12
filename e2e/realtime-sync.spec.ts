@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { makeAdmin, signUp } from "./admin-helpers";
 import {
   account,
@@ -121,5 +121,126 @@ test("sync still works when the socket cannot connect, by the old nudges", async
   await onServer(a, "# Fallback\n\nEdited");
   await b.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(editor(b)).toContainText("Edited", { timeout: 30_000 });
+  for (const c of contexts) await c.close();
+});
+
+/** Counts the pulls a page makes, from now on. */
+function countPulls(page: Page) {
+  let n = 0;
+  page.on("request", (r) => void (r.url().includes("/api/sync/pull") && n++));
+  return () => n;
+}
+
+test("with the socket up, nothing pulls: not for a change elsewhere, a local edit, focus or coming online", async ({
+  browser,
+}) => {
+  const address = `quiet-${Date.now()}@example.com`;
+  const { a, b, contexts } = await twoBrowsers(browser);
+  await account(a, "Create account", address);
+  await skipPicker(a);
+  await replaceText(a, "# Quiet\n\nFrom A");
+  await toCloud(a, "Quiet");
+  await onServer(a, "# Quiet\n\nFrom A");
+
+  const pulls = countPulls(b);
+  await account(b, "Sign in", address);
+  await skipPicker(b);
+  await expect(nav(b).getByText("Quiet")).toBeVisible({ timeout: 20_000 });
+  await nav(b).getByText("Quiet").click();
+  await b.waitForTimeout(2500); // let the socket become ready and the first round finish
+  const settled = pulls();
+  expect(settled, "one pull to start, and no more once the socket is up").toBe(1);
+
+  await replaceText(a, "# Quiet\n\nEdited by A");
+  await expect(editor(b)).toContainText("Edited by A", { timeout: 8_000 }); // by the socket
+  await replaceText(b, "# Quiet\n\nEdited by B"); // a push, which must not pull first
+  await onServer(b, "# Quiet\n\nEdited by B");
+  for (const event of ["focus", "online"])
+    await b.evaluate((name) => window.dispatchEvent(new Event(name)), event);
+  await b.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await b.waitForTimeout(4000);
+  expect(pulls()).toBe(settled);
+  for (const c of contexts) await c.close();
+});
+
+test("after the socket drops, one pull catches up on what was missed when it comes back", async ({
+  browser,
+}) => {
+  const address = `catchup-${Date.now()}@example.com`;
+  const { a, b, contexts } = await twoBrowsers(browser);
+  const live: { close: (o: { code: number }) => Promise<void> }[] = [];
+  let blocked = false;
+  await b.routeWebSocket(/\/api\/realtime/, (ws) => {
+    if (blocked) return void ws.close({ code: 1011 });
+    ws.connectToServer();
+    live.push(ws);
+  });
+  await account(a, "Create account", address);
+  await skipPicker(a);
+  await replaceText(a, "# Catch up\n\nStart");
+  await toCloud(a, "Catch up");
+  await onServer(a, "# Catch up\n\nStart");
+  const pulls = countPulls(b);
+  await account(b, "Sign in", address);
+  await skipPicker(b);
+  await nav(b).getByText("Catch up").click();
+  await expect(editor(b)).toContainText("Start", { timeout: 20_000 });
+  await b.waitForTimeout(4500); // longer than the wait before a round, so none is still pending
+  const settled = pulls();
+  expect(live).toHaveLength(1);
+
+  // B loses its connection, and A edits meanwhile
+  blocked = true;
+  await live[0]!.close({ code: 1006 });
+  await replaceText(a, "# Catch up\n\nWritten while B was cut off");
+  await onServer(a, "# Catch up\n\nWritten while B was cut off");
+  await expect(editor(b)).not.toContainText("cut off");
+  expect(pulls()).toBe(settled); // being cut off pulls nothing by itself
+
+  // it comes back, and one pull brings B up to date
+  blocked = false;
+  await expect(editor(b)).toContainText("Written while B was cut off", { timeout: 30_000 });
+  await b.waitForTimeout(3000);
+  expect(pulls()).toBe(settled + 1);
+  for (const c of contexts) await c.close();
+});
+
+test("a draft too big for the channel is a hint, and costs one pull", async ({ browser }) => {
+  const address = `big-${Date.now()}@example.com`;
+  const { a, b, contexts } = await twoBrowsers(browser);
+  await account(a, "Create account", address);
+  await skipPicker(a);
+  await replaceText(a, "# Big\n\nSmall for now");
+  await toCloud(a, "Big");
+  await onServer(a, "# Big\n\nSmall for now");
+  const pulls = countPulls(b);
+  await account(b, "Sign in", address);
+  await skipPicker(b);
+  await nav(b).getByText("Big").click();
+  await expect(editor(b)).toContainText("Small for now", { timeout: 20_000 });
+  await b.waitForTimeout(2500);
+  const settled = pulls();
+
+  // a 200 KB text, over the 128 KB the channel carries
+  const mine = (await (await a.request.get("/api/sync/pull?since=0")).json()).docs[0];
+  const text = `# Big\n\nHuge start\n\n${"word ".repeat(40_000)}`;
+  const res = await a.request.post("/api/sync/push", {
+    data: {
+      docs: [
+        {
+          id: mine.id,
+          baseVersion: mine.version,
+          title: "Big",
+          content: text,
+          createdAt: mine.createdAt,
+          editedAt: Date.now() + 1000,
+        },
+      ],
+    },
+  });
+  expect(res.status()).toBe(200);
+  await expect(editor(b)).toContainText("Huge start", { timeout: 8_000 });
+  await b.waitForTimeout(2000);
+  expect(pulls()).toBe(settled + 1);
   for (const c of contexts) await c.close();
 });

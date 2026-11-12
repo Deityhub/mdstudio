@@ -84,9 +84,10 @@ export function createRunner(opts: Options) {
         interval = undefined;
       }
     },
-    start() {
+    /** `wait` delays the first round, so a connection that is about to be ready can ask for it. */
+    start(wait = 0) {
       stopped = false;
-      request(0);
+      request(wait);
       startInterval();
     },
     stop() {

@@ -278,10 +278,17 @@ Signing out: sync once, then remove the account's cloud drafts (and their local 
              the cloud yet) and can be kept. Without a connection and with unsynced changes the writer must
              choose between staying signed in and keeping those drafts on the device.
 Syncing:     only when a draft changed (its hash differs from what the cloud has) and only drafts in the cloud.
-             A round pulls first, then pushes; it runs about 3 seconds after a local save, when the tab
-             regains focus or comes back online, when the real-time channel says to (below), and every
-             minute only while that channel is down, never while signed out. A cloud change to a draft with
-             unsaved edits waits for the next round.
+             A round pulls first, then pushes, unless the real-time channel (5.6) is up, when it only
+             pushes: other devices' changes arrive by themselves. It runs about 3 seconds after a local
+             save, when the tab comes back online, and (only without the live channel) when the tab
+             regains focus and every minute; never while signed out. The first round after sign-in waits
+             a second for the socket, so its catch-up pull is the first pull rather than a second one.
+             A cloud change to a draft with unsaved edits waits for a pull.
+Pulls:       with the live channel up, a pull happens only (1) once on every (re)connect, to catch up on
+             what came before the socket was ready, (2) when an event says `sync` (a draft over 128 KB,
+             or a batch over 10, was not sent), and (3) when a pushed draft had to wait for unsaved
+             edits. Without the channel (refused, dropped, unsupported) every round pulls, as before.
+             `src/lib/sync/policy.ts` holds the rule; the e2e specs count the pulls.
 Live:        after a push saves drafts, the server tells the account's other tabs and devices over the
              real-time channel (5.6), each changed draft in full. The tab applies it with the same rule a
              pull uses (`applyPushed` in `src/lib/sync/engine.ts`): a version already seen is skipped, a

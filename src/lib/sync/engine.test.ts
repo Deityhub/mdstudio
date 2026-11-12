@@ -37,19 +37,24 @@ function device(userId = U, api?: Partial<SyncApi>) {
   };
   const busy = new Set<string>();
   const kept: MdDocument[] = [];
+  const pulls: number[] = [];
   const deps = {
     userId,
     store,
     meta,
-    api: { ...real, ...api },
+    api: {
+      ...real,
+      pull: async (since: number) => (pulls.push(since), real.pull(since)),
+      ...api,
+    },
     isBusy: (id: string) => busy.has(id),
     snapshot: async (d: MdDocument) => void kept.push(d),
   };
-  const run = () => syncOnce(deps);
+  const run = (opts?: { pull?: boolean }) => syncOnce(deps, opts);
   /** What the real-time channel does when another device's change arrives. */
   const pushed = (docs: ServerDoc[]) => applyPushed(deps, docs);
   const link = (...ids: string[]) => linkDrafts(meta, ids);
-  return { kv, store, meta, run, pushed, busy, kept, link };
+  return { kv, store, meta, run, pushed, busy, kept, link, pulls };
 }
 type Device = ReturnType<typeof device>;
 
@@ -446,4 +451,44 @@ const serverDocFor = async (user: string, id: string): Promise<ServerDoc> => ({
   updatedAt: 1,
   editedAt: 1,
   deleted: false,
+});
+
+describe("a round that does not pull (the real-time channel is up)", () => {
+  it("pushes what changed here without asking the cloud for anything", async () => {
+    const { a, b } = await shared();
+    a.pulls.length = 0;
+    await edit(a, "d1", "# From A", 200);
+    const report = await a.run({ pull: false });
+    expect(report.pushed).toBe(1);
+    expect(a.pulls).toEqual([]);
+    expect((await cloud())[0]?.content).toBe("# From A");
+    await b.run();
+    expect(await texts(b)).toEqual(["# From A"]);
+  });
+
+  it("still resolves a conflict from what the push answers, with no pull", async () => {
+    const { a, b } = await shared();
+    const c = device();
+    await c.run(); // c has version 1, and will be behind
+    await edit(a, "d1", "# A's, earlier", 200);
+    await a.run();
+    await edit(b, "d1", "# B's, later", 300);
+    b.pulls.length = 0;
+    await b.run({ pull: false }); // b is behind too, but its edit is the later one
+    expect(b.pulls).toEqual([]);
+    expect((await cloud())[0]?.content).toBe("# B's, later");
+
+    await edit(c, "d1", "# C's, earliest", 100);
+    c.pulls.length = 0;
+    await c.run({ pull: false });
+    expect(c.pulls).toEqual([]);
+    expect(await texts(c)).toEqual(["# B's, later"]); // the server's copy came with the answer
+  });
+
+  it("pulls as always unless told not to", async () => {
+    const { a } = await shared();
+    a.pulls.length = 0;
+    await a.run();
+    expect(a.pulls.length).toBeGreaterThan(0);
+  });
 });

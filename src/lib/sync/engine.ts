@@ -61,8 +61,12 @@ const quiet = { quiet: true };
 
 // A sign-out and the background runner must never sync at the same time.
 let chain: Promise<unknown> = Promise.resolve();
-export const syncOnce = (deps: SyncDeps): Promise<SyncReport> => {
-  const next = chain.then(() => round(deps));
+export const syncOnce = (
+  deps: SyncDeps,
+  /** `pull: false` pushes only: for when another device's changes are arriving by themselves. */
+  opts: { pull?: boolean } = {},
+): Promise<SyncReport> => {
+  const next = chain.then(() => round(deps, opts.pull !== false));
   chain = next.catch(() => undefined);
   return next;
 };
@@ -169,7 +173,7 @@ export function applyPushed(deps: SyncDeps, docs: ServerDoc[]): Promise<SyncRepo
   return next;
 }
 
-async function round(deps: SyncDeps): Promise<SyncReport> {
+async function round(deps: SyncDeps, pulls: boolean): Promise<SyncReport> {
   const { userId, store, meta, api } = deps;
   const report = emptyReport();
   const { applyRemote, note } = applier(deps, report);
@@ -278,7 +282,7 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
   }
 
   for (let n = 0; n < MAX_ROUNDS; n++) {
-    await pull();
+    if (pulls) await pull();
     if (!(await push())) break;
   }
   return report;
