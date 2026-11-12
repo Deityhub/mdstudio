@@ -1,55 +1,16 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { startDraft } from "./draft";
-
-const password = "a long enough password";
-const editor = (page: Page) => page.locator(".cm-content");
-const nav = (page: Page) => page.getByRole("navigation", { name: "Drafts" });
-
-async function account(page: Page, mode: "Create account" | "Sign in", address: string) {
-  await startDraft(page);
-  await expect(editor(page)).toBeVisible();
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  if (mode === "Create account") await page.getByRole("tab", { name: "Create account" }).click();
-  await page.getByLabel("Email").fill(address);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: mode, exact: true }).click();
-  // Signing in offers to pick drafts for the cloud (see skipPicker).
-  await expect(page.getByRole("button", { name: "Not now" })).toBeVisible();
-}
-
-/** After signing in, the studio offers to pick drafts for the cloud; "Not now" leaves them all local. */
-async function skipPicker(page: Page) {
-  await page.getByRole("button", { name: "Not now" }).click();
-}
-
-async function replaceText(page: Page, text: string) {
-  await editor(page).click();
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.insertText(text);
-}
-
-/** Puts the open draft in the cloud through its library menu. */
-async function toCloud(page: Page, title: string) {
-  await page.getByRole("button", { name: `Options for ${title}` }).click();
-  await page.getByRole("menuitem", { name: "Save to cloud" }).click();
-}
-
-const cloudDocs = async (page: Page) =>
-  (await (await page.request.get("/api/sync/pull?since=0")).json()).docs as {
-    content: string;
-    deleted: boolean;
-  }[];
-const onServer = (page: Page, text: string) =>
-  expect
-    .poll(async () => (await cloudDocs(page)).some((d) => d.content === text && !d.deleted), {
-      timeout: 20_000,
-    })
-    .toBe(true);
-
-async function twoBrowsers(browser: Browser) {
-  const contexts: BrowserContext[] = [await browser.newContext(), await browser.newContext()];
-  return { a: await contexts[0]!.newPage(), b: await contexts[1]!.newPage(), contexts };
-}
+import { expect, test } from "@playwright/test";
+import {
+  account,
+  cloudDocs,
+  editor,
+  nav,
+  onServer,
+  password,
+  replaceText,
+  skipPicker,
+  toCloud,
+  twoBrowsers,
+} from "./sync-helpers";
 
 test("nothing is uploaded until it is chosen, and the usage shows", async ({ browser }) => {
   const address = `choose-${Date.now()}@example.com`;
@@ -92,8 +53,9 @@ test("a cloud draft reaches another browser and edits follow; local drafts do no
   // An edit in A reaches B while B has the draft open, without a reload.
   await replaceText(a, "# Travelled\n\nEdited in browser A");
   await onServer(a, "# Travelled\n\nEdited in browser A");
-  await b.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect(editor(b)).toContainText("Edited in browser A", { timeout: 30_000 });
+  // No focus or online nudge: it arrives over the real-time channel, far sooner than the
+  // minute the timer would take.
+  await expect(editor(b)).toContainText("Edited in browser A", { timeout: 8_000 });
   await expect(b.getByTestId("sync-status")).toHaveText("Synced");
   for (const c of contexts) await c.close();
 });

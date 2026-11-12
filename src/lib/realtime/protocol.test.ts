@@ -34,6 +34,29 @@ describe("events", () => {
       expect(parseEvent(bad), bad).toBeNull();
   });
 
+  it("carries a whole document for the device to apply, and refuses a malformed one", () => {
+    const doc = {
+      id: "u:d1",
+      version: 3,
+      title: "T",
+      name: null,
+      folder: "f",
+      content: "# T",
+      createdAt: 1,
+      updatedAt: 2,
+      editedAt: 2,
+      deleted: false,
+    };
+    expect(parseEvent(JSON.stringify({ t: "doc", doc }))).toEqual({ t: "doc", doc });
+    for (const bad of [
+      { ...doc, version: 0 },
+      { ...doc, content: 5 },
+      { ...doc, deleted: "no" },
+      { id: "u:d1" },
+    ])
+      expect(parseEvent(JSON.stringify({ t: "doc", doc: bad })), JSON.stringify(bad)).toBeNull();
+  });
+
   it("has distinct close codes in the private range, and a size cap", () => {
     const codes = Object.values(CLOSE);
     expect(new Set(codes).size).toBe(codes.length);

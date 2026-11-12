@@ -22,6 +22,11 @@ export function createRunner(opts: Options) {
   let running = false;
   let again = false;
   let stopped = false;
+  let polling = true;
+
+  const startInterval = () => {
+    if (!interval && polling && !stopped) interval = setInterval(() => request(0), poll);
+  };
 
   const set = (next: SyncStatus) => {
     status = next;
@@ -67,10 +72,22 @@ export function createRunner(opts: Options) {
       return () => void listeners.delete(listener);
     },
     request,
+    /**
+     * While a live connection tells this device about changes, checking on a timer is wasted
+     * requests: off while it is up, back on when it drops. Rounds that are requested still run.
+     */
+    setPolling(on: boolean) {
+      polling = on;
+      if (on) startInterval();
+      else {
+        clearInterval(interval);
+        interval = undefined;
+      }
+    },
     start() {
       stopped = false;
       request(0);
-      interval = setInterval(() => request(0), poll);
+      startInterval();
     },
     stop() {
       stopped = true;

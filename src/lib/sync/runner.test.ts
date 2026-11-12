@@ -78,4 +78,23 @@ describe("runner", () => {
     expect(run).toHaveBeenCalledTimes(2);
     expect(r.get().state).toBe("idle");
   });
+
+  it("can switch polling off while a live connection tells it about changes, and back on", async () => {
+    const run = vi.fn(async () => {});
+    const r = make(run);
+    r.start();
+    await vi.advanceTimersByTimeAsync(0);
+    r.setPolling(false);
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(run).toHaveBeenCalledTimes(1); // no polling
+    r.request(0); // a requested round still runs
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(2);
+    r.setPolling(true);
+    await vi.advanceTimersByTimeAsync(60_010);
+    expect(run).toHaveBeenCalledTimes(3);
+    r.setPolling(true); // already on: no second timer
+    await vi.advanceTimersByTimeAsync(60_010);
+    expect(run).toHaveBeenCalledTimes(4);
+  });
 });

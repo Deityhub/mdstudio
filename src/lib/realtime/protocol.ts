@@ -2,6 +2,7 @@
 // for, what the server sends, and why a socket is closed. Events grow with the features that use
 // them (documents for sync, comments for share pages); see docs/SYSTEM_SPEC.md, "Real-time".
 import { z } from "zod";
+import { ServerDocSchema } from "../sync/protocol";
 
 /** Private-range WebSocket close codes the client reacts to. */
 export const CLOSE = {
@@ -37,8 +38,10 @@ export const isClientId = (value: string | null): value is string =>
 export const realtimeEventSchema = z.discriminatedUnion("t", [
   /** The socket is open and subscribed. */
   z.object({ t: z.literal("ready") }),
-  /** Something changed: pull now. */
+  /** Something changed: pull now. Sent when what changed is too big or too many to send. */
   z.object({ t: z.literal("sync") }),
+  /** A cloud draft changed on another device: its whole state, to apply as a pull would. */
+  z.object({ t: z.literal("doc"), doc: ServerDocSchema }),
   /** The account's session ended; the socket is closed right after. */
   z.object({
     t: z.literal("bye"),

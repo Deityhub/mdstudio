@@ -6,6 +6,7 @@ import type { PublicUser } from "../auth/service";
 import { getStore } from "../assets/store";
 import type { Db } from "../db";
 import { getEnv } from "../env";
+import { endSessions } from "../realtime/publish";
 import { LIMITS, resolveLimits } from "../limits/catalog";
 import { deletePlan, listPlans, savePlan } from "../limits/plans";
 import { getSettings, updateSettings } from "../settings/service";
@@ -95,6 +96,8 @@ export const updateUserHandler = (request: Request, id: string) =>
     const result = await updateUser(db, actor.id, id, body);
     if (!result.ok) return fail(result.error);
     await audit(db, who(actor), "user.update", who_ ?? undefined, body);
+    // a suspended account's sessions stop working, so its open sockets are closed with them
+    if (body["suspended"] === true) await endSessions(r, id, "suspended");
     return json({ ...(await userDetail(db, env(r), id)), catalog: catalog(r) });
   })(request);
 
@@ -104,14 +107,16 @@ export const deleteUserHandler = (request: Request, id: string) =>
     const result = await deleteUser(db, await getStore(r), actor.id, id);
     if (!result.ok) return fail(result.error);
     await audit(db, who(actor), "user.delete", who_ ?? undefined);
+    await endSessions(r, id, "deleted");
     return json({ ok: true });
   })(request);
 
 export const signOutHandler = (request: Request, id: string) =>
-  write(async (_r, actor, db) => {
+  write(async (r, actor, db) => {
     const who_ = await target(db, id);
     if (!who_) return fail("not_found");
     const ended = await signOutEverywhere(db, id);
+    await endSessions(r, id, "signed_out");
     await audit(db, who(actor), "user.sign_out", who_, { sessions: ended });
     return json({ ended });
   })(request);

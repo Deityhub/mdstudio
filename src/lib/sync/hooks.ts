@@ -5,7 +5,8 @@ import { documentStore, indexedDbStore } from "@/lib/storage/documentStore";
 import { historyStore } from "@/lib/storage/history";
 import { AuthExpiredError, UnverifiedError, httpApi } from "./api";
 import { type SignOutCheck, checkSignOut, leaveAccount, linkDrafts, unlinkDraft } from "./cloud";
-import { type SyncReport, syncOnce } from "./engine";
+import { createRealtime } from "../realtime/client";
+import { type SyncReport, applyPushed, syncOnce } from "./engine";
 import { createSyncMeta } from "./meta";
 import { DEFAULT_CLOUD_LIMIT, fieldsHash } from "./protocol";
 import { type SyncStatus, createRunner } from "./runner";
@@ -123,9 +124,10 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
       void refreshCloud(undefined);
       return;
     }
+    const deps = () => depsFor(userId, (id) => latest.current.isBusy(id));
     const r = createRunner({
       run: async () => {
-        const report = await syncOnce(depsFor(userId, (id) => latest.current.isBusy(id)));
+        const report = await syncOnce(deps());
         if (report.limit !== undefined) setCloud({ limit: report.limit });
         await refreshCloud(userId);
         latest.current.onReport(report);
@@ -140,17 +142,47 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
     });
     runner = r;
     void refreshCloud(userId);
+    // Live updates: another device's change arrives over the socket and is applied without a
+    // pull. While it is up the timer poll is off; if it drops, polling comes back by itself.
+    const live = createRealtime({
+      topic: "user",
+      onConnected: (connected) => {
+        r.setPolling(!connected);
+        // whatever happened while it was down
+        if (connected) r.request(0);
+      },
+      onEvent: (event) => {
+        if (event.t === "sync") r.request(0);
+        else if (event.t === "doc")
+          void applyPushed(deps(), [event.doc])
+            .then(async (report) => {
+              await refreshCloud(userId);
+              latest.current.onReport(report);
+              // a draft with unsaved edits waits: the normal round picks it up
+              if (report.deferred) r.request();
+            })
+            .catch((error) => {
+              console.error(error);
+              r.request(0);
+            });
+      },
+      // signed out elsewhere, suspended, deleted, or the session ran out: look at the account
+      // again. If it is signed out this effect ends and stops the socket.
+      onEnded: () => accountStore.refresh(),
+    });
     const wake = () => document.visibilityState === "visible" && r.request(0);
     const offs = [r.subscribe(() => setStatus(r.get())), documentStore.onChange(() => r.request())];
     window.addEventListener("online", wake);
     window.addEventListener("focus", wake);
     document.addEventListener("visibilitychange", wake);
+    live.start();
     r.start();
     return () => {
       for (const off of offs) off();
       window.removeEventListener("online", wake);
       window.removeEventListener("focus", wake);
       document.removeEventListener("visibilitychange", wake);
+      live.stop();
       r.stop();
       if (runner === r) runner = null;
       setStatus({ state: "idle" });

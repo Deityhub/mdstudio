@@ -2,6 +2,7 @@
 import { getDb } from "../db";
 import { getEnv, siteOrigin } from "../env";
 import { getMailer } from "../mail";
+import { endSessions } from "../realtime/publish";
 import { getPublicSettings } from "../settings/service";
 import { canonicalEmail } from "./email";
 import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
@@ -188,6 +189,8 @@ export async function resetHandler(request: Request) {
     return json({ error: "invalid" }, 400);
   const result = await resetPassword(db, input.token, input.password);
   if (!result.ok) return json({ error: result.error }, 400);
+  // a reset ends every session of the account, so its sockets close too
+  await endSessions(request, result.userId, "signed_out");
   // Someone locked out by failed attempts can get back in with the new password.
   const key = canonicalEmail(result.email);
   if (key) await clearLimit(db, `login:email:${key}`);
@@ -221,7 +224,11 @@ export const resendHandler = (request: Request) =>
 export async function logoutHandler(request: Request) {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
   const token = readToken(request);
-  if (token) await logout(await getDb(request), token);
+  const db = await getDb(request);
+  const session = token ? await userForToken(db, token) : null;
+  if (token) await logout(db, token);
+  // other tabs on this browser share the cookie that just ended: their sockets close with it
+  if (session) await endSessions(request, session.user.id, "signed_out");
   return json({ ok: true }, 200, { "set-cookie": clearCookie(protocol(request)) });
 }
 
