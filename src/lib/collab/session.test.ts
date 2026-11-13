@@ -169,6 +169,38 @@ describe("a live draft's session", () => {
     expect(a.session.text()).toBe("Ship on Friday.");
   });
 
+  it("takes a whole-text change back with Undo, and brings it again with Redo, keeping what others typed", async () => {
+    const wire = new Wire();
+    await wire.room.seed("# Title\n\nintro\n\noutro");
+    const a = await open(wire);
+    const b = await open(wire, memory(), { me: { id: "u2", name: "Bea" } });
+    await settle();
+    a.session.replaceText("# New title\n\nintro\n\noutro"); // a restored version, say
+    b.session.ytext.insert(b.session.text().length, " (by b)");
+    await settle(1000);
+    expect(a.session.text()).toBe("# New title\n\nintro\n\noutro (by b)");
+    a.session.undo();
+    await settle(1000);
+    expect(a.session.text()).toBe("# Title\n\nintro\n\noutro (by b)"); // only a's change went
+    expect(b.session.text()).toBe(a.session.text());
+    a.session.redo();
+    await settle(1000);
+    expect(b.session.text()).toBe("# New title\n\nintro\n\noutro (by b)");
+  });
+
+  it("does not take another person's whole-text change back with this person's Undo", async () => {
+    const wire = new Wire();
+    await wire.room.seed("one");
+    const a = await open(wire);
+    const b = await open(wire, memory(), { me: { id: "u2", name: "Bea" } });
+    await settle();
+    b.session.replaceText("two");
+    await settle(1000);
+    a.session.undo(); // a has nothing of their own to undo
+    await settle(1000);
+    expect(a.session.text()).toBe("two");
+  });
+
   it("asks the server to refresh its text copy after this browser's edits go quiet, once", async () => {
     const wire = new Wire();
     await wire.room.seed("x");
