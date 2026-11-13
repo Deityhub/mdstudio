@@ -78,3 +78,17 @@ export async function networkSwitch(page: Page, opts: { everything?: boolean } =
     },
   };
 }
+
+/** The owner and the invited person, both in the live draft. */
+export async function bothInDraft(browser: Parameters<typeof twoPeople>[0]) {
+  const people = await twoPeople(browser);
+  await startAndInvite(people.a, people.beaAddress);
+  await people.a.keyboard.press("Escape");
+  await people.b.reload();
+  await shared(people.b)
+    .getByRole("button", { name: /^Notes/ })
+    .click();
+  await expect(status(people.b)).toHaveText(/Live/, { timeout: 15_000 });
+  await expect(status(people.a)).toHaveText(/Live/, { timeout: 15_000 });
+  return people;
+}
