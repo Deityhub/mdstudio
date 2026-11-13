@@ -15,6 +15,12 @@ export function SiteFooter() {
           <Link className="hover:text-foreground" to="/guides">
             Guides
           </Link>
+          <Link className="hover:text-foreground" to="/privacy">
+            Privacy
+          </Link>
+          <Link className="hover:text-foreground" to="/terms">
+            Terms
+          </Link>
           <a className="hover:text-foreground" href={SITE.repo} rel="noopener noreferrer">
             Source on GitHub
           </a>

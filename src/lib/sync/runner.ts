@@ -22,6 +22,11 @@ export function createRunner(opts: Options) {
   let running = false;
   let again = false;
   let stopped = false;
+  let polling = true;
+
+  const startInterval = () => {
+    if (!interval && polling && !stopped) interval = setInterval(() => request(0), poll);
+  };
 
   const set = (next: SyncStatus) => {
     status = next;
@@ -67,10 +72,23 @@ export function createRunner(opts: Options) {
       return () => void listeners.delete(listener);
     },
     request,
-    start() {
+    /**
+     * While a live connection tells this device about changes, checking on a timer is wasted
+     * requests: off while it is up, back on when it drops. Rounds that are requested still run.
+     */
+    setPolling(on: boolean) {
+      polling = on;
+      if (on) startInterval();
+      else {
+        clearInterval(interval);
+        interval = undefined;
+      }
+    },
+    /** `wait` delays the first round, so a connection that is about to be ready can ask for it. */
+    start(wait = 0) {
       stopped = false;
-      request(0);
-      interval = setInterval(() => request(0), poll);
+      request(wait);
+      startInterval();
     },
     stop() {
       stopped = true;

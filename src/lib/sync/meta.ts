@@ -13,6 +13,11 @@ export type DocMeta = {
   deleted?: boolean;
   /** Asked to leave the cloud: the next round deletes the cloud copy and keeps the local draft. */
   unlink?: boolean;
+  /**
+   * The draft is being edited live with other people: its text is the room's. This device neither
+   * pushes it nor takes the cloud's copy of it; `hash` stays what it was when the draft went live.
+   */
+  collab?: boolean;
 };
 
 export function createSyncMeta(kv: KeyValueStore, userId: string) {
@@ -54,3 +59,10 @@ export const isVisible = (owners: Map<string, Set<string>>, id: string, userId?:
   const who = owners.get(id);
   return !who || who.size === 0 || (!!userId && who.has(userId));
 };
+
+/** Like `isVisible`, and a draft shared with one account is also hidden from everyone else using the browser. */
+export const isVisibleDoc = (
+  owners: Map<string, Set<string>>,
+  d: { id: string; shared?: { userId: string } | undefined },
+  userId?: string,
+) => isVisible(owners, d.id, userId) && (!d.shared || d.shared.userId === userId);

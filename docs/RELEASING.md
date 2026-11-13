@@ -60,6 +60,16 @@ One-time setup, in addition to the secrets above:
   comment links to the workflow run.
 - A preview is a separate Worker bound to a separate preview database, so it never touches production data.
 
+## Real-time hub
+
+The app's live updates run through a Durable Object in its own Worker (`infra/realtime`). The release workflow deploys it as `mdstudio-realtime` **before** the app, and every preview deploys the shared `mdstudio-realtime-preview` before its own Worker, because the app binds to the hub by that name (`REALTIME_SCRIPT` at build, see `infra/worker-config.ts`). Nothing to set up: the same Cloudflare token deploys it, it has no public address and needs no secrets, and it uses a SQLite-backed Durable Object, which Workers Free allows. If it is ever missing, the app still works: browsers fall back to polling. Free-plan limits (100,000 Durable Object requests and 13,000 GB-s a day) are shown in the Cloudflare dashboard under Workers, Durable Objects.
+
+Live editing (several people in one draft) uses a second Durable Object class in the same Worker, `CollabRoom`, added by migration `v2` (`new_sqlite_classes`) in `infra/realtime/wrangler.jsonc`; the app reaches it through the `COLLAB` binding. Nothing else to set up, and the order stays the same (hub first, app second). Each live draft is one object that holds the document in its own SQLite and sleeps when nobody types. It is capped per account by the limits `collab_people`, `collab_docs` and `collab_enabled` (admin dashboard, per plan or account), and an admin can close it for the whole server with the `collab_open` setting. Free-plan limits (100,000 requests, 13,000 GB-s and 100,000 rows written a day) are shared with the hub; incoming socket messages count 20 to 1. To size it for a server you run, start it and run `bun scripts/collab-load.ts --url <address> --editors 8 --seconds 30` (set `MAX_COLLAB_PEOPLE` high enough on that server for the number of editors): it checks that every copy converges and prints the frames, from which the billed requests follow (frames to the room divided by 20).
+
+## Logs and traces
+
+Both Workers (the app and the real-time hub) have `observability` set: every log is kept (`head_sampling_rate: 1`, so an error is never sampled away) and 1 request in 20 is traced. The app's block is `OBSERVABILITY` in `infra/worker-config.ts`; the hub's is in `infra/realtime/wrangler.jsonc`, and a test keeps them equal. See them in the Cloudflare dashboard under Workers & Pages, the Worker, Observability (filter on errors; a trace follows a request from the app into the Durable Object), or live with `npx wrangler tail mdstudio` and `npx wrangler tail mdstudio-realtime`. The hub logs a socket it could not write to or close, and an upgrade that arrives without who is asking; the app logs a failed publish and server errors. Free-plan limits: 200,000 log events a day, kept 3 days (paid: 7 days); traces are kept 7 days; from 1 December 2026 both move to Cloudflare Observability pricing. Logpush needs the paid plan; OpenTelemetry export to Grafana, Honeycomb or Axiom is set up in the dashboard and then named under `observability.traces.destinations` and `observability.logs.destinations`.
+
 ## Hosted database and storage
 
 Create the databases once, then add their ids as repository **variables** (Settings → Secrets and
@@ -100,6 +110,16 @@ doing this on a public site, add email verification, sign-up throttling and a gl
 account may keep 10 images and 10 MB by default (`MAX_ASSETS`, `MAX_ASSET_BYTES`; per account limits can override them).
 Image links contain the address of the site that hosted them, so a draft written on a PR preview links to
 that preview, which disappears when the pull request closes.
+
+## Google sign-in
+
+In the Google Cloud console, create an OAuth client (type "Web application") with the authorized
+redirect URI `https://mdstudio.deityhub.com/api/auth/google/callback` and an OAuth consent screen
+with the `openid`, `email` and `profile` scopes (publish it, or only test users can sign in). Store its
+credentials as repository secrets: `gh secret set GOOGLE_CLIENT_ID` and
+`gh secret set GOOGLE_CLIENT_SECRET`. The release workflow sets them on the Worker under the same names.
+Previews do not offer Google sign-in (their addresses change); for local development create a second
+client with `http://localhost:8080/api/auth/google/callback` and export the two values before `bun run dev`.
 
 ## GitHub sign-in
 
@@ -145,7 +165,7 @@ only the ones that are set.
   ```
   Until `MAIL_FROM` and at least one key are set the server sends no mail, every address counts as
   confirmed, and nothing is blocked. Once they are, an account must click an emailed link before it can store
-  drafts in the cloud (GitHub sign-in counts as confirmed). The link is sent the first time the account tries
+  drafts in the cloud (GitHub and Google sign-in count as confirmed). The link is sent the first time the account tries
   the cloud, not at sign-up, so people who only write locally never use up the free sending allowance.
   Writing, previewing and exporting never need it. `MAIL_PROVIDERS=mailtrap,resend` limits and orders the
   providers, and `MAIL_<ID>_DAILY` / `MAIL_<ID>_MONTHLY` (for example `MAIL_RESEND_DAILY=50`) change the
@@ -162,4 +182,4 @@ only the ones that are set.
 - **One inbox, one account.** `test+shop@gmail.com` and `t.e.s.t@gmail.com` are the same account as
   `test@gmail.com` (a `+tag` is dropped everywhere, dots are ignored for Gmail, `googlemail.com` is `gmail.com`).
 
-Pull request previews send no mail, so confirmation is off there, like GitHub sign-in.
+Pull request previews send mail too: the preview workflow uploads `MAIL_FROM`, `RESEND_API_KEY` and `MAILTRAP_API_TOKEN` to each preview Worker (only those that are set), so invitations, confirmation and review notices can be tried there, and their links point at the preview. That also means confirmation is on in previews: a new account has to open the emailed link. Previews share one database, so the sending counters they keep do not include what production has sent: preview mail draws on the same provider allowance (for example Resend's 100 a day), so keep preview testing light or set `MAIL_PROVIDERS` for previews if you want a separate provider. GitHub and Google sign-in and the CAPTCHA stay off in previews.

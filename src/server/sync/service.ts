@@ -45,7 +45,7 @@ const liveCount = async (db: Db, userId: string) =>
       .where(and(eq(documents.userId, userId), isNull(documents.deletedAt)))
   )[0]?.n ?? 0;
 
-const toServerDoc = (r: Row): ServerDoc => ({
+export const toServerDoc = (r: Row): ServerDoc => ({
   id: r.id,
   version: r.version,
   title: r.title,
@@ -56,6 +56,7 @@ const toServerDoc = (r: Row): ServerDoc => ({
   updatedAt: r.updatedAt,
   editedAt: r.editedAt,
   deleted: r.deletedAt !== null,
+  collab: r.collab === 1,
 });
 
 const find = async (db: Db, id: string) =>
@@ -68,6 +69,7 @@ async function pushOne(
   now: number,
   limit: number,
   revisions: RevisionConfig,
+  changedDocs: ServerDoc[],
 ): Promise<PushResult> {
   const name = it.name ?? null;
   const folder = it.folder ?? null;
@@ -75,7 +77,8 @@ async function pushOne(
   const content = deleted ? "" : it.content;
   const contentHash = await fieldsHash({ title: it.title, name, folder, content });
   const editedAt = Math.min(it.editedAt, now + FUTURE_SKEW_MS);
-  const fields = { title: it.title, name, folder, content, contentHash, editedAt };
+  const text = { title: it.title, name, folder, content, editedAt };
+  const fields = { ...text, contentHash };
 
   const conflictOrRejected = async (): Promise<PushResult> => {
     const row = await find(db, it.id);
@@ -102,6 +105,15 @@ async function pushOne(
         updatedAt: now,
         deletedAt: deleted ? now : null,
       });
+      changedDocs.push({
+        id: it.id,
+        version: 1,
+        ...text,
+        createdAt: it.createdAt,
+        updatedAt: now,
+        deleted,
+        collab: false,
+      });
       return { id: it.id, status: "ok", version: 1, updatedAt: now };
     } catch {
       return conflictOrRejected(); // inserted by someone else between the read and the write
@@ -109,6 +121,9 @@ async function pushOne(
   }
 
   if (existing.userId !== userId) return { id: it.id, status: "rejected" };
+  // a live draft's text is the room's; a device may delete it, not overwrite it
+  if (existing.collab === 1 && !deleted)
+    return { id: it.id, status: "collab", server: toServerDoc(existing) };
   const wasDeleted = existing.deletedAt !== null;
   // The same text on both sides is never a conflict, however far apart the versions are.
   if (existing.contentHash === contentHash && wasDeleted === deleted)
@@ -130,6 +145,15 @@ async function pushOne(
     .where(and(eq(documents.id, it.id), eq(documents.version, existing.version)))
     .returning({ id: documents.id });
   if (changed.length === 0) return conflictOrRejected();
+  changedDocs.push({
+    id: it.id,
+    version: existing.version + 1,
+    ...text,
+    createdAt: existing.createdAt,
+    updatedAt,
+    deleted,
+    collab: existing.collab === 1,
+  });
   if (deleted) {
     // A deleted draft takes its history with it, so the text does not linger.
     await deleteRevisions(db, it.id);
@@ -159,9 +183,11 @@ export async function pushDocs(
   now = Date.now(),
   limit = DEFAULT_CLOUD_LIMIT,
   revisions: RevisionConfig = DEFAULT_REVISIONS,
+  changed: ServerDoc[] = [],
 ) {
   const results: PushResult[] = [];
-  for (const it of items) results.push(await pushOne(db, userId, it, now, limit, revisions));
+  for (const it of items)
+    results.push(await pushOne(db, userId, it, now, limit, revisions, changed));
   return results;
 }
 

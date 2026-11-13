@@ -2,10 +2,12 @@
 import { getDb } from "../db";
 import { getEnv, siteOrigin } from "../env";
 import { getMailer } from "../mail";
+import { endSessions } from "../realtime/publish";
 import { getPublicSettings } from "../settings/service";
 import { canonicalEmail } from "./email";
 import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
 import { authorizeUrl, githubSignIn, pkcePair, randomState } from "./github";
+import { googleAuthorizeUrl, googleSignIn } from "./google";
 import {
   CONNECT_COOKIE,
   OAUTH_COOKIE,
@@ -187,6 +189,8 @@ export async function resetHandler(request: Request) {
     return json({ error: "invalid" }, 400);
   const result = await resetPassword(db, input.token, input.password);
   if (!result.ok) return json({ error: result.error }, 400);
+  // a reset ends every session of the account, so its sockets close too
+  await endSessions(request, result.userId, "signed_out");
   // Someone locked out by failed attempts can get back in with the new password.
   const key = canonicalEmail(result.email);
   if (key) await clearLimit(db, `login:email:${key}`);
@@ -220,7 +224,11 @@ export const resendHandler = (request: Request) =>
 export async function logoutHandler(request: Request) {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
   const token = readToken(request);
-  if (token) await logout(await getDb(request), token);
+  const db = await getDb(request);
+  const session = token ? await userForToken(db, token) : null;
+  if (token) await logout(db, token);
+  // other tabs on this browser share the cookie that just ended: their sockets close with it
+  if (session) await endSessions(request, session.user.id, "signed_out");
   return json({ ok: true }, 200, { "set-cookie": clearCookie(protocol(request)) });
 }
 
@@ -233,6 +241,7 @@ export async function meHandler(request: Request) {
     notice: site.notice,
     signupsOpen: site.signupsOpen,
     github: githubConfig(request) !== null,
+    google: googleConfig(request) !== null,
     // whether this server can publish to GitHub (needs the OAuth app and a key for the tokens)
     githubPublish: await (await import("../github/routes")).publishingAvailable(request),
     images: await (await import("../assets/routes")).imagesAvailable(request),
@@ -299,6 +308,57 @@ export async function githubCallbackHandler(request: Request) {
     verifier,
     redirectUri: redirectUri(request),
   });
+  if ("error" in result) return fail(result.error);
+  return redirect("/editor", sessionCookie(result.token, protocol(request), SESSION_MS), clear);
+}
+
+// ---- Google sign-in -----------------------------------------------------------------------
+
+const googleConfig = (request: Request) => {
+  const clientId = getEnv(request, "GOOGLE_CLIENT_ID");
+  const clientSecret = getEnv(request, "GOOGLE_CLIENT_SECRET");
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+};
+
+const googleRedirectUri = (request: Request) =>
+  `${getEnv(request, "PUBLIC_URL")?.replace(/\/$/, "") ?? new URL(request.url).origin}/api/auth/google/callback`;
+
+export async function googleStartHandler(request: Request) {
+  const cfg = googleConfig(request);
+  if (!cfg) return redirect("/editor?auth_error=google_unavailable");
+  const { verifier, challenge } = await pkcePair();
+  const state = randomState();
+  return redirect(
+    googleAuthorizeUrl(
+      cfg,
+      googleRedirectUri(request),
+      state,
+      challenge,
+      getEnv(request, "GOOGLE_URL"),
+    ),
+    oauthCookie(`${state}.${verifier}`, protocol(request), 10 * 60 * 1000, "google"),
+  );
+}
+
+export async function googleCallbackHandler(request: Request) {
+  const cfg = googleConfig(request);
+  const clear = oauthCookie("", protocol(request), 0, "google");
+  const fail = (code: string) => redirect(`/editor?auth_error=${code}`, clear);
+  const params = new URL(request.url).searchParams;
+  const [state, verifier] = readCookie(request, OAUTH_COOKIE)?.split(".") ?? [];
+  // The state in the URL must be the one this browser was given, or the callback was forged.
+  if (!cfg || !state || !verifier || params.get("state") !== state) return fail("google_failed");
+  const code = params.get("code");
+  if (params.get("error") === "access_denied") return fail("google_denied");
+  if (!code) return fail("google_failed");
+  const result = await googleSignIn(
+    await getDb(request),
+    cfg,
+    { code, verifier, redirectUri: googleRedirectUri(request) },
+    fetch,
+    Date.now(),
+    getEnv(request, "GOOGLE_URL"),
+  );
   if ("error" in result) return fail(result.error);
   return redirect("/editor", sessionCookie(result.token, protocol(request), SESSION_MS), clear);
 }

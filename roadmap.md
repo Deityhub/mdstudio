@@ -59,7 +59,7 @@
 - [x] **Activate Server Blueprint:** Transition `infra/` backend blueprints into `src/server/`.
 - [x] **Password Reset:** "Forgot your password?" emails a one-hour, single-use link to a reset page; it never reveals whether an address has an account, ends every session, and counts as confirming the address.
 - [x] **Account Protection:** Sign-up and sign-in limits, one account per inbox (aliases blocked), email confirmation before the cloud opens, sent on first cloud use (a chain of providers: Resend and Mailtrap, SMTP or a file outbox), optional Turnstile CAPTCHA.
-- [x] **Authentication System:** Secure cookie-based session management, password authentication (PBKDF2-SHA256 through WebCrypto, because Workers has no Argon2id/Scrypt; done), and GitHub OAuth (done; sign-in dialog in the studio).
+- [x] **Authentication System:** Secure cookie-based session management, password authentication (PBKDF2-SHA256 through WebCrypto, because Workers has no Argon2id/Scrypt; done), GitHub OAuth (done; sign-in dialog in the studio), and Google OAuth with safe linking of accounts that share an email (done).
 - [x] **Optimistic Cloud Sync:** Incremental sync engine with monotonic version counters and automatic conflict branch resolution. (Done: opt-in cloud drafts with a 5-draft limit, last-edit-wins with the replaced text kept in History, sign-out removes cloud drafts from the browser, footer status.)
 - [x] **Hosted Image Pipeline (self-hosted installs; deliberately off on mdstudio.deityhub.com to keep it at $0):** Drag-and-drop image upload to Cloudflare R2 (hosted) or local disk volume (Docker); auto-rewrites relative paths to CDN URLs.
 - [x] **Cloud Revision Log:** Immutable server-side document revision history (the last 10 versions per cloud draft by default, stored compressed; `MAX_REVISIONS` changes it).
@@ -79,12 +79,9 @@
 ## Milestone 5: Collaboration & Advanced AI (Future)
 
 - [ ] **Edit access through a link:** Letting people named on a link edit the draft. Needs the collaboration engine below, so it waits for it.
-- [ ] **Real-Time Collaboration:** Peer-to-peer or server-coordinated collaborative editing using Yjs CRDTs.
+- [x] **Real-time updates (foundation):** a WebSocket channel replaces the one-minute polling: cloud drafts reach other devices as they change, a sign-out or suspension ends open sessions at once, and the timer poll only runs while the socket is down. Hosted on hibernating Durable Objects, self-hosted in process. Review comments (the writer's panel and the reader's page), link changes and an admin's plan changes arrive live too.
+- [x] **Real-time collaboration:** several named people edit one draft at the same time, online or offline, with their changes merged (Yjs). Invite by email from a draft's menu; invited people find it under "Shared with you". Remote cursors, per-person Undo, edits kept on the device and merged when the network returns, limits per plan or account, and an admin switch. Hosted on a Durable Object per draft, self-hosted in process. `scripts/collab-load.ts` sizes the cost.
 - [x] **Local AI models, Ollama:** Ollama (`http://localhost:11434/v1`, no key) is a provider in the AI integrations dialog, with a Refresh that lists the installed models. WebLLM (running a model inside the browser) is not built.
 - [x] **Inline AI Writing Actions:** Rewrite, shorten, expand, proofread, summarize, translate or a custom instruction on the selected text, reviewed as a diff before it is accepted.
 - [x] **AI help for portability issues and image alt-text:** a "Fix with AI" button on a flagged check (raw HTML, math, alerts, highlights, wiki-links, the writer's own rules and more) and "Suggest alt text" for images that lack it, both reviewed as a diff. Alt text comes from the file name and the surrounding words; the model does not see the picture.
-- [ ] **Google Auth** Integrate google signin so we have three means to signup or login, Email/Password, Github and Google
-
-## Decided not to build (for now)
-
-Deferred because they add abuse or cost risk for little gain on the editor path: **view counts** (a database write per public view could use up the free plan's daily write allowance; revisit with sampling or Cloudflare analytics), **custom slugs** (squatting, impersonation, and reused addresses once links expire) and **embeds** (a blogging feature, and an embed dies when its link expires).
+- [x] **Google Auth** Integrate google signin so we have three means to signup or login, Email/Password, Github and Google

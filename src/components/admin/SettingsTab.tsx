@@ -13,6 +13,7 @@ export function SettingsTab() {
   const [saved, setSaved] = useState<Settings | null>(null);
   const [catalog, setCatalog] = useState<LimitCatalog | null>(null);
   const [signups, setSignups] = useState(true);
+  const [collab, setCollab] = useState(true);
   const [notice, setNotice] = useState("");
   const [limits, setLimits] = useState<Record<string, LimitValue>>({});
   const [busy, setBusy] = useState(false);
@@ -21,6 +22,7 @@ export function SettingsTab() {
     setSaved(r.settings);
     setCatalog(r.catalog);
     setSignups(r.settings.signupsOpen);
+    setCollab(r.settings.collabOpen);
     setNotice(r.settings.notice ?? "");
     setLimits(r.settings.limits);
   }, []);
@@ -31,6 +33,7 @@ export function SettingsTab() {
   if (!saved || !catalog) return <p className="text-sm text-muted-foreground">Loading…</p>;
   const change = {
     ...(signups !== saved.signupsOpen && { signupsOpen: signups }),
+    ...(collab !== saved.collabOpen && { collabOpen: collab }),
     ...(notice.trim() !== (saved.notice ?? "") && { notice: notice.trim() || null }),
     ...(Object.keys(limitDiff(saved.limits, limits)).length && {
       limits: limitDiff(saved.limits, limits),
@@ -48,6 +51,16 @@ export function SettingsTab() {
             </span>
           </Label>
           <Switch id="set-signups" checked={signups} onCheckedChange={setSignups} />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="set-collab" className="flex-1">
+            Editing together is open
+            <span className="block text-xs font-normal text-muted-foreground">
+              Turn off to close live editing for everyone: open sessions end within minutes and no
+              new ones start. Drafts keep their latest text.
+            </span>
+          </Label>
+          <Switch id="set-collab" checked={collab} onCheckedChange={setCollab} />
         </div>
         <div className="space-y-1">
           <Label htmlFor="set-notice">Site notice</Label>

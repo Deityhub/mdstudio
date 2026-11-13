@@ -11,12 +11,17 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AFileRouteImport } from './routes/a.$file'
 import { Route as ApiAssetsRouteImport } from './routes/api/assets'
+import { Route as ApiCollabRouteImport } from './routes/api/collab'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
 import { Route as ApiShareRouteImport } from './routes/api/share'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
@@ -31,12 +36,14 @@ import { Route as ApiAiIntegrationsRouteImport } from './routes/api/ai.integrati
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
 import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
+import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthResetRouteImport } from './routes/api/auth/reset'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
+import { Route as ApiCollabIdRouteImport } from './routes/api/collab.$id'
 import { Route as ApiGithubConnectRouteImport } from './routes/api/github.connect'
 import { Route as ApiGithubConnectionRouteImport } from './routes/api/github.connection'
 import { Route as ApiGithubPublishRouteImport } from './routes/api/github.publish'
@@ -48,7 +55,10 @@ import { Route as ApiAdminPlansNameRouteImport } from './routes/api/admin.plans.
 import { Route as ApiAdminUsersIdRouteImport } from './routes/api/admin.users.$id'
 import { Route as ApiAiIntegrationsIdRouteImport } from './routes/api/ai.integrations.$id'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
+import { Route as ApiCollabIdEditorsRouteImport } from './routes/api/collab.$id.editors'
+import { Route as ApiCollabLinkSlugRouteImport } from './routes/api/collab.link.$slug'
 import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
 import { Route as ApiGithubPublicationsIdRouteImport } from './routes/api/github.publications.$id'
 import { Route as ApiSSlugCommentsRouteImport } from './routes/api/s.$slug.comments'
@@ -56,11 +66,14 @@ import { Route as ApiShareIdCommentsRouteImport } from './routes/api/share.$id.c
 import { Route as ApiShareIdPeopleRouteImport } from './routes/api/share.$id.people'
 import { Route as ApiAdminUsersIdContentRouteImport } from './routes/api/admin.users.$id.content'
 import { Route as ApiAdminUsersIdSignOutRouteImport } from './routes/api/admin.users.$id.sign-out'
+import { Route as ApiCollabIdEditorsEditorIdRouteImport } from './routes/api/collab.$id.editors.$editorId'
+import { Route as ApiCollabDocOwnerIdRouteImport } from './routes/api/collab.doc.$owner.$id'
 import { Route as ApiDocumentsIdRevisionsRevisionIdRouteImport } from './routes/api/documents.$id.revisions.$revisionId'
 import { Route as ApiSSlugCommentsCommentIdRouteImport } from './routes/api/s.$slug.comments.$commentId'
 import { Route as ApiShareIdCommentsCommentIdRouteImport } from './routes/api/share.$id.comments.$commentId'
 import { Route as ApiShareIdPeoplePersonIdRouteImport } from './routes/api/share.$id.people.$personId'
 import { Route as ApiAdminUsersIdKindItemRouteImport } from './routes/api/admin.users.$id.$kind.$item'
+import { Route as ApiCollabDocOwnerIdFlushRouteImport } from './routes/api/collab.doc.$owner.$id.flush'
 import { Route as ApiGithubReposOwnerRepoBranchesRouteImport } from './routes/api/github.repos.$owner.$repo.branches'
 
 const IndexRoute = IndexRouteImport.update({
@@ -73,6 +86,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -81,6 +99,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AFileRoute = AFileRouteImport.update({
@@ -93,14 +116,29 @@ const ApiAssetsRoute = ApiAssetsRouteImport.update({
   path: '/api/assets',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCollabRoute = ApiCollabRouteImport.update({
+  id: '/api/collab',
+  path: '/api/collab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRealtimeRoute = ApiRealtimeRouteImport.update({
+  id: '/api/realtime',
+  path: '/api/realtime',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiShareRoute = ApiShareRouteImport.update({
   id: '/api/share',
   path: '/api/share',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditorIndexRoute = EditorIndexRouteImport.update({
@@ -173,6 +211,11 @@ const ApiAuthGithubRoute = ApiAuthGithubRouteImport.update({
   path: '/api/auth/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthGoogleRoute = ApiAuthGoogleRouteImport.update({
+  id: '/api/auth/google',
+  path: '/api/auth/google',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   id: '/api/auth/login',
   path: '/api/auth/login',
@@ -202,6 +245,11 @@ const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
   id: '/api/auth/verify',
   path: '/api/auth/verify',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCollabIdRoute = ApiCollabIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiCollabRoute,
 } as any)
 const ApiGithubConnectRoute = ApiGithubConnectRouteImport.update({
   id: '/api/github/connect',
@@ -258,10 +306,25 @@ const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
   path: '/callback',
   getParentRoute: () => ApiAuthGithubRoute,
 } as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthGoogleRoute,
+} as any)
 const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
   id: '/resend',
   path: '/resend',
   getParentRoute: () => ApiAuthVerifyRoute,
+} as any)
+const ApiCollabIdEditorsRoute = ApiCollabIdEditorsRouteImport.update({
+  id: '/editors',
+  path: '/editors',
+  getParentRoute: () => ApiCollabIdRoute,
+} as any)
+const ApiCollabLinkSlugRoute = ApiCollabLinkSlugRouteImport.update({
+  id: '/link/$slug',
+  path: '/link/$slug',
+  getParentRoute: () => ApiCollabRoute,
 } as any)
 const ApiDocumentsIdRevisionsRoute = ApiDocumentsIdRevisionsRouteImport.update({
   id: '/api/documents/$id/revisions',
@@ -298,6 +361,17 @@ const ApiAdminUsersIdSignOutRoute = ApiAdminUsersIdSignOutRouteImport.update({
   path: '/sign-out',
   getParentRoute: () => ApiAdminUsersIdRoute,
 } as any)
+const ApiCollabIdEditorsEditorIdRoute =
+  ApiCollabIdEditorsEditorIdRouteImport.update({
+    id: '/$editorId',
+    path: '/$editorId',
+    getParentRoute: () => ApiCollabIdEditorsRoute,
+  } as any)
+const ApiCollabDocOwnerIdRoute = ApiCollabDocOwnerIdRouteImport.update({
+  id: '/doc/$owner/$id',
+  path: '/doc/$owner/$id',
+  getParentRoute: () => ApiCollabRoute,
+} as any)
 const ApiDocumentsIdRevisionsRevisionIdRoute =
   ApiDocumentsIdRevisionsRevisionIdRouteImport.update({
     id: '/$revisionId',
@@ -327,6 +401,12 @@ const ApiAdminUsersIdKindItemRoute = ApiAdminUsersIdKindItemRouteImport.update({
   path: '/$kind/$item',
   getParentRoute: () => ApiAdminUsersIdRoute,
 } as any)
+const ApiCollabDocOwnerIdFlushRoute =
+  ApiCollabDocOwnerIdFlushRouteImport.update({
+    id: '/flush',
+    path: '/flush',
+    getParentRoute: () => ApiCollabDocOwnerIdRoute,
+  } as any)
 const ApiGithubReposOwnerRepoBranchesRoute =
   ApiGithubReposOwnerRepoBranchesRouteImport.update({
     id: '/$owner/$repo/branches',
@@ -337,12 +417,17 @@ const ApiGithubReposOwnerRepoBranchesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
+  '/api/collab': typeof ApiCollabRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
+  '/c/$slug': typeof CSlugRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -357,12 +442,14 @@ export interface FileRoutesByFullPath {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/collab/$id': typeof ApiCollabIdRouteWithChildren
   '/api/github/connect': typeof ApiGithubConnectRoute
   '/api/github/connection': typeof ApiGithubConnectionRoute
   '/api/github/publish': typeof ApiGithubPublishRoute
@@ -374,7 +461,10 @@ export interface FileRoutesByFullPath {
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
+  '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
@@ -382,22 +472,30 @@ export interface FileRoutesByFullPath {
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
   '/api/admin/users/$id/content': typeof ApiAdminUsersIdContentRoute
   '/api/admin/users/$id/sign-out': typeof ApiAdminUsersIdSignOutRoute
+  '/api/collab/$id/editors/$editorId': typeof ApiCollabIdEditorsEditorIdRoute
+  '/api/collab/doc/$owner/$id': typeof ApiCollabDocOwnerIdRouteWithChildren
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
   '/api/admin/users/$id/$kind/$item': typeof ApiAdminUsersIdKindItemRoute
+  '/api/collab/doc/$owner/$id/flush': typeof ApiCollabDocOwnerIdFlushRoute
   '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
+  '/api/collab': typeof ApiCollabRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
+  '/c/$slug': typeof CSlugRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -412,12 +510,14 @@ export interface FileRoutesByTo {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/collab/$id': typeof ApiCollabIdRouteWithChildren
   '/api/github/connect': typeof ApiGithubConnectRoute
   '/api/github/connection': typeof ApiGithubConnectionRoute
   '/api/github/publish': typeof ApiGithubPublishRoute
@@ -429,7 +529,10 @@ export interface FileRoutesByTo {
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
+  '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
@@ -437,23 +540,31 @@ export interface FileRoutesByTo {
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
   '/api/admin/users/$id/content': typeof ApiAdminUsersIdContentRoute
   '/api/admin/users/$id/sign-out': typeof ApiAdminUsersIdSignOutRoute
+  '/api/collab/$id/editors/$editorId': typeof ApiCollabIdEditorsEditorIdRoute
+  '/api/collab/doc/$owner/$id': typeof ApiCollabDocOwnerIdRouteWithChildren
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
   '/api/admin/users/$id/$kind/$item': typeof ApiAdminUsersIdKindItemRoute
+  '/api/collab/doc/$owner/$id/flush': typeof ApiCollabDocOwnerIdFlushRoute
   '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
   '/api/assets': typeof ApiAssetsRouteWithChildren
+  '/api/collab': typeof ApiCollabRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
+  '/c/$slug': typeof CSlugRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -468,12 +579,14 @@ export interface FileRoutesById {
   '/api/assets/$id': typeof ApiAssetsIdRoute
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
+  '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/collab/$id': typeof ApiCollabIdRouteWithChildren
   '/api/github/connect': typeof ApiGithubConnectRoute
   '/api/github/connection': typeof ApiGithubConnectionRoute
   '/api/github/publish': typeof ApiGithubPublishRoute
@@ -485,7 +598,10 @@ export interface FileRoutesById {
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
+  '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
@@ -493,11 +609,14 @@ export interface FileRoutesById {
   '/api/share/$id/people': typeof ApiShareIdPeopleRouteWithChildren
   '/api/admin/users/$id/content': typeof ApiAdminUsersIdContentRoute
   '/api/admin/users/$id/sign-out': typeof ApiAdminUsersIdSignOutRoute
+  '/api/collab/$id/editors/$editorId': typeof ApiCollabIdEditorsEditorIdRoute
+  '/api/collab/doc/$owner/$id': typeof ApiCollabDocOwnerIdRouteWithChildren
   '/api/documents/$id/revisions/$revisionId': typeof ApiDocumentsIdRevisionsRevisionIdRoute
   '/api/s/$slug/comments/$commentId': typeof ApiSSlugCommentsCommentIdRoute
   '/api/share/$id/comments/$commentId': typeof ApiShareIdCommentsCommentIdRoute
   '/api/share/$id/people/$personId': typeof ApiShareIdPeoplePersonIdRoute
   '/api/admin/users/$id/$kind/$item': typeof ApiAdminUsersIdKindItemRoute
+  '/api/collab/doc/$owner/$id/flush': typeof ApiCollabDocOwnerIdFlushRoute
   '/api/github/repos/$owner/$repo/branches': typeof ApiGithubReposOwnerRepoBranchesRoute
 }
 export interface FileRouteTypes {
@@ -505,12 +624,17 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/privacy'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/terms'
     | '/a/$file'
     | '/api/assets'
+    | '/api/collab'
     | '/api/health'
+    | '/api/realtime'
     | '/api/share'
+    | '/c/$slug'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/s/$slug'
@@ -525,12 +649,14 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
+    | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/collab/$id'
     | '/api/github/connect'
     | '/api/github/connection'
     | '/api/github/publish'
@@ -542,7 +668,10 @@ export interface FileRouteTypes {
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
+    | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
+    | '/api/collab/$id/editors'
+    | '/api/collab/link/$slug'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
@@ -550,22 +679,30 @@ export interface FileRouteTypes {
     | '/api/share/$id/people'
     | '/api/admin/users/$id/content'
     | '/api/admin/users/$id/sign-out'
+    | '/api/collab/$id/editors/$editorId'
+    | '/api/collab/doc/$owner/$id'
     | '/api/documents/$id/revisions/$revisionId'
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
     | '/api/admin/users/$id/$kind/$item'
+    | '/api/collab/doc/$owner/$id/flush'
     | '/api/github/repos/$owner/$repo/branches'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/privacy'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/terms'
     | '/a/$file'
     | '/api/assets'
+    | '/api/collab'
     | '/api/health'
+    | '/api/realtime'
     | '/api/share'
+    | '/c/$slug'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/s/$slug'
@@ -580,12 +717,14 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
+    | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/collab/$id'
     | '/api/github/connect'
     | '/api/github/connection'
     | '/api/github/publish'
@@ -597,7 +736,10 @@ export interface FileRouteTypes {
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
+    | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
+    | '/api/collab/$id/editors'
+    | '/api/collab/link/$slug'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
@@ -605,22 +747,30 @@ export interface FileRouteTypes {
     | '/api/share/$id/people'
     | '/api/admin/users/$id/content'
     | '/api/admin/users/$id/sign-out'
+    | '/api/collab/$id/editors/$editorId'
+    | '/api/collab/doc/$owner/$id'
     | '/api/documents/$id/revisions/$revisionId'
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
     | '/api/admin/users/$id/$kind/$item'
+    | '/api/collab/doc/$owner/$id/flush'
     | '/api/github/repos/$owner/$repo/branches'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/privacy'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/terms'
     | '/a/$file'
     | '/api/assets'
+    | '/api/collab'
     | '/api/health'
+    | '/api/realtime'
     | '/api/share'
+    | '/c/$slug'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/s/$slug'
@@ -635,12 +785,14 @@ export interface FileRouteTypes {
     | '/api/assets/$id'
     | '/api/auth/forgot'
     | '/api/auth/github'
+    | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
+    | '/api/collab/$id'
     | '/api/github/connect'
     | '/api/github/connection'
     | '/api/github/publish'
@@ -652,7 +804,10 @@ export interface FileRouteTypes {
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
     | '/api/auth/github/callback'
+    | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
+    | '/api/collab/$id/editors'
+    | '/api/collab/link/$slug'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
@@ -660,23 +815,31 @@ export interface FileRouteTypes {
     | '/api/share/$id/people'
     | '/api/admin/users/$id/content'
     | '/api/admin/users/$id/sign-out'
+    | '/api/collab/$id/editors/$editorId'
+    | '/api/collab/doc/$owner/$id'
     | '/api/documents/$id/revisions/$revisionId'
     | '/api/s/$slug/comments/$commentId'
     | '/api/share/$id/comments/$commentId'
     | '/api/share/$id/people/$personId'
     | '/api/admin/users/$id/$kind/$item'
+    | '/api/collab/doc/$owner/$id/flush'
     | '/api/github/repos/$owner/$repo/branches'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsRoute: typeof TermsRoute
   AFileRoute: typeof AFileRoute
   ApiAssetsRoute: typeof ApiAssetsRouteWithChildren
+  ApiCollabRoute: typeof ApiCollabRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiRealtimeRoute: typeof ApiRealtimeRoute
   ApiShareRoute: typeof ApiShareRouteWithChildren
+  CSlugRoute: typeof CSlugRoute
   EditorDocIdRoute: typeof EditorDocIdRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   SSlugRoute: typeof SSlugRoute
@@ -690,6 +853,7 @@ export interface RootRouteChildren {
   ApiAiIntegrationsRoute: typeof ApiAiIntegrationsRouteWithChildren
   ApiAuthForgotRoute: typeof ApiAuthForgotRoute
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
+  ApiAuthGoogleRoute: typeof ApiAuthGoogleRouteWithChildren
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
@@ -723,6 +887,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -735,6 +906,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/a/$file': {
@@ -751,6 +929,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/collab': {
+      id: '/api/collab'
+      path: '/api/collab'
+      fullPath: '/api/collab'
+      preLoaderRoute: typeof ApiCollabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -758,11 +943,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/realtime': {
+      id: '/api/realtime'
+      path: '/api/realtime'
+      fullPath: '/api/realtime'
+      preLoaderRoute: typeof ApiRealtimeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/share': {
       id: '/api/share'
       path: '/api/share'
       fullPath: '/api/share'
       preLoaderRoute: typeof ApiShareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/editor/': {
@@ -863,6 +1062,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/google': {
+      id: '/api/auth/google'
+      path: '/api/auth/google'
+      fullPath: '/api/auth/google'
+      preLoaderRoute: typeof ApiAuthGoogleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/login': {
       id: '/api/auth/login'
       path: '/api/auth/login'
@@ -904,6 +1110,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/verify'
       preLoaderRoute: typeof ApiAuthVerifyRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/collab/$id': {
+      id: '/api/collab/$id'
+      path: '/$id'
+      fullPath: '/api/collab/$id'
+      preLoaderRoute: typeof ApiCollabIdRouteImport
+      parentRoute: typeof ApiCollabRoute
     }
     '/api/github/connect': {
       id: '/api/github/connect'
@@ -982,12 +1195,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthGithubCallbackRouteImport
       parentRoute: typeof ApiAuthGithubRoute
     }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof ApiAuthGoogleRoute
+    }
     '/api/auth/verify/resend': {
       id: '/api/auth/verify/resend'
       path: '/resend'
       fullPath: '/api/auth/verify/resend'
       preLoaderRoute: typeof ApiAuthVerifyResendRouteImport
       parentRoute: typeof ApiAuthVerifyRoute
+    }
+    '/api/collab/$id/editors': {
+      id: '/api/collab/$id/editors'
+      path: '/editors'
+      fullPath: '/api/collab/$id/editors'
+      preLoaderRoute: typeof ApiCollabIdEditorsRouteImport
+      parentRoute: typeof ApiCollabIdRoute
+    }
+    '/api/collab/link/$slug': {
+      id: '/api/collab/link/$slug'
+      path: '/link/$slug'
+      fullPath: '/api/collab/link/$slug'
+      preLoaderRoute: typeof ApiCollabLinkSlugRouteImport
+      parentRoute: typeof ApiCollabRoute
     }
     '/api/documents/$id/revisions': {
       id: '/api/documents/$id/revisions'
@@ -1038,6 +1272,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUsersIdSignOutRouteImport
       parentRoute: typeof ApiAdminUsersIdRoute
     }
+    '/api/collab/$id/editors/$editorId': {
+      id: '/api/collab/$id/editors/$editorId'
+      path: '/$editorId'
+      fullPath: '/api/collab/$id/editors/$editorId'
+      preLoaderRoute: typeof ApiCollabIdEditorsEditorIdRouteImport
+      parentRoute: typeof ApiCollabIdEditorsRoute
+    }
+    '/api/collab/doc/$owner/$id': {
+      id: '/api/collab/doc/$owner/$id'
+      path: '/doc/$owner/$id'
+      fullPath: '/api/collab/doc/$owner/$id'
+      preLoaderRoute: typeof ApiCollabDocOwnerIdRouteImport
+      parentRoute: typeof ApiCollabRoute
+    }
     '/api/documents/$id/revisions/$revisionId': {
       id: '/api/documents/$id/revisions/$revisionId'
       path: '/$revisionId'
@@ -1073,6 +1321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUsersIdKindItemRouteImport
       parentRoute: typeof ApiAdminUsersIdRoute
     }
+    '/api/collab/doc/$owner/$id/flush': {
+      id: '/api/collab/doc/$owner/$id/flush'
+      path: '/flush'
+      fullPath: '/api/collab/doc/$owner/$id/flush'
+      preLoaderRoute: typeof ApiCollabDocOwnerIdFlushRouteImport
+      parentRoute: typeof ApiCollabDocOwnerIdRoute
+    }
     '/api/github/repos/$owner/$repo/branches': {
       id: '/api/github/repos/$owner/$repo/branches'
       path: '/$owner/$repo/branches'
@@ -1093,6 +1348,56 @@ const ApiAssetsRouteChildren: ApiAssetsRouteChildren = {
 
 const ApiAssetsRouteWithChildren = ApiAssetsRoute._addFileChildren(
   ApiAssetsRouteChildren,
+)
+
+interface ApiCollabIdEditorsRouteChildren {
+  ApiCollabIdEditorsEditorIdRoute: typeof ApiCollabIdEditorsEditorIdRoute
+}
+
+const ApiCollabIdEditorsRouteChildren: ApiCollabIdEditorsRouteChildren = {
+  ApiCollabIdEditorsEditorIdRoute: ApiCollabIdEditorsEditorIdRoute,
+}
+
+const ApiCollabIdEditorsRouteWithChildren =
+  ApiCollabIdEditorsRoute._addFileChildren(ApiCollabIdEditorsRouteChildren)
+
+interface ApiCollabIdRouteChildren {
+  ApiCollabIdEditorsRoute: typeof ApiCollabIdEditorsRouteWithChildren
+}
+
+const ApiCollabIdRouteChildren: ApiCollabIdRouteChildren = {
+  ApiCollabIdEditorsRoute: ApiCollabIdEditorsRouteWithChildren,
+}
+
+const ApiCollabIdRouteWithChildren = ApiCollabIdRoute._addFileChildren(
+  ApiCollabIdRouteChildren,
+)
+
+interface ApiCollabDocOwnerIdRouteChildren {
+  ApiCollabDocOwnerIdFlushRoute: typeof ApiCollabDocOwnerIdFlushRoute
+}
+
+const ApiCollabDocOwnerIdRouteChildren: ApiCollabDocOwnerIdRouteChildren = {
+  ApiCollabDocOwnerIdFlushRoute: ApiCollabDocOwnerIdFlushRoute,
+}
+
+const ApiCollabDocOwnerIdRouteWithChildren =
+  ApiCollabDocOwnerIdRoute._addFileChildren(ApiCollabDocOwnerIdRouteChildren)
+
+interface ApiCollabRouteChildren {
+  ApiCollabIdRoute: typeof ApiCollabIdRouteWithChildren
+  ApiCollabLinkSlugRoute: typeof ApiCollabLinkSlugRoute
+  ApiCollabDocOwnerIdRoute: typeof ApiCollabDocOwnerIdRouteWithChildren
+}
+
+const ApiCollabRouteChildren: ApiCollabRouteChildren = {
+  ApiCollabIdRoute: ApiCollabIdRouteWithChildren,
+  ApiCollabLinkSlugRoute: ApiCollabLinkSlugRoute,
+  ApiCollabDocOwnerIdRoute: ApiCollabDocOwnerIdRouteWithChildren,
+}
+
+const ApiCollabRouteWithChildren = ApiCollabRoute._addFileChildren(
+  ApiCollabRouteChildren,
 )
 
 interface ApiShareIdCommentsRouteChildren {
@@ -1206,6 +1511,18 @@ const ApiAuthGithubRouteWithChildren = ApiAuthGithubRoute._addFileChildren(
   ApiAuthGithubRouteChildren,
 )
 
+interface ApiAuthGoogleRouteChildren {
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+}
+
+const ApiAuthGoogleRouteChildren: ApiAuthGoogleRouteChildren = {
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+}
+
+const ApiAuthGoogleRouteWithChildren = ApiAuthGoogleRoute._addFileChildren(
+  ApiAuthGoogleRouteChildren,
+)
+
 interface ApiAuthVerifyRouteChildren {
   ApiAuthVerifyResendRoute: typeof ApiAuthVerifyResendRoute
 }
@@ -1259,12 +1576,17 @@ const ApiSSlugCommentsRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsRoute: TermsRoute,
   AFileRoute: AFileRoute,
   ApiAssetsRoute: ApiAssetsRouteWithChildren,
+  ApiCollabRoute: ApiCollabRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
+  ApiRealtimeRoute: ApiRealtimeRoute,
   ApiShareRoute: ApiShareRouteWithChildren,
+  CSlugRoute: CSlugRoute,
   EditorDocIdRoute: EditorDocIdRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   SSlugRoute: SSlugRoute,
@@ -1278,6 +1600,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiIntegrationsRoute: ApiAiIntegrationsRouteWithChildren,
   ApiAuthForgotRoute: ApiAuthForgotRoute,
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
+  ApiAuthGoogleRoute: ApiAuthGoogleRouteWithChildren,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,

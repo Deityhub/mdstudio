@@ -2,7 +2,6 @@ import {
   lazy,
   Suspense,
   useCallback,
-  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -17,18 +16,31 @@ import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { ReviewComments } from "@/components/studio/ReviewComments";
 import { PUBLISH_AFTER_CONNECT, PublishDialog } from "@/components/studio/PublishDialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CollabDialog } from "@/components/studio/CollabDialog";
+import { LiveComments } from "@/components/studio/LiveComments";
+import { LocalImagesDialog } from "@/components/studio/LocalImagesDialog";
+import { type Composing, ThreadDialog } from "@/components/studio/ThreadDialog";
+import { CollabStatus } from "@/components/studio/CollabStatus";
+import type { SharedRow } from "@/components/studio/Library";
+import { CollabError, collabApi } from "@/lib/collab/api";
+import { useCollabSession, useSessionState, useThreads } from "@/lib/collab/hooks";
+import { sortLocalImages, warnLocalImages as noteLocalImages } from "@/lib/collab/images";
+import { detachShared, openShared, removeShared } from "@/lib/collab/shared";
+import { useSharedWithMe } from "@/lib/collab/sharedHooks";
 import { ShareDialog } from "@/components/studio/ShareDialog";
 import { clearShares, useShares } from "@/lib/share/hooks";
 import {
   addToCloud,
   removeFromCloud,
+  requestPull,
   syncLabel,
   syncNow,
   useCloud,
   useSync,
 } from "@/lib/sync/hooks";
 import { type CloudRevision, fetchCloudRevision, listCloudRevisions } from "@/lib/sync/revisions";
-import { cloudOwners, isVisible } from "@/lib/sync/meta";
+import { cloudOwners, isVisibleDoc } from "@/lib/sync/meta";
 import { ClientOnly, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -55,6 +67,8 @@ import {
   Tags,
   History,
   MessageSquare,
+  MessageSquarePlus,
+  PencilLine,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -127,6 +141,7 @@ import { parseProfile } from "@/lib/markdown/profiles";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editor/editing";
 import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editor/editing-insert";
 import { hydrateDiagrams, renderDiagramFor, withCachedDiagrams } from "@/lib/markdown/diagrams";
+import { useEasedValue } from "@/lib/ui/useEasedValue";
 import { useResolvedTheme } from "@/lib/ui/useResolvedTheme";
 import { renderExportBody, standaloneDocument } from "@/lib/markdown/export";
 import { ensureMath, hasMathSyntax, isMathLoaded } from "@/lib/markdown/math";
@@ -161,6 +176,7 @@ import {
 } from "@/components/ui/dialog";
 
 const NO_IMAGES: Record<string, string> = {};
+const noop = () => undefined;
 const NO_CONTEXT: Context = {
   bold: false,
   italic: false,
@@ -356,6 +372,8 @@ export function Studio({ docId }: { docId: string }) {
   const cloudOn = cloudReady(accountState);
   const visibleTo = useRef<string | undefined>(undefined);
   visibleTo.current = account?.id;
+  const docIdRef = useRef(docId);
+  docIdRef.current = docId;
   const refreshList = useCallback(
     () =>
       Promise.all([
@@ -363,7 +381,7 @@ export function Studio({ docId }: { docId: string }) {
         documentStore.folders.list(),
         cloudOwners(indexedDbStore),
       ]).then(([d, f, owners]) => {
-        setDocs(d.filter((x) => isVisible(owners, x.id, visibleTo.current)));
+        setDocs(d.filter((x) => isVisibleDoc(owners, x, visibleTo.current)));
         setFolderNames(f);
       }),
     [],
@@ -390,7 +408,7 @@ export function Studio({ docId }: { docId: string }) {
         cloudOwners(indexedDbStore),
         documentStore.hadDraft(),
       ]).then(([all, owners, had]) => {
-        const own = all.find((x) => isVisible(owners, x.id, account?.id));
+        const own = all.find((x) => isVisibleDoc(owners, x, account?.id));
         if (own) {
           example.current = null;
           go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
@@ -406,7 +424,7 @@ export function Studio({ docId }: { docId: string }) {
     }
     example.current = null;
     Promise.all([documentStore.get(docId), cloudOwners(indexedDbStore)]).then(([d, owners]) => {
-      if (d && isVisible(owners, d.id, account?.id)) setDoc(d);
+      if (d && isVisibleDoc(owners, d, account?.id)) setDoc(d);
       else {
         setDoc(null);
         setMissing(true);
@@ -421,7 +439,7 @@ export function Studio({ docId }: { docId: string }) {
     if (docId !== NEW_DOC_ID || !docs[0] || !doc || example.current?.doc !== doc) return;
     let live = true;
     Promise.all([documentStore.list(), cloudOwners(indexedDbStore)]).then(([all, owners]) => {
-      const own = all.find((x) => isVisible(owners, x.id, visibleTo.current));
+      const own = all.find((x) => isVisibleDoc(owners, x, visibleTo.current));
       if (!live || !own || example.current?.doc !== doc) return;
       example.current = null;
       go.current({ to: "/editor/$docId", params: { docId: own.id }, replace: true });
@@ -496,8 +514,11 @@ export function Studio({ docId }: { docId: string }) {
 
   // Optional account sync of the drafts chosen for the cloud: a no-op while signed out. Cloud
   // changes to the open draft wait while it has unsaved edits, then load into the editor.
+  const sharedRefresh = useRef<() => Promise<unknown> | void>(() => undefined);
   const syncStatus = useSync(cloudOn ? account?.id : undefined, {
     isBusy: (id) => pending.current?.id === id,
+    // invited, removed or stopped: the list of drafts shared with this account is read at once
+    onCollab: () => sharedRefresh.current(),
     onReport: (report) => {
       if (report.applied.length || report.removed.length || report.detached.length)
         void refreshList();
@@ -530,6 +551,180 @@ export function Studio({ docId }: { docId: string }) {
     },
   });
   const cloudDrafts = useCloud();
+  // A draft shared for editing is live: its text is a shared document the room holds, and this
+  // browser edits it through a session. Until the text has arrived the draft is shown, not editable.
+  // (a draft someone else owns is live as long as this account is invited to it)
+  const liveTarget =
+    cloudOn && account && doc
+      ? doc.shared
+        ? doc.shared.userId === account.id
+          ? { ownerId: doc.shared.ownerId, draftId: doc.shared.id }
+          : null
+        : cloudDrafts.live.has(doc.id)
+          ? { ownerId: account.id, draftId: doc.id }
+          : null
+      : null;
+  const openSession = useCollabSession(
+    liveTarget,
+    {
+      // this browser kept state of an earlier room: its text is not lost, it is in History
+      onStale: (text) => {
+        if (doc) void historyStore.save({ ...doc, content: text }, Date.now(), "replaced");
+      },
+      // the room keeps turning this browser away (removed, stopped or deleted while it was offline):
+      // find out now what became of the draft, instead of trying for a long time
+      onRefused: () => {
+        if (doc?.shared) return sharedRefresh.current();
+        requestPull();
+        return new Promise((r) => setTimeout(r, 3000)); // the round runs in the background
+      },
+    },
+    {
+      id: account?.id ?? "",
+      name: account?.displayName?.trim() || account?.email.split("@")[0] || "Someone",
+    },
+  );
+  // the session of the draft on screen, not of the one just left (it closes a moment later)
+  const collab =
+    openSession &&
+    openSession.draftId === liveTarget?.draftId &&
+    openSession.ownerId === liveTarget.ownerId
+      ? openSession
+      : null;
+  const collabState = useSessionState(collab);
+  const collabReady = !!collab && collabState.ready;
+  // Comments and suggestions on the words of a draft edited together
+  const liveThreads = useThreads(collab && collabReady ? collab : null);
+  const [composing, setComposing] = useState<Composing | null>(null);
+  const [activeThread, setActiveThread] = useState<string | null>(null);
+  const [imagesDialog, setImagesDialog] = useState<"mine" | "missing" | null>(null);
+  useEffect(() => {
+    // a click on marked words opens the thread they belong to
+    collab?.onPickThread((id) => {
+      setActiveThread(id);
+      if (overlay) setMobilePanel("comments");
+      else setPanel("comments");
+    });
+  }, [collab, overlay]);
+  // The live editor opens once the draft's saved copy shows the room's text (see below).
+  const [mirrored, setMirrored] = useState(false);
+  const waiting = !!liveTarget && !(collabReady && mirrored);
+  const mirrorId = doc?.id;
+  useEffect(() => {
+    if (!collab || !collabReady || !mirrorId) return;
+    const id = mirrorId;
+    const mirror = (text: string) =>
+      setDoc((d) => {
+        if (!d || d.id !== id || d.content === text) return d;
+        const next = { ...d, content: text, updatedAt: Date.now() };
+        next.title = docTitle(next);
+        return next;
+      });
+    mirror(collab.text());
+    setMirrored(true);
+    // the saved copy follows everyone's edits, so the library, the preview and export keep working offline
+    const stop = collab.observe(mirror);
+    return () => {
+      stop();
+      setMirrored(false);
+    };
+  }, [collab, collabReady, mirrorId]);
+
+  // Drafts others invited this account to edit. One no longer on the list (removed, stopped,
+  // deleted) stays on this device as an ordinary draft, and the person is told.
+  const tellDetached = useCallback(
+    (gone: MdDocument[]) => {
+      void refreshList();
+      for (const d of gone) {
+        // the open draft is shown as it is on screen (what is saved may be a moment behind)
+        if (d.id === docIdRef.current)
+          setDoc((prev) => {
+            if (!prev || prev.id !== d.id) return d;
+            const { shared: _ended, ...plain } = prev;
+            return plain;
+          });
+        toast.info(`You can no longer edit “${d.title}”`, {
+          id: `shared-ended-${d.id}`,
+          description:
+            "A copy of its latest text stays on this device, as a draft of your own. Changes you made while offline stay on this device only.",
+        });
+      }
+    },
+    [refreshList],
+  );
+  const { items: sharedItems, refresh: refreshShared } = useSharedWithMe(
+    cloudOn ? account?.id : undefined,
+    tellDetached,
+  );
+  sharedRefresh.current = () => refreshShared();
+  // the room says it is over (removed while editing, or it was stopped): settle it now
+  useEffect(() => {
+    if (collabState.status !== "ended" || !doc) return;
+    if (doc.shared) {
+      void detachShared(documentStore, indexedDbStore, doc.id).then((plain) => {
+        if (plain) tellDetached([plain]);
+        void refreshShared();
+      });
+      return;
+    }
+    // the owner's own draft: the cloud is asked what became of it, and again a moment later, because
+    // a round leaves a draft alone while its latest edits are still waiting to be saved
+    requestPull();
+    const again = setTimeout(() => requestPull(), 1500);
+    return () => clearTimeout(again);
+    // only when the connection ends, not on every keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collabState.status]);
+  const sharedRows = useMemo<SharedRow[]>(() => {
+    const local = new Map(
+      docs.flatMap((d) => (d.shared ? [[`${d.shared.ownerId}:${d.shared.id}`, d] as const] : [])),
+    );
+    const rows: SharedRow[] = sharedItems.map((i) => {
+      const d = local.get(`${i.ownerId}:${i.id}`);
+      local.delete(`${i.ownerId}:${i.id}`);
+      return { ...i, title: d?.title ?? i.title, ...(d && { localId: d.id }) };
+    });
+    // opened before and not on the list that was read (offline): shown from what this device has
+    for (const d of local.values())
+      rows.push({
+        ownerId: d.shared!.ownerId,
+        id: d.shared!.id,
+        title: d.title,
+        ownerName: d.shared!.ownerName,
+        localId: d.id,
+      });
+    return rows.sort((a, b) => a.title.localeCompare(b.title));
+  }, [docs, sharedItems]);
+  const openSharedRow = async (row: SharedRow) => {
+    if (!account) return;
+    const id = await openShared(documentStore, account.id, row);
+    await refreshList();
+    go.current({ to: "/editor/$docId", params: { docId: id } });
+  };
+  const leaveSharedRow = async (row: SharedRow) => {
+    try {
+      await collabApi.leave(row.ownerId, row.id);
+    } catch (error) {
+      // already gone is the same as left; anything else leaves things as they are
+      if (!(error instanceof CollabError && error.code === "not_found")) {
+        toast.error("Couldn't leave the draft", {
+          description: "Check your connection and try again.",
+        });
+        return;
+      }
+    }
+    if (row.localId) {
+      if (row.localId === docId) pending.current = null;
+      await removeShared(documentStore, indexedDbStore, row.localId, (id) =>
+        historyStore.clear(id),
+      );
+      if (row.localId === docId)
+        go.current({ to: "/editor/$docId", params: { docId: NEW_DOC_ID } });
+    }
+    await refreshList();
+    await refreshShared();
+    toast.success(`You left “${row.title}”`);
+  };
   // The account's share links are read when something asks for them (the Share dialog, the
   // Comments panel), never in the background, so they cost nothing until used.
   useEffect(() => {
@@ -570,11 +765,28 @@ export function Studio({ docId }: { docId: string }) {
       return next;
     });
   }, []);
-  const setContent = useCallback((content: string) => update({ content }), [update]);
+  // In a live draft a new text (a restored version, the front matter form, an AI edit) is a small
+  // edit of the shared one, so what others typed meanwhile is kept.
+  const setContent = useCallback(
+    (content: string) =>
+      collabReady && collab ? collab.replaceText(content) : update({ content }),
+    [update, collab, collabReady],
+  );
 
   const content = doc?.content ?? "";
-  const deferred = useDeferredValue(content);
+  // The preview and checks are rebuilt from the whole text, which takes longer the longer the draft
+  // is. Other people's edits can arrive many times a second, so they follow no faster than that
+  // work allows (see useEasedValue); the input itself is never held back.
+  // (Not useDeferredValue: React abandons and restarts a deferred render whenever a key is pressed
+  // meanwhile, so under continuous typing the same work is started again and again and never ends.)
+  const [deferred, easedDone] = useEasedValue(content, doc?.id ?? null);
   const images = doc?.images ?? NO_IMAGES;
+  // Images stored in only one browser are not shared with the others in a draft edited together
+  const localImages = useMemo(
+    () => (collabReady ? sortLocalImages(deferred, images) : { mine: [], missing: [] }),
+    [collabReady, deferred, images],
+  );
+  const imageNotes = noteLocalImages(localImages, hostingOn && cloudOn);
   // KaTeX loads only when a document has math; bumping this re-renders once it is ready.
   const [mathVersion, setMathVersion] = useState(0);
   useEffect(() => {
@@ -593,7 +805,8 @@ export function Studio({ docId }: { docId: string }) {
   const html = useMemo(() => {
     const rendered = renderMarkdown(deferred, profile, images, { sourceLines: true });
     // known diagrams go straight into the HTML so they never show up as code while typing
-    return supports("mermaid", profile) ? withCachedDiagrams(rendered, theme) : rendered;
+    const out = supports("mermaid", profile) ? withCachedDiagrams(rendered, theme) : rendered;
+    return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deferred, profile, images, mathVersion, theme]);
   // Only the blocks that changed are replaced (see patchHtml), then pending diagrams render.
@@ -653,7 +866,25 @@ export function Studio({ docId }: { docId: string }) {
     },
     [profile, theme],
   );
-  useLayoutEffect(() => syncPreview(previewBody.current), [html, syncPreview]);
+  useLayoutEffect(() => {
+    syncPreview(previewBody.current);
+    easedDone(); // the update is on screen: how long it took sets the pace of the next
+  }, [html, syncPreview, easedDone]);
+  // In a draft edited together, a local image this browser does not have is marked, not left as a
+  // broken picture. The preview is drawn in pieces and not always in the same step as a render, so
+  // this watches the pane instead of running after a render.
+  useEffect(() => {
+    const root = previewBody.current;
+    if (!collabReady || !root) return;
+    const mark = () =>
+      root
+        .querySelectorAll('img[src^="./images/"], img[src^="images/"]')
+        .forEach((img) => img.setAttribute("data-unshared", ""));
+    mark();
+    const watch = new MutationObserver(mark);
+    watch.observe(root, { childList: true, subtree: true });
+    return () => watch.disconnect();
+  }, [collabReady, effectiveView]);
   const issues = useMemo(
     () => runChecks(deferred, profile, checkConfig).issues,
     [deferred, profile, checkConfig],
@@ -760,6 +991,14 @@ export function Studio({ docId }: { docId: string }) {
       refs.push(`![${labelOf(name)}](./images/${name})`);
       if (kb(data) > 500)
         toast.warning(`${name} is ${kb(data)} KB. Large embedded images make the file heavy.`);
+      if (collabReady)
+        toast.warning("Only you can see this image", {
+          id: "live-local-image",
+          description:
+            hostingOn && cloudOn
+              ? "The others in this draft see a broken picture. Host it from the note in the footer, or use an image address."
+              : "The others in this draft see a broken picture. Use an image address (a link to the picture) instead.",
+        });
     }
     if (Object.keys(next).length !== Object.keys(doc.images).length) update({ images: next });
     editor.current?.insert(refs.join("\n"));
@@ -815,7 +1054,10 @@ export function Studio({ docId }: { docId: string }) {
     };
     next.title = docTitle(next);
     await documentStore.save(next);
-    if (d.id === doc?.id) setDoc(next);
+    if (d.id === doc?.id) {
+      setDoc(next);
+      if (collabReady && collab) collab.replaceText(next.content);
+    }
     await refreshList();
     toast.success(`Hosted ${done} image${done === 1 ? "" : "s"}`, {
       description: "The draft now links to them by address. Ctrl/⌘+Z undoes the text change.",
@@ -989,6 +1231,8 @@ export function Studio({ docId }: { docId: string }) {
     () => docs.map((d) => (d.id === doc?.id ? { ...d, ...doc } : d)),
     [docs, doc],
   );
+  // drafts other people own are listed apart, under "Shared with you"
+  const ownDocs = useMemo(() => libraryDocs.filter((d) => !d.shared), [libraryDocs]);
   /** Applies a library-only change to a draft, on screen or in storage. */
   const patchDraft = async (d: MdDocument, patch: Partial<MdDocument>) => {
     if (d.id === doc?.id) return update(patch);
@@ -1025,6 +1269,7 @@ export function Studio({ docId }: { docId: string }) {
   };
   // the draft whose share dialog is open
   const [shareTarget, setShareTarget] = useState<MdDocument | null>(null);
+  const [collabTarget, setCollabTarget] = useState<MdDocument | null>(null);
   // the draft whose publish-to-GitHub dialog is open
   const [publishTarget, setPublishTarget] = useState<MdDocument | null>(null);
   // Back from GitHub after connecting, the dialog the writer left is opened again on its draft.
@@ -1167,6 +1412,25 @@ export function Studio({ docId }: { docId: string }) {
     setTimeout(() => editor.current?.goToLine(line), 100);
   };
   const ownShare = doc ? shares.byDraft.get(doc.id) : undefined;
+  const startCompose = (kind: Composing["kind"]) => {
+    const snap = editor.current?.getSnapshot();
+    if (!snap || snap.from === snap.to)
+      return void toast.info("Select some words in the draft first");
+    setComposing({ kind, from: snap.from, to: snap.to, text: snap.text.slice(snap.from, snap.to) });
+  };
+  const submitThread = (c: Composing, body: string, proposed: string) => {
+    if (!collab) return "empty";
+    const r = collab.threads.add({
+      kind: c.kind,
+      from: c.from,
+      to: c.to,
+      body,
+      ...(c.kind === "suggestion" && { proposed }),
+    });
+    if (!r.ok) return r.error;
+    setActiveThread(r.id);
+    return undefined;
+  };
   const panelButtons = (
     [
       ["checks", errCount ? AlertTriangle : CheckCircle2, "Checks"],
@@ -1174,7 +1438,10 @@ export function Studio({ docId }: { docId: string }) {
       ["meta", Tags, "Front matter"],
       ["history", History, "History"],
       // comments belong to a draft that is in the cloud; the panel reads them when it is opened
-      ...(inCloud ? ([["comments", MessageSquare, "Comments"]] as const) : []),
+      // (and the people in a draft edited together comment on its words)
+      ...(inCloud || (collab && collabReady)
+        ? ([["comments", MessageSquare, "Comments"]] as const)
+        : []),
     ] as const
   ).map(([p, Icon, label]) => (
     <Button
@@ -1196,7 +1463,8 @@ export function Studio({ docId }: { docId: string }) {
   ));
   const libraryContent = (
     <Library
-      docs={libraryDocs}
+      docs={ownDocs}
+      sharedWithMe={{ rows: sharedRows, onOpen: openSharedRow, onLeave: leaveSharedRow }}
       folders={folderNames}
       activeId={docId}
       onCreateFolder={createFolder}
@@ -1220,6 +1488,8 @@ export function Studio({ docId }: { docId: string }) {
             onShare: (d: MdDocument) => setShareTarget(d),
             shared: sharedIds,
             sharedPrivately: privateIds,
+            onCollab: (d: MdDocument) => setCollabTarget(d),
+            live: cloudDrafts.live,
           }),
           ...(cloudOn && githubPublish && { onPublish: (d: MdDocument) => setPublishTarget(d) }),
           ...(hostingOn && cloudOn && { onHostImages: (d: MdDocument) => void hostImages(d) }),
@@ -1271,7 +1541,39 @@ export function Studio({ docId }: { docId: string }) {
             })}
         />
       )}
-      {activePanel === "comments" && doc && (
+      {activePanel === "comments" && doc && collab && collabReady && (
+        <Tabs defaultValue="team">
+          {inCloud && (
+            <TabsList className="mb-3 grid w-full grid-cols-2">
+              <TabsTrigger value="team">Team</TabsTrigger>
+              <TabsTrigger value="reviewers">Reviewers</TabsTrigger>
+            </TabsList>
+          )}
+          <TabsContent value="team">
+            <LiveComments
+              threads={liveThreads}
+              actions={collab.threads}
+              userId={account?.id ?? ""}
+              isOwner={!doc.shared}
+              activeId={activeThread}
+              canSelect
+              onComment={() => startCompose("comment")}
+              onSuggest={() => startCompose("suggestion")}
+              onGo={(t) => {
+                setMobilePanel(null);
+                setView("editor");
+                setTimeout(() => editor.current?.selectRange(t.from, t.to), 100);
+              }}
+            />
+          </TabsContent>
+          {inCloud && (
+            <TabsContent value="reviewers">
+              <ReviewComments draftId={doc.id} share={ownShare} onGo={goToLine} />
+            </TabsContent>
+          )}
+        </Tabs>
+      )}
+      {activePanel === "comments" && doc && !(collab && collabReady) && (
         <ReviewComments draftId={doc.id} share={ownShare} onGo={goToLine} />
       )}
       {activePanel === "meta" && (
@@ -1628,9 +1930,20 @@ export function Studio({ docId }: { docId: string }) {
                     <ClientOnly fallback={<EditorFallback />}>
                       <Suspense fallback={<EditorFallback />}>
                         <MarkdownEditor
+                          // a live draft gets its own editor, bound to the shared text
+                          key={
+                            waiting
+                              ? `wait:${doc.id}`
+                              : collabReady && collab
+                                ? `live:${doc.id}`
+                                : "solo"
+                          }
                           ref={editor}
                           value={content}
-                          onChange={setContent}
+                          {...(collabReady && collab && !waiting ? { collab } : {})}
+                          // (a shared draft that cannot be live right now is only shown)
+                          readOnly={waiting || (!!doc.shared && !liveTarget)}
+                          onChange={collabReady && !waiting ? noop : setContent}
                           onScroll={onEditorScroll}
                           onPaste={onPaste}
                           onFiles={onFiles}
@@ -1671,6 +1984,27 @@ export function Studio({ docId }: { docId: string }) {
               <span>{stats.minutes} min read</span>
               <span>{Object.keys(images).length} images</span>
               {!online && <span>Offline, your drafts are still saved here</span>}
+              {liveTarget && <CollabStatus state={collabState} waiting={waiting} />}
+              {imageNotes.mine && (
+                <button
+                  type="button"
+                  data-testid="local-images-note"
+                  className="text-warning underline-offset-2 hover:underline"
+                  onClick={() => setImagesDialog("mine")}
+                >
+                  {imageNotes.mine.label}
+                </button>
+              )}
+              {imageNotes.missing && (
+                <button
+                  type="button"
+                  data-testid="missing-images-note"
+                  className="underline-offset-2 hover:underline"
+                  onClick={() => setImagesDialog("missing")}
+                >
+                  {imageNotes.missing.label}
+                </button>
+              )}
               {account && syncStatus.state !== "idle" && (
                 <span
                   data-testid="sync-status"
@@ -1725,6 +2059,22 @@ export function Studio({ docId }: { docId: string }) {
           onOpenChange={(open) => !open && setShareTarget(null)}
           beforePublish={bringCloudUpToDate}
         />
+        <CollabDialog
+          draft={collabTarget && doc && collabTarget.id === doc.id ? doc : collabTarget}
+          open={collabTarget !== null}
+          onOpenChange={(open) => !open && setCollabTarget(null)}
+          beforeStart={bringCloudUpToDate}
+          beforeStop={async () => {
+            // the comments live in the room and go with it: the open ones are kept as text
+            const notes = collab && collabTarget?.id === doc?.id ? collab.exportNotes() : "";
+            if (collab && doc && notes)
+              await historyStore.save(
+                { id: doc.id, title: doc.title, content: collab.text() + notes },
+                Date.now(),
+                "manual",
+              );
+          }}
+        />
         <PublishDialog
           draft={publishTarget && doc && publishTarget.id === doc.id ? doc : publishTarget}
           open={publishTarget !== null}
@@ -1770,6 +2120,36 @@ export function Studio({ docId }: { docId: string }) {
           config={checkConfig}
           onChange={chooseCheckConfig}
         />
+        {selRect && !aiEdit && collab && collabReady && (
+          <div
+            className="fixed z-40 hidden gap-1 md:flex"
+            style={{
+              left: Math.max(8, Math.min(selRect.x + 52, window.innerWidth - 220)),
+              top: selRect.top > 48 ? selRect.top - 36 : selRect.bottom + 6,
+            }}
+          >
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 gap-1 px-2 shadow-md"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => startCompose("comment")}
+              aria-label="Comment on the selection"
+            >
+              <MessageSquarePlus className="size-3.5" /> Comment
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 gap-1 px-2 shadow-md"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => startCompose("suggestion")}
+              aria-label="Suggest an edit for the selection"
+            >
+              <PencilLine className="size-3.5" /> Suggest
+            </Button>
+          </div>
+        )}
         {selRect && !aiEdit && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1792,6 +2172,19 @@ export function Studio({ docId }: { docId: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        <LocalImagesDialog
+          note={imagesDialog ? imageNotes[imagesDialog] : null}
+          names={imagesDialog ? localImages[imagesDialog] : []}
+          onClose={() => setImagesDialog(null)}
+          {...(hostingOn && cloudOn && doc && imagesDialog === "mine"
+            ? { onHost: () => hostImages(doc) }
+            : {})}
+        />
+        <ThreadDialog
+          composing={composing}
+          onClose={() => setComposing(null)}
+          onSubmit={submitThread}
+        />
         <AiEditDialog edit={aiEdit} onClose={() => setAiEdit(null)} onAccept={acceptAi} />
         <AiIntegrationsDialog open={aiIntegrations} onOpenChange={setAiIntegrations} />
         <ShortcutsDialog

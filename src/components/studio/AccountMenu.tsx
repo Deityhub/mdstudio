@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -122,9 +123,7 @@ export function AccountMenu() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label={`Account: ${label}`}>
-              <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-medium uppercase text-primary-foreground">
-                {label.charAt(0)}
-              </span>
+              <Avatar src={user.avatarUrl} label={label} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -291,6 +290,13 @@ export function AccountMenu() {
                   {mode === "login" ? "Sign in" : "Create account"}
                 </Button>
               </form>
+              {account.google && (
+                <Button variant="outline" asChild>
+                  <a href="/api/auth/google">
+                    <GoogleLogo /> Continue with Google
+                  </a>
+                </Button>
+              )}
               {account.github && (
                 <Button variant="outline" asChild>
                   <a href="/api/auth/github">
@@ -303,5 +309,14 @@ export function AccountMenu() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/** lucide has no brand marks; this is Google's "G" in a single colour, so it follows the theme. */
+function GoogleLogo() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-current">
+      <path d="M21.35 11.1H12v2.98h5.35c-.23 1.4-1.6 4.1-5.35 4.1a5.9 5.9 0 0 1 0-11.8c1.87 0 3.12.8 3.84 1.48l2.6-2.5A9.4 9.4 0 0 0 12 3.2a9.8 9.8 0 1 0 0 19.6c5.65 0 9.4-3.97 9.4-9.57 0-.64-.07-1.13-.15-1.6z" />
+    </svg>
   );
 }

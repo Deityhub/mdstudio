@@ -23,17 +23,39 @@ docker compose -f infra/docker-compose.yml up -d    # http://localhost:3000
 
 Data lives in the `mdstudio-data` volume mounted at `/data`. `GET /api/health` is the liveness probe.
 
+## Real-time updates
+
+Changes to cloud drafts reach your other devices as they happen, over a WebSocket on the same port; there is nothing to configure. Behind a reverse proxy it must pass WebSocket upgrades: Caddy does by default, nginx needs `proxy_set_header Upgrade $http_upgrade;` and `proxy_set_header Connection "upgrade";` in the location that serves the app. Without upgrades the app falls back to checking every minute. Live editing (several people in one draft) runs in the same process and keeps its state in the database (tables `collab_snapshots` and `collab_updates`); there is nothing to configure, and `COLLAB_ENABLED=false` turns it off. It needs the same proxy upgrades, since there is no polling fallback for a shared draft.
+
 ## GitHub sign-in (optional)
 
 Create an OAuth app (GitHub → Settings → Developer settings → OAuth Apps) with the callback URL
 `<your address>/api/auth/github/callback`, then set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
 (and `PUBLIC_URL`, e.g. `https://notes.example.com`, when a proxy hides the real address). Without
-both, the button is not shown. An existing password account is never linked automatically to a
-GitHub account with the same email.
+both, the button is not shown. An account that already has the same (confirmed) email is signed in
+and gains the GitHub sign-in; see "Linking accounts" below.
 
 To let writers publish to their GitHub repositories, also set `GH_TOKEN_KEY` to 32 random bytes in
 base64 (`openssl rand -base64 32`). It seals the GitHub tokens kept in the database; keep it stable,
 since a new key means writers connect again. The same OAuth app and callback are used.
+
+## Google sign-in (optional)
+
+In the Google Cloud console create an OAuth client (APIs & Services → Credentials → OAuth client ID,
+type "Web application") with the authorized redirect URI `<your address>/api/auth/google/callback`
+(and the OAuth consent screen set up for the `openid`, `email` and `profile` scopes), then set
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (and `PUBLIC_URL` behind a proxy). Without both, the
+button is not shown.
+
+## Linking accounts
+
+Google and GitHub sign-in work the same way. A sign-in the provider has already seen goes to the same
+account. Otherwise the provider must vouch for the email; an account with that email (spelled any way
+that reaches the same inbox) then gets the new sign-in added, so one person can use Google, GitHub and
+a password for one account. If that account's address was never confirmed (a password sign-up on a
+server that sends mail), its password and sessions are removed first, since whoever made it may not own
+the address. Without an account for that email, a new one is made (unless an admin closed sign-ups).
+Two providers with different emails make two accounts.
 
 ## Cloud limits
 

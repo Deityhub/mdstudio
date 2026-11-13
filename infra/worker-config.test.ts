@@ -1,18 +1,24 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { isPreview, previewWorkerName, workerConfig } from "./worker-config";
+import { readFileSync } from "node:fs";
+import { OBSERVABILITY, isPreview, previewWorkerName, workerConfig } from "./worker-config";
 
 describe("workerConfig", () => {
   it("production claims the custom domain", () => {
     expect(workerConfig({})).toEqual({
       name: "mdstudio",
       routes: [{ pattern: "mdstudio.deityhub.com", custom_domain: true }],
+      observability: OBSERVABILITY,
     });
   });
 
   it("a preview gets its own name on workers.dev and never touches the production domain", () => {
     const config = workerConfig({ PREVIEW_WORKER_NAME: "mdstudio-pr-12" });
-    expect(config).toEqual({ name: "mdstudio-pr-12", workers_dev: true });
+    expect(config).toEqual({
+      name: "mdstudio-pr-12",
+      workers_dev: true,
+      observability: OBSERVABILITY,
+    });
     expect(config).not.toHaveProperty("routes");
   });
 
@@ -52,8 +58,87 @@ describe("workerConfig", () => {
     ).toMatchObject({ r2_buckets: [{ bucket_name: "mdstudio-preview-assets" }] });
   });
 
+  it("binds the real-time hub, by script name, only when one is named", () => {
+    expect(workerConfig({})).not.toHaveProperty("durable_objects");
+    const bound = (env: Record<string, string>) => workerConfig(env);
+    expect(bound({ REALTIME_SCRIPT: "mdstudio-realtime" })).toMatchObject({
+      durable_objects: {
+        bindings: [
+          { name: "REALTIME", class_name: "RealtimeHub", script_name: "mdstudio-realtime" },
+          { name: "COLLAB", class_name: "CollabRoom", script_name: "mdstudio-realtime" },
+        ],
+      },
+    });
+    // previews share one hub of their own, so they never touch production's
+    expect(
+      bound({ PREVIEW_WORKER_NAME: "mdstudio-pr-3", REALTIME_SCRIPT: "mdstudio-realtime-preview" }),
+    ).toMatchObject({
+      durable_objects: {
+        bindings: [
+          { script_name: "mdstudio-realtime-preview" },
+          { script_name: "mdstudio-realtime-preview" },
+        ],
+      },
+    });
+  });
+
+  it("migrates both Durable Object classes in the real-time Worker, as SQLite classes (all the free plan has)", () => {
+    const text = readFileSync("infra/realtime/wrangler.jsonc", "utf8")
+      .replace(/^\s*\/\/.*$/gm, "")
+      .replace(/,(\s*[}\]])/g, "$1");
+    const config = JSON.parse(text);
+    expect(
+      config.durable_objects.bindings.map((b: { class_name: string }) => b.class_name),
+    ).toEqual(["RealtimeHub", "CollabRoom"]);
+    expect(config.migrations).toEqual([
+      { tag: "v1", new_sqlite_classes: ["RealtimeHub"] },
+      { tag: "v2", new_sqlite_classes: ["CollabRoom"] },
+    ]);
+  });
+
+  it("only binds a Worker name that looks like one of ours", () => {
+    for (const bad of ["other", "mdstudio-realtime/../x", "mdstudio-realtime-x y", "mdstudio"])
+      expect(() => workerConfig({ REALTIME_SCRIPT: bad }), bad).toThrow(/REALTIME_SCRIPT/);
+  });
+
   it("treats an empty name as production", () =>
     expect(workerConfig({ PREVIEW_WORKER_NAME: "" })).toHaveProperty("routes"));
+});
+
+describe("observability", () => {
+  it("is on for the app Worker in production and in previews: logs, and sampled traces", () => {
+    expect(workerConfig({})).toMatchObject({ observability: OBSERVABILITY });
+    expect(workerConfig({ PREVIEW_WORKER_NAME: "mdstudio-pr-2" })).toMatchObject({
+      observability: OBSERVABILITY,
+    });
+  });
+
+  it("keeps every log but only a sample of traces", () => {
+    expect(OBSERVABILITY).toEqual({
+      enabled: true,
+      head_sampling_rate: 1,
+      traces: { enabled: true, head_sampling_rate: 0.05 },
+    });
+  });
+
+  it("is the same for the real-time Worker, whose config is a file of its own", () => {
+    // a JSONC file: comments on lines of their own, and trailing commas
+    const text = readFileSync("infra/realtime/wrangler.jsonc", "utf8")
+      .replace(/^\s*\/\/.*$/gm, "")
+      .replace(/,(\s*[}\]])/g, "$1");
+    expect(JSON.parse(text).observability).toEqual(OBSERVABILITY);
+  });
+});
+
+describe("the TOML blueprint", () => {
+  it("has the same observability, so anyone deploying from it gets logs and traces too", () => {
+    const toml = readFileSync("infra/wrangler.toml", "utf8");
+    const block = (header: string) => toml.split(header)[1]?.split(/\n\[/)[0] ?? "";
+    expect(block("[observability]\n")).toMatch(/enabled = true/);
+    expect(block("[observability]\n")).toMatch(/head_sampling_rate = 1\b/);
+    expect(block("[observability.traces]\n")).toMatch(/enabled = true/);
+    expect(block("[observability.traces]\n")).toMatch(/head_sampling_rate = 0\.05/);
+  });
 });
 
 describe("previews", () => {

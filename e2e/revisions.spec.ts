@@ -81,24 +81,22 @@ test("History lists the cloud's versions of a cloud draft, and one can be compar
   await page.getByRole("menuitem", { name: "Save to cloud" }).click();
   await expect(page.getByLabel("Stored in your cloud")).toBeVisible();
   const pulled = async () => (await (await page.request.get("/api/sync/pull")).json()).docs;
-  await expect
-    .poll(async () =>
-      (await pulled()).some((d: { content: string }) => d.content.includes("first words")),
-    )
-    .toBe(true);
+  // a sync round starts a few seconds after an edit, and takes longer on a busy machine
+  const onCloud = (words: string) =>
+    expect
+      .poll(
+        async () => (await pulled()).some((d: { content: string }) => d.content.includes(words)),
+        {
+          timeout: 30_000,
+        },
+      )
+      .toBe(true);
+  await onCloud("first words");
 
   await replaceText(page, "# Cloudy\n\nsecond words");
-  await expect
-    .poll(async () =>
-      (await pulled()).some((d: { content: string }) => d.content.includes("second words")),
-    )
-    .toBe(true);
+  await onCloud("second words");
   await replaceText(page, "# Cloudy\n\nthird words");
-  await expect
-    .poll(async () =>
-      (await pulled()).some((d: { content: string }) => d.content.includes("third words")),
-    )
-    .toBe(true);
+  await onCloud("third words");
 
   await page.getByRole("button", { name: "History", exact: true }).click();
   const cloud = page.getByRole("region", { name: "Versions in your cloud" });

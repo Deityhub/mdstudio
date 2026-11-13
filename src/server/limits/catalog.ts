@@ -24,6 +24,10 @@ export const LIMITS = {
   private_links: { type: "boolean", fallback: true, env: "PRIVATE_LINKS" },
   invites_per_day: { type: "number", fallback: 20 },
   github_publish: { type: "boolean", fallback: true },
+  // live editing together: people in one draft (the owner counts), live drafts an account may keep
+  collab_enabled: { type: "boolean", fallback: true, env: "COLLAB_ENABLED" },
+  collab_people: { type: "number", fallback: 3, env: "MAX_COLLAB_PEOPLE", max: 10 },
+  collab_docs: { type: "number", fallback: 2, env: "MAX_COLLAB_DOCS", max: 100 },
   // rate limits (per account)
   share_changes_per_hour: { type: "number", fallback: 60 },
   comments_per_hour: { type: "number", fallback: 30 },

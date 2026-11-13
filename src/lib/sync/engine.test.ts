@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createNodeDb } from "../../../infra/db/node";
 import { users } from "../../../infra/db/schema";
 import type { Db } from "@/server/db";
+import { applyCollabText, enableCollab, disableCollab } from "@/server/collab/service";
+import { DEFAULT_REVISIONS } from "@/server/revisions/service";
 import { pullDocs, pushDocs } from "@/server/sync/service";
 import { createDocumentStore, type KeyValueStore, type MdDocument } from "../storage/documentStore";
 import { checkSignOut, leaveAccount, linkDrafts, unlinkDraft } from "./cloud";
-import { type SyncApi, syncOnce } from "./engine";
+import { type SyncApi, applyPushed, syncOnce } from "./engine";
 import { cloudOwners, createSyncMeta, isVisible } from "./meta";
-import { fieldsHash, remoteId } from "./protocol";
+import { type ServerDoc, fieldsHash, remoteId } from "./protocol";
 
 // Two browsers sharing one account, talking to the real server logic over an in-memory database.
 let db: Db;
@@ -37,17 +39,26 @@ function device(userId = U, api?: Partial<SyncApi>) {
   };
   const busy = new Set<string>();
   const kept: MdDocument[] = [];
-  const run = () =>
-    syncOnce({
-      userId,
-      store,
-      meta,
-      api: { ...real, ...api },
-      isBusy: (id) => busy.has(id),
-      snapshot: async (d) => void kept.push(d),
-    });
+  const left: string[] = [];
+  const pulls: number[] = [];
+  const deps = {
+    userId,
+    store,
+    meta,
+    api: {
+      ...real,
+      pull: async (since: number) => (pulls.push(since), real.pull(since)),
+      ...api,
+    },
+    isBusy: (id: string) => busy.has(id),
+    snapshot: async (d: MdDocument) => void kept.push(d),
+    onLeaveLive: async (id: string) => void left.push(id),
+  };
+  const run = (opts?: { pull?: boolean }) => syncOnce(deps, opts);
+  /** What the real-time channel does when another device's change arrives. */
+  const pushed = (docs: ServerDoc[]) => applyPushed(deps, docs);
   const link = (...ids: string[]) => linkDrafts(meta, ids);
-  return { kv, store, meta, run, busy, kept, link };
+  return { kv, store, meta, run, pushed, busy, kept, left, link, pulls };
 }
 type Device = ReturnType<typeof device>;
 
@@ -337,5 +348,271 @@ describe("accounts and failures", () => {
     const report = await a.run();
     expect(report.tooLarge).toEqual(["big"]);
     expect((await cloud()).map((d) => d.id)).toEqual([remoteId(U, "small")]);
+  });
+});
+
+describe("a draft pushed over the real-time channel", () => {
+  /** What the server has for a draft, as the channel would carry it. */
+  const serverDoc = async (id = "d1") =>
+    (await pullDocs(db, U, 0)).docs.find((d) => d.id === remoteId(U, id))!;
+
+  it("is applied without a pull, and leaves the pull cursor where it was", async () => {
+    const { a, b } = await shared();
+    const cursor = await b.meta.cursor();
+    await edit(a, "d1", "# Hello\n\nFrom A", 200);
+    await a.run();
+    const report = await b.pushed([await serverDoc()]);
+    expect(report.applied).toEqual(["d1"]);
+    expect(await texts(b)).toEqual(["# Hello\n\nFrom A"]);
+    expect((await b.meta.get("d1"))?.version).toBe(2);
+    expect(await b.meta.cursor()).toBe(cursor); // only a real pull moves it, so no gap can open
+  });
+
+  it("is harmless when it arrives twice, late, or as the sender's own echo", async () => {
+    const { a, b } = await shared();
+    await edit(a, "d1", "# v2", 200);
+    await a.run();
+    const v2 = await serverDoc();
+    expect((await b.pushed([v2])).applied).toEqual(["d1"]);
+    expect((await b.pushed([v2])).applied).toEqual([]); // twice
+    expect((await b.pushed([{ ...v2, version: 1, content: "# old" }])).applied).toEqual([]); // late
+    expect(await texts(b)).toEqual(["# v2"]);
+    expect((await a.pushed([v2])).applied).toEqual([]); // the device that made it
+  });
+
+  it("waits while the draft has unsaved edits here, and a pull brings it in afterwards", async () => {
+    const { a, b } = await shared();
+    await edit(a, "d1", "# From A", 200);
+    await a.run();
+    b.busy.add("d1");
+    const report = await b.pushed([await serverDoc()]);
+    expect(report).toMatchObject({ applied: [], deferred: 1 });
+    expect(await texts(b)).toEqual(["# Hello"]);
+    b.busy.clear();
+    await b.run();
+    expect(await texts(b)).toEqual(["# From A"]);
+  });
+
+  it("keeps a later edit made here, and keeps the text it replaces in history when it loses", async () => {
+    const { a, b } = await shared();
+    const c = device();
+    await c.run(); // c has version 1
+    await edit(a, "d1", "# A's", 200);
+    await a.run();
+    await edit(b, "d1", "# B's, later", 300);
+    await b.pushed([await serverDoc()]);
+    expect(await texts(b)).toEqual(["# B's, later"]); // this device's edit is the later one
+
+    await edit(c, "d1", "# C's, earlier", 150);
+    await c.pushed([await serverDoc()]);
+    expect(await texts(c)).toEqual(["# A's"]);
+    expect(c.kept.map((d) => d.content)).toEqual(["# C's, earlier"]);
+  });
+
+  it("removes a draft deleted elsewhere", async () => {
+    const { a, b } = await shared();
+    await a.store.remove("d1");
+    await a.run();
+    const gone = await serverDoc();
+    expect(gone.deleted).toBe(true);
+    expect((await b.pushed([gone])).removed).toEqual(["d1"]);
+    expect(await texts(b)).toEqual([]);
+  });
+
+  it("never removes a draft that has edits which were not synced", async () => {
+    const { a, b } = await shared();
+    await a.store.remove("d1");
+    await a.run();
+    await edit(b, "d1", "# kept", 999);
+    expect((await b.pushed([await serverDoc()])).detached).toEqual(["d1"]);
+    expect(await texts(b)).toEqual(["# kept"]);
+  });
+
+  it("ignores a document that is not this account's", async () => {
+    const b = device();
+    const stranger = { ...(await serverDocFor("u2", "x")), id: "u2:x" };
+    expect((await b.pushed([stranger])).applied).toEqual([]);
+    expect(await texts(b)).toEqual([]);
+  });
+
+  it("a missed event costs nothing: the next pull has it", async () => {
+    const { a, b } = await shared();
+    await edit(a, "d1", "# While offline", 200);
+    await a.run(); // b never heard about it
+    await b.run();
+    expect(await texts(b)).toEqual(["# While offline"]);
+  });
+});
+
+const serverDocFor = async (user: string, id: string): Promise<ServerDoc> => ({
+  id: remoteId(user, id),
+  version: 1,
+  title: "x",
+  name: null,
+  folder: null,
+  content: "x",
+  createdAt: 1,
+  updatedAt: 1,
+  editedAt: 1,
+  deleted: false,
+});
+
+describe("a round that does not pull (the real-time channel is up)", () => {
+  it("pushes what changed here without asking the cloud for anything", async () => {
+    const { a, b } = await shared();
+    a.pulls.length = 0;
+    await edit(a, "d1", "# From A", 200);
+    const report = await a.run({ pull: false });
+    expect(report.pushed).toBe(1);
+    expect(a.pulls).toEqual([]);
+    expect((await cloud())[0]?.content).toBe("# From A");
+    await b.run();
+    expect(await texts(b)).toEqual(["# From A"]);
+  });
+
+  it("still resolves a conflict from what the push answers, with no pull", async () => {
+    const { a, b } = await shared();
+    const c = device();
+    await c.run(); // c has version 1, and will be behind
+    await edit(a, "d1", "# A's, earlier", 200);
+    await a.run();
+    await edit(b, "d1", "# B's, later", 300);
+    b.pulls.length = 0;
+    await b.run({ pull: false }); // b is behind too, but its edit is the later one
+    expect(b.pulls).toEqual([]);
+    expect((await cloud())[0]?.content).toBe("# B's, later");
+
+    await edit(c, "d1", "# C's, earliest", 100);
+    c.pulls.length = 0;
+    await c.run({ pull: false });
+    expect(c.pulls).toEqual([]);
+    expect(await texts(c)).toEqual(["# B's, later"]); // the server's copy came with the answer
+  });
+
+  it("pulls as always unless told not to", async () => {
+    const { a } = await shared();
+    a.pulls.length = 0;
+    await a.run();
+    expect(a.pulls.length).toBeGreaterThan(0);
+  });
+});
+
+describe("a draft edited live with other people", () => {
+  /** The owner switches the shared draft to live editing, and the room later writes a new text copy. */
+  const goLive = async () => enableCollab(db, U, "d1", { docs: 2 }, ++clock);
+  const roomWrites = (text: string) =>
+    applyCollabText(db, remoteId(U, "d1"), text, ++clock, DEFAULT_REVISIONS);
+
+  it("is marked live on a device that pulls, and its text is left to the room from then on", async () => {
+    const { a, b } = await shared();
+    await goLive();
+    await b.run();
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+    // the room's later copies are not applied to this device's text, and a local edit is not pushed
+    await roomWrites("# From the room");
+    await edit(b, "d1", "# Typed here", 500);
+    await b.run();
+    expect((await b.store.get("d1"))?.content).toBe("# Typed here");
+    expect((await cloud())[0]?.content).toBe("# From the room");
+    expect((await b.meta.get("d1"))?.version).toBe((await cloud())[0]?.version);
+    expect(b.pulls.length).toBeGreaterThan(0);
+  });
+
+  it("keeps unsynced text of this device in history when the draft goes live, and shows the cloud copy", async () => {
+    const { a, b } = await shared();
+    await edit(b, "d1", "# Edited offline", 400); // not pushed yet
+    await goLive();
+    await b.run();
+    expect(b.kept.map((d) => d.content)).toEqual(["# Edited offline"]);
+    expect((await b.store.get("d1"))?.content).toBe("# Hello");
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+    expect(a).toBeDefined();
+  });
+
+  it("is refused a push of its text, learns it is live, and loses nothing", async () => {
+    const { a, b } = await shared();
+    await goLive();
+    // b has not heard yet, and pushes an edit: the cloud says it is live instead of taking it
+    await edit(b, "d1", "# Stale device", 900);
+    const report = await b.run({ pull: false });
+    expect(report.rejected).toBe(0);
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+    expect(b.kept.map((d) => d.content)).toEqual(["# Stale device"]);
+    expect((await cloud())[0]?.content).toBe("# Hello");
+    void a;
+  });
+
+  it("is applied from the real-time channel the same way", async () => {
+    const { b } = await shared();
+    const live = await goLive();
+    if (!live.ok) throw new Error("not live");
+    await b.pushed([live.doc]);
+    expect((await b.meta.get("d1"))?.collab).toBe(true);
+  });
+
+  it("returns to ordinary sync when live editing stops, taking the room's last text", async () => {
+    const { b } = await shared();
+    await goLive();
+    await b.run();
+    await roomWrites("# Final text");
+    const stopped = await disableCollab(db, U, "d1", ++clock);
+    expect(stopped?.collab).toBe(false);
+    await edit(b, "d1", "# Mirror that lagged", 700);
+    await b.run();
+    expect((await b.store.get("d1"))?.content).toBe("# Final text");
+    expect((await b.meta.get("d1"))?.collab).toBeUndefined();
+    expect(b.left).toEqual(["d1"]);
+    // and from now on an edit goes up as usual
+    await edit(b, "d1", "# Normal again", 800);
+    await b.run();
+    expect((await cloud())[0]?.content).toBe("# Normal again");
+  });
+
+  it("keeps the name and folder given on this device when it goes live, and when it stops", async () => {
+    const { b } = await shared();
+    await b.store.save({
+      ...(await b.store.get("d1"))!,
+      name: "My name",
+      folder: "Work",
+      updatedAt: 150,
+    });
+    await goLive();
+    await b.run();
+    expect(await b.store.get("d1")).toMatchObject({ name: "My name", folder: "Work" });
+    // renamed while live: that is not pushed (the room carries the text), but it is not lost either
+    await b.store.save({ ...(await b.store.get("d1"))!, name: "Renamed live", updatedAt: 300 });
+    await roomWrites("# Notes\n\nfrom the room");
+    await b.run();
+    expect((await b.store.get("d1"))?.name).toBe("Renamed live");
+    await disableCollab(db, U, "d1", ++clock);
+    await b.run();
+    expect(await b.store.get("d1")).toMatchObject({
+      name: "Renamed live",
+      folder: "Work",
+      content: "# Notes\n\nfrom the room",
+    });
+    // and now that it is ordinary again, the name goes up with the next round
+    await b.run();
+    expect((await cloud())[0]).toMatchObject({ name: "Renamed live", folder: "Work" });
+  });
+
+  it("is not counted as unsynced when signing out", async () => {
+    const { b } = await shared();
+    await goLive();
+    await b.run();
+    await edit(b, "d1", "# More typed", 600);
+    const check = await checkSignOut(b.store, b.meta, fieldsHash);
+    expect(check.unsynced).toEqual([]);
+  });
+
+  it("is told to the engine as gone when the owner deletes it elsewhere", async () => {
+    const { a, b } = await shared();
+    await goLive();
+    await a.run();
+    await b.run();
+    await a.store.remove("d1");
+    await a.run();
+    await b.run();
+    expect(b.left).toContain("d1");
   });
 });

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { email, makeAdmin, password, signUp } from "./admin-helpers";
+import { email, makeAdmin, makeUser, password, signUp } from "./admin-helpers";
 
 test("the admin API and page are invisible to anyone who is not an admin", async ({
   page,
@@ -7,7 +7,10 @@ test("the admin API and page are invisible to anyone who is not an admin", async
 }) => {
   // signed out
   expect((await request.get("/api/admin/overview")).status()).toBe(404);
-  await signUp(page.request);
+  // the first account on a server is its admin, and this spec may run first: make this one a user
+  const { address } = await signUp(page.request);
+  makeUser(address);
+  expect((await (await page.request.get("/api/auth/me")).json()).user.isAdmin).toBe(false);
   expect((await page.request.get("/api/admin/overview")).status()).toBe(404);
   expect((await page.request.get("/api/admin/users")).status()).toBe(404);
   await page.goto("/admin");

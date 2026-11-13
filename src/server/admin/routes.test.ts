@@ -143,8 +143,14 @@ describe("plans and server settings", () => {
     expect((await res.json()).settings).toEqual({
       limits: { cloud_docs: 8 },
       signupsOpen: false,
+      collabOpen: true,
       notice: "Maintenance at noon",
     });
+    // the kill switch for live editing is changed the same way
+    const off = await routes.updateSettingsHandler(
+      as(admin.token, "PATCH", "/", { collabOpen: false }),
+    );
+    expect((await off.json()).settings.collabOpen).toBe(false);
     expect(
       (await routes.updateSettingsHandler(as(admin.token, "PATCH", "/", { signupsOpen: "no" })))
         .status,

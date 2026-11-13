@@ -24,6 +24,8 @@ export type PublicUser = {
   emailVerified: boolean;
   /** May use the admin dashboard. The first account ever made is an admin. */
   isAdmin: boolean;
+  /** The picture a social sign-in brought, shown in the account menu. */
+  avatarUrl?: string | null;
 };
 type Signed = { user: PublicUser; token: string };
 
@@ -44,12 +46,14 @@ const publicUser = (u: {
   displayName: string | null;
   emailVerifiedAt: number | null;
   role?: string;
+  avatarUrl?: string | null;
 }): PublicUser => ({
   id: u.id,
   email: u.email,
   displayName: u.displayName,
   emailVerified: u.emailVerifiedAt !== null,
   isAdmin: u.role === "admin",
+  avatarUrl: u.avatarUrl ?? null,
 });
 
 /** The role a new account gets: admin when it is the very first account, in one statement so two sign-ups cannot both win. */
@@ -160,6 +164,7 @@ export async function userForToken(
       id: users.id,
       email: users.email,
       displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
       emailVerifiedAt: users.emailVerifiedAt,
       role: users.role,
       suspendedAt: users.suspendedAt,

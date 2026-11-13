@@ -16,7 +16,20 @@ export const LIMITS: Limits = {
   maxGzipBytes: 1.5 * MiB,
   // Libraries that only run in the browser (loaded on demand there); they must not be bundled
   // into the server build.
-  forbidden: ["mermaid", "elkjs", "katex", "cytoscape", "dagre", "d3", "chevrotain"],
+  forbidden: [
+    "mermaid",
+    "elkjs",
+    "katex",
+    "cytoscape",
+    "dagre",
+    "d3",
+    "chevrotain",
+    // live editing: the browser and the real-time Worker (infra/realtime) carry these, the app does not
+    "yjs",
+    "y-protocols",
+    "lib0",
+    "y-codemirror",
+  ],
 };
 
 function listModules(dir: string): string[] {

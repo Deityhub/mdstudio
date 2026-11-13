@@ -61,6 +61,9 @@ export async function refreshShares() {
   }
 }
 
+/** For a live event that the list changed elsewhere: reads again only if something already read it. */
+export const refreshSharesIfLoaded = () => (state.loaded ? refreshShares() : Promise.resolve());
+
 /** Reads the links once, the first time something needs them; `refreshShares` reads them again. */
 export const ensureShares = () => (state.loaded ? Promise.resolve() : refreshShares());
 

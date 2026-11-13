@@ -13,7 +13,12 @@ beforeEach(() => {
 
 describe("server settings", () => {
   it("start open, with no notice and no default limits", async () => {
-    expect(await getSettings(db)).toEqual({ limits: {}, signupsOpen: true, notice: null });
+    expect(await getSettings(db)).toEqual({
+      limits: {},
+      signupsOpen: true,
+      collabOpen: true,
+      notice: null,
+    });
   });
   it("close sign-ups, set and clear a notice, and set and remove a default limit", async () => {
     await updateSettings(db, {
@@ -24,11 +29,23 @@ describe("server settings", () => {
     expect(await getSettings(db)).toEqual({
       limits: { cloud_docs: 9 },
       signupsOpen: false,
+      collabOpen: true,
       notice: "Back at noon",
     });
     expect(await getPublicSettings(db)).toEqual({ signupsOpen: false, notice: "Back at noon" });
     await updateSettings(db, { notice: "", limits: { cloud_docs: null } });
     expect(await getSettings(db)).toMatchObject({ limits: {}, notice: null, signupsOpen: false });
+  });
+  it("has a kill switch for live editing, which new rooms respect", async () => {
+    expect((await getSettings(db)).collabOpen).toBe(true);
+    await updateSettings(db, { collabOpen: false });
+    expect((await getSettings(db)).collabOpen).toBe(false);
+    expect(await updateSettings(db, { collabOpen: "off" })).toEqual({
+      ok: false,
+      error: "invalid",
+    });
+    await updateSettings(db, { collabOpen: true });
+    expect((await getSettings(db)).collabOpen).toBe(true);
   });
   it("refuses a bad change and changes nothing", async () => {
     for (const patch of [

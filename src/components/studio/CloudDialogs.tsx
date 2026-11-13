@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { documentStore, indexedDbStore, type MdDocument } from "@/lib/storage/documentStore";
 import { addToCloud, useCloud } from "@/lib/sync/hooks";
-import { cloudOwners, isVisible } from "@/lib/sync/meta";
+import { cloudOwners, isVisibleDoc } from "@/lib/sync/meta";
 import { toast } from "sonner";
 import { requestVerification } from "@/lib/account/client";
 import { accountStore } from "@/lib/account/store";
@@ -37,7 +37,9 @@ export function ChooseCloudDrafts({
     if (!open) return;
     setPicked(new Set());
     void Promise.all([documentStore.list(), cloudOwners(indexedDbStore)]).then(([all, owners]) =>
-      setDrafts(all.filter((d) => isVisible(owners, d.id, userId) && !cloud.linked.has(d.id))),
+      setDrafts(
+        all.filter((d) => isVisibleDoc(owners, d, userId) && !d.shared && !cloud.linked.has(d.id)),
+      ),
     );
     // the list is read when the dialog opens; later cloud changes must not reshuffle it
     // eslint-disable-next-line react-hooks/exhaustive-deps

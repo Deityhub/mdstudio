@@ -25,12 +25,15 @@ export function ReaderSignIn({
   onOpenChange,
   onSignedIn,
   reason,
+  confirmFor = "comment",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSignedIn: (user: AccountUser) => void;
   /** Why they are being asked, shown under the title. */
   reason: string;
+  /** What an unconfirmed address cannot do yet, for the notice that asks them to confirm it. */
+  confirmFor?: string;
 }) {
   const account = useAccount();
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -61,7 +64,7 @@ export function ReaderSignIn({
     if (!result.user.emailVerified && account.email) {
       // commenting needs a confirmed address; the link comes by email and the page stays as it is
       void requestVerification();
-      toast.info("Confirm your email to comment", {
+      toast.info(`Confirm your email to ${confirmFor}`, {
         description: "We sent you a link. Open it, then come back to this page.",
       });
     } else toast.success(mode === "signup" ? "Account created" : "Signed in");

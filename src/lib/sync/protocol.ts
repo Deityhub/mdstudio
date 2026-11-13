@@ -21,23 +21,29 @@ export const PushItemSchema = z.object({
 });
 export type PushItem = z.infer<typeof PushItemSchema>;
 
-export type ServerDoc = {
-  id: string;
-  version: number;
-  title: string;
-  name: string | null;
-  folder: string | null;
-  content: string;
-  createdAt: number;
-  updatedAt: number;
+/** A draft as the server keeps it: what a pull returns and the real-time channel carries to other devices. */
+export const ServerDocSchema = z.object({
+  id: z.string().min(1).max(100),
+  version: z.number().int().min(1),
+  title: z.string().max(500),
+  name: z.string().max(500).nullable(),
+  folder: z.string().max(500).nullable(),
+  content: z.string().max(MAX_CONTENT),
+  createdAt: z.number().int().min(0),
+  updatedAt: z.number().int().min(0),
   /** The edit time the server kept (see PushItem.editedAt). */
-  editedAt: number;
-  deleted: boolean;
-};
+  editedAt: z.number().int().min(0),
+  deleted: z.boolean(),
+  /** Being edited live with other people: its text is the room's, and a device must not push or apply text. */
+  collab: z.boolean().optional(),
+});
+export type ServerDoc = z.infer<typeof ServerDocSchema>;
 
 export type PushResult =
   | { id: string; status: "ok"; version: number; updatedAt: number }
   | { id: string; status: "conflict"; server: ServerDoc }
+  /** The draft is edited live: its text is not taken from a device. */
+  | { id: string; status: "collab"; server: ServerDoc }
   | { id: string; status: "limit_reached"; limit: number }
   | { id: string; status: "rejected" };
 

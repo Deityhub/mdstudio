@@ -17,6 +17,9 @@ export type Overview = {
   unverified: number;
   newThisWeek: number;
   drafts: number;
+  /** Drafts being edited together, and the people invited to them. */
+  liveDrafts: number;
+  collaborators: number;
   shares: number;
   images: number;
   imageBytes: number;
@@ -64,6 +67,7 @@ export type Plan = { name: string; label: string; limits: Record<string, LimitVa
 export type Settings = {
   limits: Record<string, LimitValue>;
   signupsOpen: boolean;
+  collabOpen: boolean;
   notice: string | null;
 };
 export type AuditEntry = {

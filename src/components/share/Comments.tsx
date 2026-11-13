@@ -14,7 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { type AccountUser } from "@/lib/account/client";
 import { cloudReady, useAccount } from "@/lib/account/store";
+import { useRealtime } from "@/lib/realtime/hooks";
+import type { RealtimeEvent } from "@/lib/realtime/protocol";
 import { commentsApi, ShareError } from "@/lib/share/api";
+import { applyCommentEvent, upsertComment } from "@/lib/share/live";
 import { type Block, type Thread, blockText, placeComments, plainText } from "@/lib/share/anchor";
 import { clearHighlights, highlightSnippet } from "@/lib/share/highlight";
 import { MAX_COMMENT_LENGTH, type ShareComment } from "@/lib/share/protocol";
@@ -212,7 +215,13 @@ const useWide = () =>
 type Item =
   | { key: string; kind: "thread"; line: number; thread: Thread; loose: boolean }
   | { key: string; kind: "draft"; line: number; snippet: string }
-  | { key: string; kind: "notice"; line: number };
+  | {
+      key: string;
+      kind: "notice";
+      line: number;
+      /** Set when the link changed under the reader: a new copy was published, or it was withdrawn. */
+      message?: "updated" | "revoked";
+    };
 
 /** The top-level block of the page that holds a node, if any. */
 const blockOf = (root: HTMLElement, node: Node | null) => {
@@ -280,6 +289,8 @@ export function ShareComments({
     );
   }, [html, enabled, body]);
 
+  const [changed, setChanged] = useState<"updated" | "revoked" | null>(null);
+
   const load = useCallback(async () => {
     if (!ready) return setComments([]);
     try {
@@ -289,12 +300,38 @@ export function ShareComments({
       setComments([]);
     }
   }, [ready, slug]);
-  useEffect(() => void load(), [load]);
+
+  // What the writer and the other readers do reaches this page over the link's live topic.
+  const live = useRealtime(ready ? `share:${slug}` : null, (event: RealtimeEvent) => {
+    setComments((current) => applyCommentEvent(current, event));
+    if (event.t === "share" && event.change !== "settings") setChanged(event.change);
+  });
+  // One read: when the live connection is ready (it also catches up after a reconnect), or after a
+  // moment if there is none. Nothing reads again while it is up.
+  const loaded = useRef(false);
+  useEffect(() => {
+    loaded.current = false;
+  }, [ready, slug]);
+  useEffect(() => {
+    if (!ready || live) {
+      loaded.current = true;
+      void load();
+      return;
+    }
+    const wait = setTimeout(() => {
+      if (!loaded.current) {
+        loaded.current = true;
+        void load();
+      }
+    }, 1000);
+    return () => clearTimeout(wait);
+  }, [load, live, ready]);
 
   const { byLine, loose } = useMemo(() => placeComments(comments, blocks), [comments, blocks]);
 
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
+    if (changed) out.push({ key: "changed", kind: "notice", line: 0, message: changed });
     if (!ready) out.push({ key: "notice", kind: "notice", line: 0 });
     for (const [line, threads] of [...byLine].sort((a, b) => a[0] - b[0]))
       for (const thread of threads)
@@ -303,7 +340,7 @@ export function ShareComments({
     for (const thread of loose)
       out.push({ key: thread.comment.id, kind: "thread", line: Infinity, thread, loose: true });
     return out;
-  }, [byLine, loose, draft, ready]);
+  }, [byLine, loose, draft, ready, changed]);
 
   // the highlights: the words of each comment, and of the one being written
   useLayoutEffect(() => {
@@ -429,7 +466,7 @@ export function ShareComments({
     parentId?: string;
   }) => {
     const made = await commentsApi.add(slug, input);
-    setComments((all) => [...all, made]);
+    setComments((all) => upsertComment(all, made)); // its echo may have come first
     return made;
   };
   const remove = async (c: ShareComment) => {
@@ -470,7 +507,26 @@ export function ShareComments({
         wide ? "absolute inset-x-0" : ""
       } ${active === item.key ? "border-primary ring-1 ring-primary" : "border-border"}`}
     >
-      {item.kind === "notice" && (
+      {item.kind === "notice" && item.message && (
+        <p role="status" className="text-muted-foreground">
+          {item.message === "updated" ? (
+            <>
+              The writer published an update.{" "}
+              <button
+                type="button"
+                className="text-primary underline-offset-4 hover:underline"
+                onClick={() => window.location.reload()}
+              >
+                Reload to read it
+              </button>
+              . Comments written so far are marked as being on an earlier copy.
+            </>
+          ) : (
+            "The writer has stopped sharing this page."
+          )}
+        </p>
+      )}
+      {item.kind === "notice" && !item.message && (
         <p className="text-muted-foreground">
           The writer is taking comments.{" "}
           {account.user ? (

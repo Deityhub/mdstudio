@@ -32,6 +32,8 @@ export type SyncDeps = {
   snapshot?: (doc: MdDocument) => Promise<unknown>;
   /** Called when a draft leaves this device because it was deleted in the cloud. */
   onGone?: (id: string) => Promise<unknown>;
+  /** Called when a draft stops being edited live here (stopped, deleted, or gone): what the browser kept of the room is forgotten. */
+  onLeaveLive?: (id: string) => Promise<unknown>;
 };
 
 export type SyncReport = {
@@ -61,28 +63,50 @@ const quiet = { quiet: true };
 
 // A sign-out and the background runner must never sync at the same time.
 let chain: Promise<unknown> = Promise.resolve();
-export const syncOnce = (deps: SyncDeps): Promise<SyncReport> => {
-  const next = chain.then(() => round(deps));
+export const syncOnce = (
+  deps: SyncDeps,
+  /** `pull: false` pushes only: for when another device's changes are arriving by themselves. */
+  opts: { pull?: boolean } = {},
+): Promise<SyncReport> => {
+  const next = chain.then(() => round(deps, opts.pull !== false));
   chain = next.catch(() => undefined);
   return next;
 };
 
-async function round(deps: SyncDeps): Promise<SyncReport> {
-  const { userId, store, meta, api } = deps;
-  const report: SyncReport = {
-    applied: [],
-    removed: [],
-    replaced: [],
-    detached: [],
-    pushed: 0,
-    deferred: 0,
-    tooLarge: [],
-    overLimit: [],
-    rejected: 0,
-  };
+/** Starts a report with nothing in it. */
+const emptyReport = (): SyncReport => ({
+  applied: [],
+  removed: [],
+  replaced: [],
+  detached: [],
+  pushed: 0,
+  deferred: 0,
+  tooLarge: [],
+  overLimit: [],
+  rejected: 0,
+});
+
+/**
+ * Brings a draft from the cloud into this device, writing what happens into `report`. Shared by a
+ * round (which pulls) and by a draft that another device's change delivers directly.
+ */
+function applier(deps: SyncDeps, report: SyncReport) {
+  const { userId, store, meta } = deps;
   const note = (list: string[], v: string) => void (list.includes(v) || list.push(v));
 
-  async function writeRemote(local: MdDocument | undefined, rd: ServerDoc, id: string) {
+  /**
+   * `keepLabels` leaves the name and folder this device has: a live draft's text is taken from the
+   * room, but its name and folder are not part of that, and are not sent while it is live, so the
+   * server's copy of them may be older than what was given here.
+   */
+  async function writeRemote(
+    local: MdDocument | undefined,
+    rd: ServerDoc,
+    id: string,
+    keepLabels = false,
+  ) {
+    const name = keepLabels && local ? local.name : rd.name;
+    const folder = keepLabels && local ? local.folder : rd.folder;
     const next: MdDocument = {
       id,
       content: rd.content,
@@ -91,11 +115,11 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
       createdAt: local?.createdAt ?? rd.createdAt,
       // The edit time travels with the text, so a later comparison is between like clocks.
       updatedAt: rd.editedAt || rd.updatedAt,
-      ...(rd.name ? { name: rd.name } : {}),
-      ...(rd.folder ? { folder: rd.folder } : {}),
+      ...(name ? { name } : {}),
+      ...(folder ? { folder } : {}),
     };
     await store.save(next, quiet);
-    if (rd.folder) await store.folders.add(rd.folder);
+    if (folder) await store.folders.add(folder);
     note(report.applied, id);
   }
 
@@ -125,6 +149,35 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
         note(report.removed, id);
       }
       await meta.set({ id, version: rd.version, hash: "", deleted: true });
+      if (m?.collab) await deps.onLeaveLive?.(id);
+      return true;
+    }
+
+    if (rd.collab) {
+      // Edited live: the room holds the text. The first time this device hears of it, text it has
+      // that the cloud did not is kept in History; after that the cloud's copy is never applied.
+      if (!m?.collab) {
+        if (local && dirty) {
+          await deps.snapshot?.(local);
+          note(report.replaced, id);
+        }
+        if (!local || localHash !== remoteHash) await writeRemote(local, rd, id, true);
+      }
+      await meta.set({
+        id,
+        version: rd.version,
+        hash: m?.collab ? m.hash : remoteHash!,
+        collab: true,
+      });
+      return true;
+    }
+    if (m?.collab) {
+      // Live editing stopped: the room's last text is the draft's, whatever this device's copy says.
+      if (local && localHash !== remoteHash) await deps.snapshot?.(local);
+      if (!local || localHash !== remoteHash) await writeRemote(local, rd, id, true);
+      // (the name and folder kept here are not what the cloud has: they go up with the next round)
+      await meta.set({ id, version: rd.version, hash: remoteHash! });
+      await deps.onLeaveLive?.(id);
       return true;
     }
 
@@ -141,6 +194,32 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
     await meta.set({ id, version: rd.version, hash: remoteHash! });
     return true;
   }
+
+  return { applyRemote, note };
+}
+
+/**
+ * Applies drafts another device just changed, delivered over the real-time channel, without a
+ * pull. It is the same rule as a pull applies (a version already seen is skipped, an edit made
+ * here that is later is kept, one with unsaved edits waits), so a late, repeated or echoed event is
+ * harmless. The pull cursor is not touched: only a real pull moves it, so no gap can open.
+ * `deferred` in the report means a draft had to wait; the caller asks for a pull then.
+ */
+export function applyPushed(deps: SyncDeps, docs: ServerDoc[]): Promise<SyncReport> {
+  const next = chain.then(async () => {
+    const report = emptyReport();
+    const { applyRemote } = applier(deps, report);
+    for (const rd of docs) await applyRemote(rd);
+    return report;
+  });
+  chain = next.catch(() => undefined);
+  return next;
+}
+
+async function round(deps: SyncDeps, pulls: boolean): Promise<SyncReport> {
+  const { userId, store, meta, api } = deps;
+  const report = emptyReport();
+  const { applyRemote, note } = applier(deps, report);
 
   async function pull() {
     let since = await meta.cursor();
@@ -166,6 +245,7 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
     for (const m of metas) {
       if (m.deleted) continue;
       const d = here.get(m.id);
+      if (m.collab && d && !m.unlink) continue; // live: the room carries its text
       if (!d || m.unlink) {
         // Deleted here, or taken out of the cloud on purpose: the cloud copy goes.
         items.push({
@@ -233,6 +313,9 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
           await applyRemote(r.server, true);
           const after = await meta.get(id);
           if (after && after.version !== before?.version) again = true;
+        } else if (r.status === "collab") {
+          // this device did not know the draft is live: its text is kept in History, the room's is shown
+          await applyRemote(r.server, true);
         } else if (r.status === "limit_reached") {
           report.limit = r.limit;
           await meta.remove(id);
@@ -246,7 +329,7 @@ async function round(deps: SyncDeps): Promise<SyncReport> {
   }
 
   for (let n = 0; n < MAX_ROUNDS; n++) {
-    await pull();
+    if (pulls) await pull();
     if (!(await push())) break;
   }
   return report;

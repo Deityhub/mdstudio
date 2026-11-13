@@ -6,6 +6,9 @@ import type { PublicUser } from "../auth/service";
 import { getStore } from "../assets/store";
 import type { Db } from "../db";
 import { getEnv } from "../env";
+import { endCollab } from "../collab/routes";
+import { liveDocIds } from "../collab/service";
+import { endSessions, publish, userTopic } from "../realtime/publish";
 import { LIMITS, resolveLimits } from "../limits/catalog";
 import { deletePlan, listPlans, savePlan } from "../limits/plans";
 import { getSettings, updateSettings } from "../settings/service";
@@ -95,23 +98,31 @@ export const updateUserHandler = (request: Request, id: string) =>
     const result = await updateUser(db, actor.id, id, body);
     if (!result.ok) return fail(result.error);
     await audit(db, who(actor), "user.update", who_ ?? undefined, body);
+    // a suspended account's sessions stop working, so its open sockets are closed with them
+    if (body["suspended"] === true) await endSessions(r, id, "suspended");
+    // a plan or limit change shows in the account's open tabs (the cloud usage reads it) at once
+    else await publish(r, userTopic(id), { t: "sync" });
     return json({ ...(await userDetail(db, env(r), id)), catalog: catalog(r) });
   })(request);
 
 export const deleteUserHandler = (request: Request, id: string) =>
   write(async (r, actor, db) => {
     const who_ = await target(db, id);
+    const live = await liveDocIds(db, id);
     const result = await deleteUser(db, await getStore(r), actor.id, id);
     if (!result.ok) return fail(result.error);
+    for (const docId of live) await endCollab(r, db, docId); // their live drafts' rooms end with them
     await audit(db, who(actor), "user.delete", who_ ?? undefined);
+    await endSessions(r, id, "deleted");
     return json({ ok: true });
   })(request);
 
 export const signOutHandler = (request: Request, id: string) =>
-  write(async (_r, actor, db) => {
+  write(async (r, actor, db) => {
     const who_ = await target(db, id);
     if (!who_) return fail("not_found");
     const ended = await signOutEverywhere(db, id);
+    await endSessions(r, id, "signed_out");
     await audit(db, who(actor), "user.sign_out", who_, { sessions: ended });
     return json({ ended });
   })(request);
@@ -128,8 +139,10 @@ export const removeContentHandler = (request: Request, id: string, kind: string,
     if (!who_) return fail("not_found");
     let done = false;
     if (kind === "shares") done = await removeShare(db, id, item);
-    else if (kind === "drafts") done = await removeDraft(db, id, item);
-    else if (kind === "images") {
+    else if (kind === "drafts") {
+      done = await removeDraft(db, id, item);
+      if (done) await endCollab(r, db, `${id}:${item}`); // a live draft's room ends with it
+    } else if (kind === "images") {
       const store = await getStore(r);
       done = store ? await removeImage(db, store, id, item) : false;
     } else return fail("invalid");

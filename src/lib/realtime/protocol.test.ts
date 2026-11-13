@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import { CLOSE, MAX_EVENT_BYTES, isClientId, parseEvent, parseTopic } from "./protocol";
+
+describe("parseTopic", () => {
+  it("knows the user's own topic and a share's topic", () => {
+    expect(parseTopic("user")).toEqual({ kind: "user" });
+    expect(parseTopic("share:3f2a-bc_9")).toEqual({ kind: "share", id: "3f2a-bc_9" });
+  });
+
+  it("knows a draft's room by its owner and its id", () => {
+    expect(parseTopic("doc:owner-1:d_9")).toEqual({ kind: "doc", ownerId: "owner-1", id: "d_9" });
+    for (const bad of ["doc:", "doc:a", "doc:a:", "doc::b", "doc:a:b:c", "doc:a b:c", "doc:a:../x"])
+      expect(parseTopic(bad), bad).toBeNull();
+    expect(parseTopic(`doc:${"a".repeat(65)}:x`)).toBeNull();
+  });
+
+  it("refuses anything else, including another user's topic written out", () => {
+    for (const bad of [null, "", "user:abc", "users", "share:", "share:a b", "share:../x", "doc:1"])
+      expect(parseTopic(bad), String(bad)).toBeNull();
+    expect(parseTopic(`share:${"a".repeat(65)}`)).toBeNull();
+  });
+});
+
+describe("isClientId", () => {
+  it("accepts a random token and refuses odd input", () => {
+    expect(isClientId("q9Zx_aB-12345678")).toBe(true);
+    for (const bad of [null, "", "short", "has space 1234", "a".repeat(65), "bad/char12345"])
+      expect(isClientId(bad), String(bad)).toBe(false);
+  });
+});
+
+describe("events", () => {
+  it("parses the events the server sends and nothing else", () => {
+    expect(parseEvent('{"t":"ready"}')).toEqual({ t: "ready" });
+    expect(parseEvent('{"t":"sync"}')).toEqual({ t: "sync" });
+    expect(parseEvent('{"t":"bye","reason":"suspended"}')).toEqual({
+      t: "bye",
+      reason: "suspended",
+    });
+    for (const bad of ["", "nope", '{"t":"other"}', '{"t":"bye","reason":"x"}', "[]", "null"])
+      expect(parseEvent(bad), bad).toBeNull();
+  });
+
+  it("carries a whole document for the device to apply, and refuses a malformed one", () => {
+    const doc = {
+      id: "u:d1",
+      version: 3,
+      title: "T",
+      name: null,
+      folder: "f",
+      content: "# T",
+      createdAt: 1,
+      updatedAt: 2,
+      editedAt: 2,
+      deleted: false,
+    };
+    expect(parseEvent(JSON.stringify({ t: "doc", doc }))).toEqual({ t: "doc", doc });
+    for (const bad of [
+      { ...doc, version: 0 },
+      { ...doc, content: 5 },
+      { ...doc, deleted: "no" },
+      { id: "u:d1" },
+    ])
+      expect(parseEvent(JSON.stringify({ t: "doc", doc: bad })), JSON.stringify(bad)).toBeNull();
+  });
+
+  it("carries a comment, its resolving and removal, and what happened to a share", () => {
+    const comment = {
+      id: "c1",
+      parentId: null,
+      author: "Bea",
+      mine: false,
+      line: 3,
+      snippet: "Intro",
+      body: "Tighten this",
+      outdated: false,
+      resolved: false,
+      createdAt: 5,
+    };
+    const events = [
+      { t: "comment", comment },
+      { t: "comment_resolved", id: "c1", resolved: true },
+      { t: "comment_deleted", id: "c1" },
+      { t: "share", change: "updated" },
+      { t: "share", change: "revoked" },
+      { t: "share", change: "settings" },
+      { t: "shares" },
+      { t: "collab" },
+    ];
+    for (const e of events) expect(parseEvent(JSON.stringify(e)), e.t).toEqual(e);
+    for (const bad of [
+      { t: "comment", comment: { ...comment, body: 7 } },
+      { t: "comment_resolved", id: "c1" },
+      { t: "comment_deleted" },
+      { t: "share", change: "other" },
+    ])
+      expect(parseEvent(JSON.stringify(bad)), JSON.stringify(bad)).toBeNull();
+  });
+
+  it("has distinct close codes in the private range, and a size cap", () => {
+    const codes = Object.values(CLOSE);
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const code of codes) expect(code).toBeGreaterThanOrEqual(4000);
+    expect(MAX_EVENT_BYTES).toBe(128 * 1024);
+  });
+});

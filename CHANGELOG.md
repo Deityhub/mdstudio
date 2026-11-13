@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.0 (2026-11-13)
+
+### Features
+
+- **collab:** warn about images only one browser has in a live draft
+- **collab:** comments and suggestions on the words of a live draft
+- **collab:** open an invited draft from a link, and see invitations at once
+- **collab:** share a draft for editing and open drafts shared with you
+- **collab:** edit a live draft in the editor, online and offline
+- **collab:** the room core and server wiring for editing a draft together (#95)
+- **realtime:** live sync, review comments and session ends over the socket (#94)
+- **realtime:** a WebSocket channel for live updates, on Durable Objects and in process (#93)
+- **auth:** sign in and sign up with Google, and link accounts by email (#89)
+
+### Fixes
+
+- **collab:** mark an unshared image whenever the preview is drawn
+- **collab:** whole-text changes in a live draft are part of Undo
+- keep a draft's name when it goes live or stops, and stop the page hanging while typing
+- **collab:** someone removed while offline finds out when the network returns
+- **collab:** the owner opening a draft's link gets their own draft
+- **collab:** a closing connection no longer stops others getting an edit
+
 ## 0.5.0 (2026-11-10)
 
 ### Features
