@@ -182,4 +182,4 @@ only the ones that are set.
 - **One inbox, one account.** `test+shop@gmail.com` and `t.e.s.t@gmail.com` are the same account as
   `test@gmail.com` (a `+tag` is dropped everywhere, dots are ignored for Gmail, `googlemail.com` is `gmail.com`).
 
-Pull request previews send no mail, so confirmation is off there, like GitHub and Google sign-in.
+Pull request previews send mail too: the preview workflow uploads `MAIL_FROM`, `RESEND_API_KEY` and `MAILTRAP_API_TOKEN` to each preview Worker (only those that are set), so invitations, confirmation and review notices can be tried there, and their links point at the preview. That also means confirmation is on in previews: a new account has to open the emailed link. Previews share one database, so the sending counters they keep do not include what production has sent: preview mail draws on the same provider allowance (for example Resend's 100 a day), so keep preview testing light or set `MAIL_PROVIDERS` for previews if you want a separate provider. GitHub and Google sign-in and the CAPTCHA stay off in previews.

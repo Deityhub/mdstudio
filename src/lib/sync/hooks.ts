@@ -133,6 +133,8 @@ type Handlers = {
   /** True while a draft has edits that are not saved yet; remote changes to it wait. */
   isBusy: (id: string) => boolean;
   onReport: (report: SyncReport) => void;
+  /** What is shared with this account for editing changed: read the list again now. */
+  onCollab?: () => void;
 };
 
 /** Keeps this browser's cloud drafts and the signed-in account in step. Inert while signed out. */
@@ -187,6 +189,8 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
         } else if (event.t === "shares") {
           // the account's links changed on another device
           void refreshSharesIfLoaded();
+        } else if (event.t === "collab") {
+          latest.current.onCollab?.();
         } else if (event.t === "doc")
           void applyPushed(deps(), [event.doc])
             .then(async (report) => {

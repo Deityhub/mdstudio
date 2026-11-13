@@ -102,7 +102,8 @@ test("readers sign in to comment on selected words, reply, and take a comment ba
   await page.getByRole("button", { name: "Comment on selection" }).click();
   await page.getByLabel("Add a comment").fill("<img src=x onerror=window.__x=1> Which Friday?");
   await page.getByRole("button", { name: "Comment", exact: true }).click();
-  const mine = page.getByText("Which Friday?");
+  // the comment itself, not the box it was typed in (that still holds the words for a moment)
+  const mine = page.locator("p", { hasText: "Which Friday?" });
   await expect(mine).toBeVisible();
   await expect(page.locator("img[src='x']")).toHaveCount(0); // text, not markup
   expect(await page.evaluate(() => (window as unknown as { __x?: number }).__x)).toBeUndefined();
@@ -111,13 +112,13 @@ test("readers sign in to comment on selected words, reply, and take a comment ba
 
   // it is still there after a reload, under the same block
   await page.reload();
-  await expect(page.getByText("Which Friday?")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("p", { hasText: "Which Friday?" })).toBeVisible({ timeout: 20_000 });
 
   // the column can be hidden, and a click on the highlighted words brings it back
   await page.getByRole("button", { name: "Hide comments" }).click();
-  await expect(page.getByText("Which Friday?")).toBeHidden();
+  await expect(page.locator("p", { hasText: "Which Friday?" })).toBeHidden();
   await body(page).locator("mark.share-hl").click();
-  await expect(page.getByText("Which Friday?")).toBeVisible();
+  await expect(page.locator("p", { hasText: "Which Friday?" })).toBeVisible();
 
   await page.getByRole("button", { name: "Reply" }).click();
   await page.getByLabel("Write a reply").fill("The 14th");
@@ -129,7 +130,7 @@ test("readers sign in to comment on selected words, reply, and take a comment ba
 
   await page.getByRole("button", { name: "Delete" }).first().click();
   await page.getByRole("button", { name: "Confirm delete" }).click();
-  await expect(page.getByText("Which Friday?")).toHaveCount(0);
+  await expect(page.locator("p", { hasText: "Which Friday?" })).toHaveCount(0);
   await expect(page.getByText("The 14th")).toHaveCount(0); // the reply went with it
   await context.close();
 });

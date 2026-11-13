@@ -1,9 +1,10 @@
 // The HTTP side of live editing (the sockets are src/server/realtime/routes.ts): the owner switches a
 // draft to live editing and back, invites and removes people; invited people list what is shared with
 // them and leave; and any editor can ask for the plain-text copy to be refreshed from the room.
-import { eq } from "drizzle-orm";
-import { users } from "../../../infra/db/schema";
+import { eq, inArray } from "drizzle-orm";
+import { documentEditors, users } from "../../../infra/db/schema";
 import { remoteId } from "@/lib/sync/protocol";
+import { canonicalEmail } from "../auth/email";
 import { withVerifiedUser } from "../auth/guard";
 import { noStoreJson as json, readJson, sameOrigin } from "../auth/http";
 import { hit } from "../auth/limits";
@@ -11,7 +12,7 @@ import type { Db } from "../db";
 import { siteOrigin } from "../env";
 import { limitsFor } from "../limits/request";
 import { sendQuietly } from "../mail/quiet";
-import { publishDocs } from "../realtime/publish";
+import { publish, publishDocs, userTopic } from "../realtime/publish";
 import { revisionConfig } from "../revisions/routes";
 import { getSettings } from "../settings/service";
 import { getCollabHost } from "./host";
@@ -23,7 +24,9 @@ import {
   docAccess,
   dropEditors,
   enableCollab,
+  ensureLink,
   leaveDoc,
+  linkTarget,
   listEditors,
   removeEditor,
   sharedWith,
@@ -40,6 +43,13 @@ const STATUS: Record<string, number> = {
 };
 const fail = (error: string) => json({ error }, STATUS[error] ?? 400);
 
+/** Where a draft's address leads for this person; anyone not invited gets the same 404 as a wrong address. */
+export const openLinkHandler = (request: Request, link: string) =>
+  withVerifiedUser(request, async (user, db) => {
+    const target = await linkTarget(db, user, link);
+    return target ? json(target) : fail("not_found");
+  });
+
 /** Drafts others invited this person to edit. */
 export const sharedHandler = (request: Request) =>
   withVerifiedUser(request, async (user, db) => json({ drafts: await sharedWith(db, user) }));
@@ -49,9 +59,12 @@ export const stateHandler = (request: Request, localId: string) =>
   withVerifiedUser(request, async (user, db) => {
     const limits = await limitsFor(request, db, user.id);
     const editors = await listEditors(db, user.id, localId);
+    const link = editors ? await ensureLink(db, remoteId(user.id, localId)) : null;
     return json({
       live: editors !== null,
       editors: editors ?? [],
+      // where the invited open the draft; the owner can send it themselves too
+      link: link ? `${siteOrigin(request)}/c/${link}` : null,
       people: limits.collab_people,
       docs: limits.collab_docs,
       available: limits.collab_enabled && (await getSettings(db)).collabOpen,
@@ -85,9 +98,15 @@ export const disableHandler = (request: Request, localId: string) =>
     const text = await host.text(docId);
     if (text !== null)
       await applyCollabText(db, docId, text, Date.now(), revisionConfig(request, limits.revisions));
+    const invited = (await listEditors(db, user.id, localId)) ?? [];
     const doc = await disableCollab(db, user.id, localId);
     if (!doc) return fail("not_found");
     await host.destroy(docId);
+    await notifyPeople(
+      request,
+      db,
+      invited.map((e) => keyOf(e.email)),
+    );
     await publishDocs(request, user.id, [doc]);
     return json({ ok: true });
   });
@@ -105,12 +124,21 @@ export const addEditorHandler = (request: Request, localId: string) =>
     const r = await addEditor(db, user, localId, body["email"], limits.collab_people);
     if (!r.ok) return fail(r.error);
     // only a new address is emailed, so adding the same one again cannot be used to send mail
-    const emailed = r.added
-      ? await sendQuietly(
-          request,
-          collabInviteMail(siteOrigin(request), access.title, r.email, user.displayName ?? ""),
-        )
-      : false;
+    const link = r.added ? await ensureLink(db, access.docId) : null;
+    const emailed =
+      r.added && link
+        ? await sendQuietly(
+            request,
+            collabInviteMail(
+              siteOrigin(request),
+              access.title,
+              r.email,
+              user.displayName ?? "",
+              link,
+            ),
+          )
+        : false;
+    if (r.added) await notifyPeople(request, db, [keyOf(r.email)]);
     return json({ editors: r.editors, emailed });
   });
 
@@ -121,6 +149,7 @@ export const removeEditorHandler = (request: Request, localId: string, editorId:
     const removed = await removeEditor(db, user.id, localId, editorId);
     if (!removed) return fail("not_found");
     await kickByAddress(request, db, remoteId(user.id, localId), removed.emailKey);
+    await notifyPeople(request, db, [removed.emailKey]);
     return json({ ok: true });
   });
 
@@ -169,10 +198,32 @@ export async function refreshCollabText(
 
 /** Ends a draft's room for good: it was deleted. Everyone invited is let go and the room forgotten. */
 export async function endCollab(request: Request, db: Db, docId: string) {
+  const invited = await db
+    .select({ key: documentEditors.emailKey })
+    .from(documentEditors)
+    .where(eq(documentEditors.documentId, docId));
   await dropEditors(db, docId);
+  await notifyPeople(
+    request,
+    db,
+    invited.map((e) => e.key),
+  );
   const host = await getCollabHost(request, db);
   await host?.destroy(docId);
 }
+
+/**
+ * Tells the accounts behind these addresses, wherever they have the studio open, that what is
+ * shared with them changed, so their list is read again now and not at the next visit. Addresses
+ * with no account are skipped; the event carries nothing about the draft.
+ */
+async function notifyPeople(request: Request, db: Db, emailKeys: string[]) {
+  const keys = [...new Set(emailKeys.filter(Boolean))];
+  if (!keys.length) return;
+  const people = await db.select({ id: users.id }).from(users).where(inArray(users.emailKey, keys));
+  for (const p of people) await publish(request, userTopic(p.id), { t: "collab" });
+}
+const keyOf = (address: string) => canonicalEmail(address) ?? "";
 
 async function kickByAddress(request: Request, db: Db, docId: string, emailKey: string) {
   const [person] = await db

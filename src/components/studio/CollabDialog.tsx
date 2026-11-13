@@ -1,4 +1,4 @@
-import { Users, X } from "lucide-react";
+import { Check, Copy, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ export function CollabDialog({
   const [state, setState] = useState<CollabState | null>(null);
   const [busy, setBusy] = useState<"start" | "stop" | "invite" | null>(null);
   const [email, setEmail] = useState("");
+  const [copied, setCopied] = useState(false);
   const [problem, setProblem] = useState("");
   const draftId = draft?.id;
 
@@ -93,7 +94,8 @@ export function CollabDialog({
     run("start", async () => {
       await beforeStart();
       const r = await collabApi.start(draft.id);
-      setState((s) => (s ? { ...s, live: true, editors: r.editors } : s));
+      const fresh = await collabApi.state(draft.id); // for the address people open it by
+      setState((s) => (s ? { ...s, ...fresh, live: true, editors: r.editors } : s));
       requestSync(0);
       toast.success("Editing together is on");
     });
@@ -126,6 +128,15 @@ export function CollabDialog({
       setState((s) => (s ? { ...s, editors: s.editors.filter((p) => p.id !== person.id) } : s));
     });
 
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(state?.link ?? "");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.info("Select the link and press Ctrl+C to copy it");
+    }
+  };
   const full = !!state && state.editors.length + 1 >= state.people;
 
   return (
@@ -181,6 +192,26 @@ export function CollabDialog({
                 Invite
               </Button>
             </form>
+            {state.link && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="collab-link">Draft link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="collab-link"
+                    readOnly
+                    value={state.link}
+                    onFocus={(e) => e.currentTarget.select()}
+                    aria-label="Draft link"
+                  />
+                  <Button type="button" variant="outline" onClick={copy} aria-label="Copy link">
+                    {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Only the people you invite can open it. Invitations by email include it.
+                </p>
+              </div>
+            )}
             {full && (
               <p className="text-sm text-muted-foreground">
                 A draft can have up to {state.people} people, you included.

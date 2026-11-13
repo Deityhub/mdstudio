@@ -47,6 +47,18 @@ export async function openShared(
   return id;
 }
 
+/**
+ * Where a draft's address leads for this person, as the id of the draft to open here. The owner is
+ * taken to their own draft (never a second, shared copy of it); an invited person gets their local copy.
+ */
+export async function openTarget(
+  store: Store,
+  userId: string,
+  item: Pick<SharedItem, "ownerId" | "id" | "title" | "ownerName">,
+) {
+  return item.ownerId === userId ? item.id : openShared(store, userId, item);
+}
+
 /** The draft stops being shared: it stays on this device as an ordinary local draft. */
 export async function detachShared(store: Store, kv: KeyValueStore, id: string) {
   const d = await store.get(id);
@@ -74,6 +86,12 @@ export async function reconcileShared(
   for (const d of await store.list()) {
     if (d.shared?.userId !== userId) continue;
     if (listed.has(d.id)) continue;
+    if (d.shared.ownerId === userId) {
+      // a copy of the person's own draft (made before opening it by its link took them to the original)
+      await store.remove(d.id, { quiet: true });
+      await forgetKept(kv, d.shared.ownerId, d.shared.id);
+      continue;
+    }
     const plain = await detachShared(store, kv, d.id);
     if (plain) detached.push(plain);
   }

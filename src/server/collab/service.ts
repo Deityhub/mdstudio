@@ -57,6 +57,63 @@ export async function docAccess(
   return invited ? { ...allowed, isOwner: false } : { ok: false };
 }
 
+const LINK_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+/** A short random address, 12 characters (about 70 bits), so it cannot be counted through. */
+const newLink = () =>
+  Array.from(
+    crypto.getRandomValues(new Uint8Array(12)),
+    (b) => LINK_ALPHABET[b % LINK_ALPHABET.length],
+  ).join("");
+
+/**
+ * The address a live draft is opened by (/c/<it>), made on first need (a draft that was live before
+ * links existed gets one then). Null when the draft is not live. It names nobody: opening it still
+ * takes an invitation.
+ */
+export async function ensureLink(db: Db, docId: string): Promise<string | null> {
+  const doc = await liveDoc(db, docId);
+  if (!doc) return null;
+  if (doc.collabLink) return doc.collabLink;
+  await db
+    .update(documents)
+    .set({ collabLink: newLink() })
+    .where(and(eq(documents.id, docId), isNull(documents.collabLink)));
+  return (await liveDoc(db, docId))?.collabLink ?? null;
+}
+
+/**
+ * Where an address leads for this person: the draft, if it is live and they may edit it. Anyone
+ * else, and an address that leads nowhere, get the same null, so it never says that a draft exists.
+ */
+export async function linkTarget(db: Db, user: PublicUser, link: string) {
+  if (!/^[A-Za-z0-9_-]{6,32}$/.test(link)) return null;
+  const [row] = await db
+    .select({ id: documents.id, ownerId: documents.userId })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.collabLink, link),
+        eq(documents.collab, 1),
+        isNull(documents.deletedAt),
+        ownerActive,
+      ),
+    );
+  if (!row) return null;
+  const localId = row.id.slice(row.ownerId.length + 1);
+  const access = await docAccess(db, user, row.ownerId, localId);
+  if (!access.ok) return null;
+  const [owner] = await db
+    .select({ name: users.displayName })
+    .from(users)
+    .where(eq(users.id, row.ownerId));
+  return {
+    ownerId: row.ownerId,
+    id: localId,
+    title: access.title,
+    ownerName: owner?.name ?? null,
+  };
+}
+
 export type EditorInfo = { id: string; email: string; createdAt: number };
 
 /** The people invited to one of the caller's live drafts; null when it is not theirs. */
@@ -218,7 +275,12 @@ export async function enableCollab(
   if (n >= limits.docs) return { ok: false, error: "limit_reached" };
   const [updated] = await db
     .update(documents)
-    .set({ collab: 1, version: row.version + 1, updatedAt: Math.max(now, row.updatedAt) })
+    .set({
+      collab: 1,
+      collabLink: row.collabLink ?? newLink(),
+      version: row.version + 1,
+      updatedAt: Math.max(now, row.updatedAt),
+    })
     .where(and(eq(documents.id, docId), eq(documents.collab, 0)))
     .returning();
   return { ok: true, text: row.content, doc: toServerDoc(updated ?? { ...row, collab: 1 }) };
@@ -241,7 +303,13 @@ export async function disableCollab(
   await db.delete(documentEditors).where(eq(documentEditors.documentId, docId));
   const [updated] = await db
     .update(documents)
-    .set({ collab: 0, version: row.version + 1, updatedAt: Math.max(now, row.updatedAt) })
+    // the address stops working with it; starting again makes a new one
+    .set({
+      collab: 0,
+      collabLink: null,
+      version: row.version + 1,
+      updatedAt: Math.max(now, row.updatedAt),
+    })
     .where(eq(documents.id, docId))
     .returning();
   return toServerDoc(updated ?? { ...row, collab: 0 });

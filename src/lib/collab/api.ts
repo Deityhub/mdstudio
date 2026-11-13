@@ -5,6 +5,8 @@ export type Editor = { id: string; email: string; createdAt: number };
 export type CollabState = {
   live: boolean;
   editors: Editor[];
+  /** The address the invited open the draft by, while it is live. */
+  link: string | null;
   /** People one draft may have, the owner counted, and live drafts the account may have. */
   people: number;
   docs: number;
@@ -50,6 +52,11 @@ const enc = encodeURIComponent;
 export const collabApi = {
   /** Drafts others invited this account to edit. */
   shared: async () => (await send<{ drafts: SharedItem[] }>("/api/collab")).drafts,
+  /** Where a draft's address (/c/<link>) leads for the signed-in person. */
+  open: (link: string) =>
+    send<Pick<SharedItem, "ownerId" | "id" | "title" | "ownerName">>(
+      `/api/collab/link/${enc(link)}`,
+    ),
   state: (id: string) => send<CollabState>(`/api/collab/${enc(id)}`),
   /** Switches a cloud draft to live editing. */
   start: (id: string) =>

@@ -507,8 +507,11 @@ export function Studio({ docId }: { docId: string }) {
 
   // Optional account sync of the drafts chosen for the cloud: a no-op while signed out. Cloud
   // changes to the open draft wait while it has unsaved edits, then load into the editor.
+  const sharedRefresh = useRef<() => void>(() => undefined);
   const syncStatus = useSync(cloudOn ? account?.id : undefined, {
     isBusy: (id) => pending.current?.id === id,
+    // invited, removed or stopped: the list of drafts shared with this account is read at once
+    onCollab: () => sharedRefresh.current(),
     onReport: (report) => {
       if (report.applied.length || report.removed.length || report.detached.length)
         void refreshList();
@@ -616,6 +619,7 @@ export function Studio({ docId }: { docId: string }) {
     cloudOn ? account?.id : undefined,
     tellDetached,
   );
+  sharedRefresh.current = () => void refreshShared();
   // the room says it is over (removed while editing, or it was stopped): settle it now
   useEffect(() => {
     if (collabState.status !== "ended" || !doc) return;
