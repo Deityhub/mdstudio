@@ -138,3 +138,33 @@ test("stopping editing together keeps the open comments in the draft's History",
   expect(kept).toContain("Please expand this");
   for (const c of contexts) await c.close();
 });
+
+test("restoring a version in a draft edited together can be undone, and Bea's typing stays", async ({
+  browser,
+}) => {
+  const { a, b, contexts } = await bothInDraft(browser);
+  // a saved version, then the draft moves on
+  await a.getByRole("button", { name: "History", exact: true }).click();
+  await a.getByRole("button", { name: "Save a version now" }).click();
+  await editor(a).click();
+  await a.keyboard.press("ControlOrMeta+End");
+  await a.keyboard.insertText("\n\nadded after the version");
+  await expect(editor(b)).toContainText("added after the version");
+  await a.waitForTimeout(700); // Undo joins changes made within half a second into one step
+
+  // restore it, while Bea types elsewhere
+  await a.getByRole("button", { name: /words/ }).first().click();
+  await a.getByRole("button", { name: "Restore this version" }).click();
+  await expect(editor(a)).not.toContainText("added after the version");
+  await editor(b).click();
+  await b.keyboard.press("ControlOrMeta+Home");
+  await b.keyboard.insertText("Bea: ");
+  await expect(editor(a)).toContainText("Bea: ");
+
+  await editor(a).click();
+  await a.keyboard.press("ControlOrMeta+z");
+  await expect(editor(a)).toContainText("added after the version");
+  await expect(editor(b)).toContainText("added after the version");
+  await expect(editor(b)).toContainText("Bea: "); // hers stays
+  for (const c of contexts) await c.close();
+});

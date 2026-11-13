@@ -25,6 +25,9 @@ export type SessionState = {
   refused: boolean;
 };
 
+/** The origin of a whole-text change (a restored version, the front matter form): this person's Undo tracks it. */
+const REPLACE_ORIGIN = "text-replace";
+
 /** The plain-text copy on the server is asked to refresh this long after the last edit made here. */
 export const TEXT_COPY_MS = 30_000;
 
@@ -115,8 +118,10 @@ export async function openSession(opts: SessionOptions) {
   if (kept) persistence.start(kept.epoch);
 
   const threads = createThreads(doc, ytext, opts.me);
-  // an accepted suggestion is an edit by the person who accepts it, so their Undo takes it back
-  const undoManager = new Y.UndoManager(ytext, { trackedOrigins: new Set([ACCEPT_ORIGIN]) });
+  // an accepted suggestion and a whole-text change are edits by the person who made them, so their Undo takes them back
+  const undoManager = new Y.UndoManager(ytext, {
+    trackedOrigins: new Set([ACCEPT_ORIGIN, REPLACE_ORIGIN]),
+  });
   let picked: (id: string) => void = () => undefined;
   const extension: Extension = [
     threadHighlights(threads, (id) => picked(id)),
@@ -183,7 +188,7 @@ export async function openSession(opts: SessionOptions) {
       doc.transact(() => {
         if (change.to > change.from) ytext.delete(change.from, change.to - change.from);
         if (change.insert) ytext.insert(change.from, change.insert);
-      });
+      }, REPLACE_ORIGIN);
     },
     undo: () => void undoManager.undo(),
     redo: () => void undoManager.redo(),
