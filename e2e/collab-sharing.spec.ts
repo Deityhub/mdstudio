@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { shared, startAndInvite, status, twoPeople } from "./collab-people";
+import { networkSwitch, shared, startAndInvite, status, twoPeople } from "./collab-people";
 import { editor, nav } from "./sync-helpers";
 import { makeAdmin, signUp } from "./admin-helpers";
 import { account as person, cloudDraft, invite, startLive } from "./collab-helpers";
@@ -229,5 +229,41 @@ test("the owner opening the draft link lands on their own draft, not a second co
   await expect(nav(a).getByText("Notes")).toHaveCount(1);
   await expect(shared(a)).toHaveCount(0);
   void b;
+  for (const c of contexts) await c.close();
+});
+
+test("someone removed while offline finds out when the network returns, and keeps what they typed", async ({
+  browser,
+}) => {
+  const { a, b, contexts, beaAddress } = await twoPeople(browser);
+  // set up before her page loads, so every socket it opens goes through it, the account's own
+  // channel too: when the connection is cut the removal cannot be pushed to her
+  const net = await networkSwitch(b, { everything: true });
+  const dialog = await startAndInvite(a, beaAddress);
+  await b.reload();
+  await shared(b)
+    .getByRole("button", { name: /^Notes/ })
+    .click();
+  await expect(status(b)).toHaveText(/Live/, { timeout: 15_000 });
+
+  net.cut();
+  await expect(status(b)).toHaveText(/Offline/);
+  await editor(b).click();
+  await b.keyboard.press("ControlOrMeta+End");
+  await b.keyboard.insertText("\n\nwritten offline");
+  // the owner removes her while her connection is down: she cannot be told over the socket
+  await dialog.getByRole("button", { name: `Remove ${beaAddress}` }).click();
+  await expect(dialog.getByText("No one yet")).toBeVisible();
+
+  await net.restore();
+  // she is not left retrying for a minute: within seconds the studio asks what became of the draft
+  await expect(b.getByText("You can no longer edit “Notes”")).toBeVisible({ timeout: 15_000 });
+  await expect(
+    b.getByText(/Changes you made while offline stay on this device only/),
+  ).toBeVisible();
+  await expect(status(b)).toHaveCount(0);
+  await expect(shared(b)).toHaveCount(0);
+  await expect(editor(b)).toContainText("written offline");
+  await expect(nav(b).getByText("Notes")).toBeVisible();
   for (const c of contexts) await c.close();
 });

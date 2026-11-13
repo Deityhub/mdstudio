@@ -105,6 +105,40 @@ describe("a live draft's session", () => {
     expect(a.session.text()).toBe(b.session.text());
   });
 
+  it("asks what became of the draft when the room keeps refusing, and says so only meanwhile", async () => {
+    const wire = new Wire();
+    await wire.room.seed("x");
+    wire.down = true;
+    let finish: () => void = () => undefined;
+    const asked: number[] = [];
+    const { session } = await open(wire, memory(), {
+      onRefused: () => {
+        asked.push(1);
+        return new Promise<void>((r) => (finish = r));
+      },
+    });
+    await settle(1200);
+    expect(asked).toHaveLength(1);
+    expect(session.state.refused).toBe(true);
+    finish(); // the draft is still shared with this person
+    await settle(0);
+    expect(session.state.refused).toBe(false);
+    expect(asked).toHaveLength(1);
+  });
+
+  it("does not wait forever for the access check", async () => {
+    const wire = new Wire();
+    await wire.room.seed("x");
+    wire.down = true;
+    const { session } = await open(wire, memory(), {
+      onRefused: () => new Promise(() => undefined),
+    });
+    await settle(1200);
+    expect(session.state.refused).toBe(true);
+    await settle(4100);
+    expect(session.state.refused).toBe(false);
+  });
+
   it("asks the server to refresh its text copy after this browser's edits go quiet, once", async () => {
     const wire = new Wire();
     await wire.room.seed("x");

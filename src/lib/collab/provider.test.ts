@@ -19,6 +19,7 @@ function browser(wire: Wire, opts: { doc?: Y.Doc; epoch?: string | null } = {}) 
   const doc = opts.doc ?? new Y.Doc();
   const awareness = new awarenessProtocol.Awareness(doc);
   const log = {
+    refused: 0,
     statuses: [] as Status[],
     synced: [] as (string | null)[],
     stale: 0,
@@ -33,6 +34,7 @@ function browser(wire: Wire, opts: { doc?: Y.Doc; epoch?: string | null } = {}) 
     onStatus: (s) => log.statuses.push(s),
     onSynced: (e) => log.synced.push(e),
     onStale: () => log.stale++,
+    onRefused: () => log.refused++,
     onPeers: (p) => log.peers.push(p),
   });
   return { doc, text: doc.getText(TEXT_KEY), awareness, provider, log };
@@ -87,6 +89,52 @@ describe("createProvider", () => {
     wire.sockets[1]!.deaf = false;
     await tick(RESYNC_MS + 100);
     expect(b.text.toString()).toBe("Hello there");
+  });
+
+  it("says the room keeps refusing it after two failed tries in a row, once, and not for one", async () => {
+    const wire = new Wire();
+    await wire.room.seed("x");
+    wire.down = true;
+    const a = browser(wire);
+    a.provider.start();
+    await flush();
+    expect(a.log.refused).toBe(0); // one failed try is a blip
+    await tick(1100);
+    expect(a.log.refused).toBe(1);
+    await tick(60_000);
+    expect(a.log.refused).toBe(1); // asked once for the run of failures, not at every try
+    expect(wire.sockets.length).toBeGreaterThan(3); // and it keeps trying
+  });
+
+  it("does not say refused for a connection that dropped after it was in the room", async () => {
+    const wire = new Wire();
+    await wire.room.seed("x");
+    const a = browser(wire);
+    a.provider.start();
+    await flush();
+    wire.sockets[0]!.closeFromServer(1006); // dropped while live: it reconnects at once
+    await tick(1100);
+    expect(a.provider.status).toBe("live");
+    expect(a.log.refused).toBe(0);
+  });
+
+  it("starts counting again after it was in the room", async () => {
+    const wire = new Wire();
+    await wire.room.seed("x");
+    wire.down = true;
+    const a = browser(wire);
+    a.provider.start();
+    await flush();
+    await tick(1100);
+    expect(a.log.refused).toBe(1);
+    wire.down = false;
+    a.provider.nudge();
+    await flush();
+    expect(a.provider.status).toBe("live");
+    wire.sockets.at(-1)!.closeFromServer(1006);
+    wire.down = true;
+    await tick(5000);
+    expect(a.log.refused).toBe(2); // a new run of failures is reported again
   });
 
   it("is back within seconds after the room asked it to slow down, not a minute", async () => {

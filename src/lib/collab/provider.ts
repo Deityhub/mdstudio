@@ -39,6 +39,12 @@ type Options = {
   /** The room is not the one the kept state came from (the draft was stopped and started again). */
   onStale?: () => void;
   onPeers?: (peers: Peer[]) => void;
+  /**
+   * Two tries in a row ended without ever reaching the room, while the network is up: most likely
+   * the room no longer lets this person in (removed, stopped, deleted), which a socket cannot say.
+   * Told once for each run of failures; the owner of the provider finds out what became of the draft.
+   */
+  onRefused?: () => void;
   /** The session ended or ran out: look at the account again before trying more. */
   onEnded?: (code: number) => Promise<unknown> | unknown;
 };
@@ -86,6 +92,9 @@ export function createProvider(opts: Options) {
   let status: Status = "offline";
   let epoch = opts.epoch ?? null;
   let attempt = 0;
+  /** Tries in a row that closed before the room said ready. */
+  let failures = 0;
+  let refusedTold = false;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let ping: ReturnType<typeof setInterval> | undefined;
   let pong: ReturnType<typeof setTimeout> | undefined;
@@ -200,6 +209,8 @@ export function createProvider(opts: Options) {
   };
 
   async function lost(code: number | null) {
+    if (!socket) return; // already dealt with (a dead connection is closed and reported by two paths)
+    const never = !ready;
     release();
     if (!running) return;
     if (code === CLOSE.gone) {
@@ -208,6 +219,10 @@ export function createProvider(opts: Options) {
       return;
     }
     setStatus("offline");
+    if (never && ++failures >= 2 && !refusedTold && navigator.onLine !== false) {
+      refusedTold = true;
+      opts.onRefused?.();
+    }
     if (code === CLOSE.sessionEnded || code === CLOSE.expired) {
       await opts.onEnded?.(code);
       schedule(MIN_WAIT);
@@ -232,6 +247,8 @@ export function createProvider(opts: Options) {
     }
     epoch = epoch ?? room;
     attempt = 0;
+    failures = 0;
+    refusedTold = false;
     ready = true;
     setStatus("live");
     // ask for what is missing; the room asks back for what it is missing (this is how offline edits arrive)

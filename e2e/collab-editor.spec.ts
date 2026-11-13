@@ -8,6 +8,7 @@ import {
   startLive,
   textOf,
 } from "./collab-helpers";
+import { networkSwitch } from "./collab-people";
 import { account, editor, onServer, replaceText, skipPicker, toCloud } from "./sync-helpers";
 
 // The live editor in a real browser: the owner's page on one side, a Yjs client (another person)
@@ -26,30 +27,6 @@ async function ownerWithDraft(page: Page, text = "# Notes\n\nStart") {
   const me = (await (await page.request.get("/api/auth/me")).json()).user as { id: string };
   const owner = { request: page.request, id: me.id, base: "http://localhost:4173" } as Account;
   return { owner, draft };
-}
-
-/** Holds the page's room socket: while cut it is refused, and an open one is dropped. */
-async function networkSwitch(page: Page) {
-  let down = false;
-  let current: { close: (o?: { code?: number }) => void } | null = null;
-  await page.routeWebSocket(/topic=doc/, (ws) => {
-    if (down) return void ws.close({ code: 1001 });
-    const server = ws.connectToServer();
-    current = ws;
-    ws.onMessage((m) => server.send(m));
-    server.onMessage((m) => ws.send(m));
-    server.onClose((code) => ws.close({ code }));
-  });
-  return {
-    cut() {
-      down = true;
-      current?.close({ code: 1001 });
-    },
-    async restore() {
-      down = false;
-      await page.evaluate(() => window.dispatchEvent(new Event("online")));
-    },
-  };
 }
 
 const status = (page: Page) => page.getByTestId("collab-status");
