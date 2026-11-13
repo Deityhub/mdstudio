@@ -868,13 +868,23 @@ export function Studio({ docId }: { docId: string }) {
   );
   useLayoutEffect(() => {
     syncPreview(previewBody.current);
-    // in a draft edited together, a local image this browser does not have is marked, not left as a broken picture
-    if (collabReady)
-      previewBody.current
-        ?.querySelectorAll('img[src^="./images/"], img[src^="images/"]')
-        .forEach((img) => img.setAttribute("data-unshared", ""));
     easedDone(); // the update is on screen: how long it took sets the pace of the next
-  }, [html, syncPreview, easedDone, collabReady]);
+  }, [html, syncPreview, easedDone]);
+  // In a draft edited together, a local image this browser does not have is marked, not left as a
+  // broken picture. The preview is drawn in pieces and not always in the same step as a render, so
+  // this watches the pane instead of running after a render.
+  useEffect(() => {
+    const root = previewBody.current;
+    if (!collabReady || !root) return;
+    const mark = () =>
+      root
+        .querySelectorAll('img[src^="./images/"], img[src^="images/"]')
+        .forEach((img) => img.setAttribute("data-unshared", ""));
+    mark();
+    const watch = new MutationObserver(mark);
+    watch.observe(root, { childList: true, subtree: true });
+    return () => watch.disconnect();
+  }, [collabReady, effectiveView]);
   const issues = useMemo(
     () => runChecks(deferred, profile, checkConfig).issues,
     [deferred, profile, checkConfig],
