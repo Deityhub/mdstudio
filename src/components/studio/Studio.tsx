@@ -2,7 +2,6 @@ import {
   lazy,
   Suspense,
   useCallback,
-  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -140,6 +139,7 @@ import { parseProfile } from "@/lib/markdown/profiles";
 import type { Command, Context, Edit, Snapshot } from "@/lib/editor/editing";
 import { findLinkAt, insertImage, insertLink, type FoundLink } from "@/lib/editor/editing-insert";
 import { hydrateDiagrams, renderDiagramFor, withCachedDiagrams } from "@/lib/markdown/diagrams";
+import { useEasedValue } from "@/lib/ui/useEasedValue";
 import { useResolvedTheme } from "@/lib/ui/useResolvedTheme";
 import { renderExportBody, standaloneDocument } from "@/lib/markdown/export";
 import { ensureMath, hasMathSyntax, isMathLoaded } from "@/lib/markdown/math";
@@ -765,7 +765,12 @@ export function Studio({ docId }: { docId: string }) {
   );
 
   const content = doc?.content ?? "";
-  const deferred = useDeferredValue(content);
+  // The preview and checks are rebuilt from the whole text, which takes longer the longer the draft
+  // is. Other people's edits can arrive many times a second, so they follow no faster than that
+  // work allows (see useEasedValue); the input itself is never held back.
+  // (Not useDeferredValue: React abandons and restarts a deferred render whenever a key is pressed
+  // meanwhile, so under continuous typing the same work is started again and again and never ends.)
+  const [deferred, easedDone] = useEasedValue(content, doc?.id ?? null);
   const images = doc?.images ?? NO_IMAGES;
   // KaTeX loads only when a document has math; bumping this re-renders once it is ready.
   const [mathVersion, setMathVersion] = useState(0);
@@ -785,7 +790,8 @@ export function Studio({ docId }: { docId: string }) {
   const html = useMemo(() => {
     const rendered = renderMarkdown(deferred, profile, images, { sourceLines: true });
     // known diagrams go straight into the HTML so they never show up as code while typing
-    return supports("mermaid", profile) ? withCachedDiagrams(rendered, theme) : rendered;
+    const out = supports("mermaid", profile) ? withCachedDiagrams(rendered, theme) : rendered;
+    return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deferred, profile, images, mathVersion, theme]);
   // Only the blocks that changed are replaced (see patchHtml), then pending diagrams render.
@@ -845,7 +851,10 @@ export function Studio({ docId }: { docId: string }) {
     },
     [profile, theme],
   );
-  useLayoutEffect(() => syncPreview(previewBody.current), [html, syncPreview]);
+  useLayoutEffect(() => {
+    syncPreview(previewBody.current);
+    easedDone(); // the update is on screen: how long it took sets the pace of the next
+  }, [html, syncPreview, easedDone]);
   const issues = useMemo(
     () => runChecks(deferred, profile, checkConfig).issues,
     [deferred, profile, checkConfig],

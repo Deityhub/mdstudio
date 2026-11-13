@@ -403,6 +403,11 @@ Several people typing in one Markdown draft, online or offline, converge without
 - **Stopping.** The threads go with the room. Before the owner's browser stops live editing, the open ones are written as a Markdown section ("Comments and suggestions") after the draft's text and saved as a version in its History (`exportThreads`); resolved and closed ones are not carried over. Stopping from a browser that does not have the draft open keeps nothing.
 - **Studio.** The marks are a CodeMirror plugin (`highlights.ts`) redrawn when a thread or the text changes; clicking a mark opens its thread in the Comments panel (`LiveComments`), which has a Team tab, and a Reviewers tab for the comments on a published link when the draft has one.
 
+**Names and responsiveness**
+
+- **A draft's name and folder stay.** The name (the library label) and folder are not part of a live draft's text and are not sent while it is live, so the cloud's copy of them can be older than what was given on this device. When a draft goes live, and when it stops (the room's last text is taken), the engine keeps this device's name and folder instead of overwriting them with the cloud's; they go up with the next round once the draft is ordinary again. (Before, renaming a draft and then sharing it for editing, or stopping, put the front matter or heading title back.)
+- **The preview follows at the pace the work allows** (`useEasedValue`). The preview, checks, outline and counts are rebuilt from the whole text. They used to sit behind React's `useDeferredValue`, whose render is abandoned and restarted every time a key is pressed meanwhile, so under continuous typing (two people typing in a long draft) the same work was started again and again and never finished, and the page stopped responding. Now a value is let through, drawn in one piece, and the next waits three times what that took (at most a second); a burst of changes is one update with the latest text. Measured at 20 keys a second in a 400-line draft the page went from about 95% busy to under 20%.
+
 ## 6. Authoritative Database Schema (SQLite / Drizzle)
 
 The database schema is defined in `infra/db/schema.ts` and runs identically on Cloudflare D1 and `better-sqlite3`:
