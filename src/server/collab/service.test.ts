@@ -12,7 +12,9 @@ import {
   disableCollab,
   docAccess,
   enableCollab,
+  ensureLink,
   leaveDoc,
+  linkTarget,
   listEditors,
   removeEditor,
   sharedWith,
@@ -262,5 +264,58 @@ describe("the text copy", () => {
     expect(await applyCollabText(db, "o:nope", "x", t0 + 5, { max: 10, intervalMs: 0 })).toBe(
       false,
     );
+  });
+});
+
+describe("the draft's link", () => {
+  it("is made when live editing starts, is short and not the owner's id, and stays the same", async () => {
+    await live();
+    const link = await ensureLink(db, "o:d1");
+    expect(link).toMatch(/^[A-Za-z0-9_-]{10,16}$/);
+    expect(link).not.toContain("o:");
+    expect(await ensureLink(db, "o:d1")).toBe(link);
+  });
+
+  it("is made on the spot for a draft that was live before links existed", async () => {
+    await live();
+    await db.update(documents).set({ collabLink: null }).where(eq(documents.id, "o:d1"));
+    const link = await ensureLink(db, "o:d1");
+    expect(link).toBeTruthy();
+    expect(await ensureLink(db, "o:d1")).toBe(link);
+  });
+
+  it("is not made for a draft that is not live", async () => {
+    await draft();
+    expect(await ensureLink(db, "o:d1")).toBeNull();
+  });
+
+  it("finds the draft for the people invited to it, and says nothing to anyone else", async () => {
+    await live();
+    await addEditor(db, owner, "d1", "b@x.co", 3, t0 + 2);
+    const link = (await ensureLink(db, "o:d1"))!;
+    expect(await linkTarget(db, bea, link)).toMatchObject({
+      ownerId: "o",
+      id: "d1",
+      title: "Notes",
+      ownerName: "O",
+    });
+    expect(await linkTarget(db, owner, link)).toMatchObject({ ownerId: "o", id: "d1" });
+    expect(await linkTarget(db, cy, link)).toBeNull(); // not invited: the same answer as for no such link
+    expect(await linkTarget(db, bea, "nosuchlink1")).toBeNull();
+    expect(await linkTarget(db, person("b", { emailVerified: false }), link)).toBeNull();
+  });
+
+  it("stops working when live editing stops, and a restart gets a new link", async () => {
+    await live();
+    await addEditor(db, owner, "d1", "b@x.co", 3, t0 + 2);
+    const first = (await ensureLink(db, "o:d1"))!;
+    await disableCollab(db, "o", "d1", t0 + 3);
+    expect(await linkTarget(db, bea, first)).toBeNull();
+    await enableCollab(db, "o", "d1", limits, t0 + 4);
+    const second = (await ensureLink(db, "o:d1"))!;
+    expect(second).not.toBe(first);
+    await addEditor(db, owner, "d1", "b@x.co", 3, t0 + 5);
+    expect(await linkTarget(db, bea, first)).toBeNull();
+    expect(await linkTarget(db, bea, second)).toMatchObject({ id: "d1" });
   });
 });

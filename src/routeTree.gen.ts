@@ -21,6 +21,7 @@ import { Route as ApiCollabRouteImport } from './routes/api/collab'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
 import { Route as ApiShareRouteImport } from './routes/api/share'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as EditorIndexRouteImport } from './routes/editor.index'
 import { Route as EditorDocIdRouteImport } from './routes/editor.$docId'
 import { Route as GuidesIndexRouteImport } from './routes/guides.index'
@@ -57,6 +58,7 @@ import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/git
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 import { Route as ApiCollabIdEditorsRouteImport } from './routes/api/collab.$id.editors'
+import { Route as ApiCollabLinkSlugRouteImport } from './routes/api/collab.link.$slug'
 import { Route as ApiDocumentsIdRevisionsRouteImport } from './routes/api/documents.$id.revisions'
 import { Route as ApiGithubPublicationsIdRouteImport } from './routes/api/github.publications.$id'
 import { Route as ApiSSlugCommentsRouteImport } from './routes/api/s.$slug.comments'
@@ -132,6 +134,11 @@ const ApiRealtimeRoute = ApiRealtimeRouteImport.update({
 const ApiShareRoute = ApiShareRouteImport.update({
   id: '/api/share',
   path: '/api/share',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditorIndexRoute = EditorIndexRouteImport.update({
@@ -314,6 +321,11 @@ const ApiCollabIdEditorsRoute = ApiCollabIdEditorsRouteImport.update({
   path: '/editors',
   getParentRoute: () => ApiCollabIdRoute,
 } as any)
+const ApiCollabLinkSlugRoute = ApiCollabLinkSlugRouteImport.update({
+  id: '/link/$slug',
+  path: '/link/$slug',
+  getParentRoute: () => ApiCollabRoute,
+} as any)
 const ApiDocumentsIdRevisionsRoute = ApiDocumentsIdRevisionsRouteImport.update({
   id: '/api/documents/$id/revisions',
   path: '/api/documents/$id/revisions',
@@ -415,6 +427,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
+  '/c/$slug': typeof CSlugRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -451,6 +464,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
+  '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
@@ -481,6 +495,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
+  '/c/$slug': typeof CSlugRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -517,6 +532,7 @@ export interface FileRoutesByTo {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
+  '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
@@ -548,6 +564,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/share': typeof ApiShareRouteWithChildren
+  '/c/$slug': typeof CSlugRoute
   '/editor/$docId': typeof EditorDocIdRoute
   '/guides/$slug': typeof GuidesSlugRoute
   '/s/$slug': typeof SSlugRoute
@@ -584,6 +601,7 @@ export interface FileRoutesById {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
+  '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
   '/api/documents/$id/revisions': typeof ApiDocumentsIdRevisionsRouteWithChildren
   '/api/github/publications/$id': typeof ApiGithubPublicationsIdRoute
   '/api/s/$slug/comments': typeof ApiSSlugCommentsRouteWithChildren
@@ -616,6 +634,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/realtime'
     | '/api/share'
+    | '/c/$slug'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/s/$slug'
@@ -652,6 +671,7 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
+    | '/api/collab/link/$slug'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
@@ -682,6 +702,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/realtime'
     | '/api/share'
+    | '/c/$slug'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/s/$slug'
@@ -718,6 +739,7 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
+    | '/api/collab/link/$slug'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
@@ -748,6 +770,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/realtime'
     | '/api/share'
+    | '/c/$slug'
     | '/editor/$docId'
     | '/guides/$slug'
     | '/s/$slug'
@@ -784,6 +807,7 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
+    | '/api/collab/link/$slug'
     | '/api/documents/$id/revisions'
     | '/api/github/publications/$id'
     | '/api/s/$slug/comments'
@@ -815,6 +839,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiRealtimeRoute: typeof ApiRealtimeRoute
   ApiShareRoute: typeof ApiShareRouteWithChildren
+  CSlugRoute: typeof CSlugRoute
   EditorDocIdRoute: typeof EditorDocIdRoute
   GuidesSlugRoute: typeof GuidesSlugRoute
   SSlugRoute: typeof SSlugRoute
@@ -930,6 +955,13 @@ declare module '@tanstack/react-router' {
       path: '/api/share'
       fullPath: '/api/share'
       preLoaderRoute: typeof ApiShareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/editor/': {
@@ -1184,6 +1216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCollabIdEditorsRouteImport
       parentRoute: typeof ApiCollabIdRoute
     }
+    '/api/collab/link/$slug': {
+      id: '/api/collab/link/$slug'
+      path: '/link/$slug'
+      fullPath: '/api/collab/link/$slug'
+      preLoaderRoute: typeof ApiCollabLinkSlugRouteImport
+      parentRoute: typeof ApiCollabRoute
+    }
     '/api/documents/$id/revisions': {
       id: '/api/documents/$id/revisions'
       path: '/api/documents/$id/revisions'
@@ -1347,11 +1386,13 @@ const ApiCollabDocOwnerIdRouteWithChildren =
 
 interface ApiCollabRouteChildren {
   ApiCollabIdRoute: typeof ApiCollabIdRouteWithChildren
+  ApiCollabLinkSlugRoute: typeof ApiCollabLinkSlugRoute
   ApiCollabDocOwnerIdRoute: typeof ApiCollabDocOwnerIdRouteWithChildren
 }
 
 const ApiCollabRouteChildren: ApiCollabRouteChildren = {
   ApiCollabIdRoute: ApiCollabIdRouteWithChildren,
+  ApiCollabLinkSlugRoute: ApiCollabLinkSlugRoute,
   ApiCollabDocOwnerIdRoute: ApiCollabDocOwnerIdRouteWithChildren,
 }
 
@@ -1545,6 +1586,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiRealtimeRoute: ApiRealtimeRoute,
   ApiShareRoute: ApiShareRouteWithChildren,
+  CSlugRoute: CSlugRoute,
   EditorDocIdRoute: EditorDocIdRoute,
   GuidesSlugRoute: GuidesSlugRoute,
   SSlugRoute: SSlugRoute,

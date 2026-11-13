@@ -85,6 +85,7 @@ describe("events", () => {
       { t: "share", change: "revoked" },
       { t: "share", change: "settings" },
       { t: "shares" },
+      { t: "collab" },
     ];
     for (const e of events) expect(parseEvent(JSON.stringify(e)), e.t).toEqual(e);
     for (const bad of [

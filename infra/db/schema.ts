@@ -137,8 +137,14 @@ export const documents = sqliteTable(
     // 1 while the draft is edited live with other people: its text then lives in a room (see
     // src/server/collab), and this column holds a copy that is refreshed from it.
     collab: integer("collab").notNull().default(0),
+    // The address people invited to edit open it by (/c/<this>): short, not the owner's id. Made
+    // when live editing starts and dropped when it stops; opening it still needs an invitation.
+    collabLink: text("collab_link"),
   },
-  (t) => [index("idx_documents_user_updated").on(t.userId, t.updatedAt)],
+  (t) => [
+    index("idx_documents_user_updated").on(t.userId, t.updatedAt),
+    uniqueIndex("idx_documents_collab_link").on(t.collabLink),
+  ],
 );
 
 /** People the owner invited to edit a draft together, by address (they may not have an account yet). */

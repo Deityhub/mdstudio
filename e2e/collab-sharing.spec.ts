@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 import { shared, startAndInvite, status, twoPeople } from "./collab-people";
 import { editor, nav } from "./sync-helpers";
 import { makeAdmin, signUp } from "./admin-helpers";
+import { account as person, cloudDraft, invite, startLive } from "./collab-helpers";
+import { account as mailPerson } from "./review-helpers";
+import { SITE, linkIn, mailTo } from "./mail-server";
+import { password } from "./sync-helpers";
 
 // Editing together, from the owner's Share-like dialog to the invited person's library, in two real
 // browsers: invite, open from "Shared with you", type together, be removed, leave.
@@ -117,4 +121,97 @@ test("signing out takes a shared draft, and what the browser kept of its room, o
   expect(left).not.toContain("ydoc:");
   expect(left).not.toContain("sh-");
   for (const c of contexts) await c.close();
+});
+
+test("an invitation shows up for the invited person at once, and so does a removal, with no reload", async ({
+  browser,
+}) => {
+  const { a, b, contexts, beaAddress } = await twoPeople(browser);
+  await expect(shared(b)).toHaveCount(0);
+  const dialog = await startAndInvite(a, beaAddress);
+  // Bea did nothing: the list is read again when the event reaches her studio
+  await expect(shared(b).getByRole("button", { name: /^Notes/ })).toBeVisible({ timeout: 10_000 });
+  await dialog.getByRole("button", { name: `Remove ${beaAddress}` }).click();
+  await expect(shared(b)).toHaveCount(0, { timeout: 10_000 });
+  for (const c of contexts) await c.close();
+});
+
+test("the draft link opens the draft after signing in with the invited address, and only for them", async ({
+  browser,
+  playwright,
+}) => {
+  const owner = await person(playwright, "owner");
+  const draft = await cloudDraft(owner, "# Notes\n\nStart");
+  await startLive(owner, draft);
+  const beaAddress = `bea-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
+  await invite(owner, draft, beaAddress);
+  const state = await (await owner.request.get(`/api/collab/${draft}`)).json();
+  const path = new URL(state.link).pathname;
+  expect(path).toMatch(/^\/c\/[A-Za-z0-9_-]{10,16}$/);
+  expect(path).not.toContain(owner.id);
+
+  // signed out: the page asks for a sign-in, and carries on to the draft afterwards
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.goto(path);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("tab", { name: "Create account" }).click();
+  await page.getByLabel("Email").fill(beaAddress);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/editor\/sh-/, { timeout: 20_000 });
+  await expect(status(page)).toHaveText(/Live/, { timeout: 15_000 });
+  await expect(editor(page)).toContainText("Start");
+
+  // someone who was not invited is told the same as for a wrong address
+  const stranger = await ctx.browser()!.newContext();
+  const other = await stranger.newPage();
+  await other.goto("/");
+  await other.request.post("/api/auth/signup", {
+    data: { email: `cy-${Date.now()}@example.com`, password },
+  });
+  await other.goto(path);
+  await expect(other.getByRole("heading", { name: "You can't open this draft" })).toBeVisible();
+  await other.goto("/c/NoSuchLink12");
+  await expect(other.getByRole("heading", { name: "You can't open this draft" })).toBeVisible();
+  await ctx.close();
+  await stranger.close();
+});
+
+test("the invitation email links straight to the draft", async ({ playwright }) => {
+  const owner = await mailPerson(playwright, "owner");
+  const bea = await mailPerson(playwright, "bea");
+  const draft = `d${Math.random().toString(36).slice(2, 8)}`;
+  await owner.request.post("/api/sync/push", {
+    data: {
+      docs: [
+        {
+          id: `${owner.id}:${draft}`,
+          baseVersion: 0,
+          title: "Quarterly plan",
+          content: "# Quarterly plan",
+          createdAt: Date.now(),
+          editedAt: Date.now(),
+        },
+      ],
+    },
+  });
+  expect((await owner.request.post(`/api/collab/${draft}`)).ok()).toBe(true);
+  expect(
+    (await owner.request.post(`/api/collab/${draft}/editors`, { data: { email: bea.email } })).ok(),
+  ).toBe(true);
+  const mail = await mailTo(bea.email, /invited you to edit/);
+  const link = linkIn(mail);
+  expect(link.origin).toBe(new URL(SITE).origin);
+  expect(link.pathname).toMatch(/^\/c\/[A-Za-z0-9_-]{10,16}$/);
+  expect(mail.text).not.toContain(owner.id);
+  // the same address opens it for the invited person, and not for the owner's other accounts
+  const found = await bea.request.get(link.pathname.replace("/c/", "/api/collab/link/"));
+  expect(found.status()).toBe(200);
+  expect((await found.json()).title).toBe("Quarterly plan");
+  const anon = await playwright.request.newContext({ baseURL: SITE });
+  expect((await anon.get(link.pathname.replace("/c/", "/api/collab/link/"))).status()).toBe(401);
 });

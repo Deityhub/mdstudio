@@ -59,6 +59,8 @@ export const realtimeEventSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("share"), change: z.enum(["updated", "revoked", "settings"]) }),
   /** On the owner's topic: the account's list of links changed (on another device). */
   z.object({ t: z.literal("shares") }),
+  /** On the account's own topic: what is shared with it for editing changed (invited, removed, stopped, deleted). */
+  z.object({ t: z.literal("collab") }),
   /** The account's session ended; the socket is closed right after. */
   z.object({
     t: z.literal("bye"),
