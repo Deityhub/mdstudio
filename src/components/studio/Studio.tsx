@@ -507,7 +507,7 @@ export function Studio({ docId }: { docId: string }) {
 
   // Optional account sync of the drafts chosen for the cloud: a no-op while signed out. Cloud
   // changes to the open draft wait while it has unsaved edits, then load into the editor.
-  const sharedRefresh = useRef<() => void>(() => undefined);
+  const sharedRefresh = useRef<() => Promise<unknown> | void>(() => undefined);
   const syncStatus = useSync(cloudOn ? account?.id : undefined, {
     isBusy: (id) => pending.current?.id === id,
     // invited, removed or stopped: the list of drafts shared with this account is read at once
@@ -557,9 +557,18 @@ export function Studio({ docId }: { docId: string }) {
           ? { ownerId: account.id, draftId: doc.id }
           : null
       : null;
-  const openSession = useCollabSession(liveTarget, (text) => {
+  const openSession = useCollabSession(liveTarget, {
     // this browser kept state of an earlier room: its text is not lost, it is in History
-    if (doc) void historyStore.save({ ...doc, content: text }, Date.now(), "replaced");
+    onStale: (text) => {
+      if (doc) void historyStore.save({ ...doc, content: text }, Date.now(), "replaced");
+    },
+    // the room keeps turning this browser away (removed, stopped or deleted while it was offline):
+    // find out now what became of the draft, instead of trying for a long time
+    onRefused: () => {
+      if (doc?.shared) return sharedRefresh.current();
+      requestSync(0);
+      return new Promise((r) => setTimeout(r, 3000)); // the round runs in the background
+    },
   });
   // the session of the draft on screen, not of the one just left (it closes a moment later)
   const collab =
@@ -609,7 +618,8 @@ export function Studio({ docId }: { docId: string }) {
           });
         toast.info(`You can no longer edit “${d.title}”`, {
           id: `shared-ended-${d.id}`,
-          description: "A copy of its latest text stays on this device, as a draft of your own.",
+          description:
+            "A copy of its latest text stays on this device, as a draft of your own. Changes you made while offline stay on this device only.",
         });
       }
     },
@@ -619,7 +629,7 @@ export function Studio({ docId }: { docId: string }) {
     cloudOn ? account?.id : undefined,
     tellDetached,
   );
-  sharedRefresh.current = () => void refreshShared();
+  sharedRefresh.current = () => refreshShared();
   // the room says it is over (removed while editing, or it was stopped): settle it now
   useEffect(() => {
     if (collabState.status !== "ended" || !doc) return;

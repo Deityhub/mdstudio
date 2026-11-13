@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 /** What a live draft says about itself in the footer: the connection, and who else is in it. */
 function liveLabel(state: SessionState, waiting: boolean) {
   if (state.status === "ended") return "No longer shared with you";
+  if (state.refused) return "Can't reach the room. Checking your access…";
   if (waiting)
     return state.status === "offline"
       ? "Shared draft: connect once to start editing"
@@ -17,7 +18,15 @@ export function CollabStatus({ state, waiting }: { state: SessionState; waiting:
   return (
     <span
       data-testid="collab-status"
-      data-state={state.status === "ended" ? "ended" : waiting ? "waiting" : state.status}
+      data-state={
+        state.status === "ended"
+          ? "ended"
+          : state.refused
+            ? "refused"
+            : waiting
+              ? "waiting"
+              : state.status
+      }
       className="flex items-center gap-1.5"
     >
       <span

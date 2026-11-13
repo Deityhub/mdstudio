@@ -388,6 +388,11 @@ Several people typing in one Markdown draft, online or offline, converge without
 - **The page** (`OpenInvite`) signs the person in on the page (the sign-in dialog leaves them where they are, so the page carries straight on), asks for a confirmed email when needed, makes the local copy and opens the live editor. The invitation email's button is this link; the owner also sees it in the dialog (`Draft link`, copy) and in `GET /api/collab/<id>`.
 - **Live updates.** The server sends `{t:"collab"}` on the invited account's own topic (found by the address's canonical form; an address with no account gets nothing) when someone is invited, removed, or the draft is stopped or deleted. The studio reads "Shared with you" again at once; the 30 s refresh stays as a fallback. The event carries nothing about the draft.
 
+**Removed while offline**
+
+- A socket cannot say why an upgrade was refused (a browser only sees a failed connection), so a person removed, or a draft stopped or deleted, while their browser was offline would otherwise retry for a long time. The provider counts tries in a row that closed before the room said ready; at the second, with the network up, it tells its owner once (`onRefused`, again only after a connection has worked in between) while it keeps retrying.
+- The studio then asks what became of the draft at once: for a draft shared with the person, it reads "Shared with you" (no 30 s throttle) and detaches what is no longer listed; for the owner's own draft it runs a sync round, which takes the room's last text or removes the draft. Until that answers (4 s at most) the footer says "Can't reach the room. Checking your access…"; if the draft is still shared it goes back to the offline message. The detach notice says that changes made while offline stay on this device only.
+
 ## 6. Authoritative Database Schema (SQLite / Drizzle)
 
 The database schema is defined in `infra/db/schema.ts` and runs identically on Cloudflare D1 and `better-sqlite3`:

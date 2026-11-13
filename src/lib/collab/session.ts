@@ -18,6 +18,8 @@ export type SessionState = {
   peers: Peer[];
   /** The draft's text is in this document, from the room or from what this browser kept: it may be edited. */
   ready: boolean;
+  /** The room keeps refusing this person; true until a connection works again. */
+  refused: boolean;
 };
 
 /** The plain-text copy on the server is asked to refresh this long after the last edit made here. */
@@ -33,6 +35,8 @@ export type SessionOptions = {
   /** The room is not the one this browser's kept state came from: the text it held is handed over to be saved. */
   onStale: (text: string) => void;
   onEnded?: (code: number) => Promise<unknown> | unknown;
+  /** The room keeps refusing this person (see the provider): find out what became of the draft. */
+  onRefused?: () => Promise<unknown> | void;
 };
 
 const defaultRefresh = (url: string) =>
@@ -48,7 +52,7 @@ export async function openSession(opts: SessionOptions) {
   const persistence = createPersistence(kv, keptKey(ownerId, draftId), doc);
   const kept = await persistence.load();
 
-  let state: SessionState = { status: "connecting", peers: [], ready: !!kept };
+  let state: SessionState = { status: "connecting", peers: [], ready: !!kept, refused: false };
   const listeners = new Set<() => void>();
   const set = (patch: Partial<SessionState>) => {
     state = { ...state, ...patch };
@@ -80,7 +84,16 @@ export async function openSession(opts: SessionOptions) {
     awareness,
     epoch: kept?.epoch ?? null,
     ...(opts.createSocket ? { createSocket: opts.createSocket } : {}),
-    onStatus: (status) => set({ status }),
+    onStatus: (status) => set({ status, ...(status === "live" && { refused: false }) }),
+    onRefused: () => {
+      // said until the access check is back (a few seconds at most); if the draft is still shared
+      // the footer goes back to saying offline, which is then the whole truth
+      set({ refused: true });
+      const waited = new Promise((r) => setTimeout(r, 4000));
+      void Promise.race([Promise.resolve(opts.onRefused?.()).catch(() => undefined), waited]).then(
+        () => set({ refused: false }),
+      );
+    },
     onPeers: (peers) => set({ peers }),
     onSynced: (epoch) => {
       persistence.start(epoch);

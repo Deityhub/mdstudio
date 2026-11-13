@@ -10,14 +10,14 @@ import type { Session, SessionState } from "./session";
  */
 export function useCollabSession(
   target: { ownerId: string; draftId: string } | null,
-  onStale: (text: string) => void,
+  handlers: { onStale: (text: string) => void; onRefused: () => Promise<unknown> | void },
 ): Session | null {
   const [session, setSession] = useState<Session | null>(null);
   // a new session after the room changed under the one kept here
   const [generation, setGeneration] = useState(0);
   const ownerId = target?.ownerId;
   const draftId = target?.draftId;
-  const stale = useLatest(onStale);
+  const latest = useLatest(handlers);
 
   useEffect(() => {
     // (a browser-only library: the server build leaves it out)
@@ -30,9 +30,10 @@ export function useCollabSession(
         draftId,
         kv: indexedDbStore,
         onStale: (text) => {
-          stale.current(text);
+          latest.current.onStale(text);
           setGeneration((g) => g + 1);
         },
+        onRefused: () => latest.current.onRefused(),
         // signed out elsewhere or the session ran out: look at the account again
         onEnded: () => accountStore.refresh(),
       });
@@ -45,12 +46,12 @@ export function useCollabSession(
       opened?.destroy();
       setSession(null);
     };
-  }, [ownerId, draftId, generation, stale]);
+  }, [ownerId, draftId, generation, latest]);
 
   return ownerId && draftId ? session : null;
 }
 
-const NONE: SessionState = { status: "offline", peers: [], ready: false };
+const NONE: SessionState = { status: "offline", peers: [], ready: false, refused: false };
 const noop = () => () => undefined;
 
 /** The connection, the people in the draft, and whether its text is ready, as they change. */
