@@ -123,7 +123,7 @@ test("readers sign in to comment on selected words, reply, and take a comment ba
   await page.getByRole("button", { name: "Reply" }).click();
   await page.getByLabel("Write a reply").fill("The 14th");
   await page.getByRole("button", { name: "Reply", exact: true }).last().click();
-  await expect(page.getByText("The 14th")).toBeVisible();
+  await expect(page.locator("p", { hasText: "The 14th" })).toBeVisible();
 
   // the owner, who is also a reader here, sees both and the author names are not addresses
   await expect(page.locator("body")).not.toContainText(reviewer.email);
@@ -131,7 +131,7 @@ test("readers sign in to comment on selected words, reply, and take a comment ba
   await page.getByRole("button", { name: "Delete" }).first().click();
   await page.getByRole("button", { name: "Confirm delete" }).click();
   await expect(page.locator("p", { hasText: "Which Friday?" })).toHaveCount(0);
-  await expect(page.getByText("The 14th")).toHaveCount(0); // the reply went with it
+  await expect(page.locator("p", { hasText: "The 14th" })).toHaveCount(0); // the reply went with it
   await context.close();
 });
 

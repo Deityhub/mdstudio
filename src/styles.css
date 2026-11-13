@@ -581,3 +581,13 @@ mark.share-hl {
 mark.share-hl[data-active] {
   background: color-mix(in oklch, var(--warning) 65%, transparent);
 }
+
+/* Words a comment or suggestion in a draft edited together is about */
+.cm-thread {
+  background: color-mix(in oklch, var(--warning) 30%, transparent);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.cm-thread-suggestion {
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+}

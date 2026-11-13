@@ -8,6 +8,9 @@ import { keymap } from "@codemirror/view";
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
 import type { KeyValueStore } from "../storage/documentStore";
 import { minimalChange } from "./diff";
+import { threadHighlights } from "./highlights";
+import { ACCEPT_ORIGIN, type Author, exportThreads } from "./thread-rules";
+import { createThreads } from "./threads";
 import { forgetKept, keptKey } from "./kept";
 import { createPersistence } from "./persistence";
 import { TEXT_KEY } from "./protocol";
@@ -26,6 +29,8 @@ export type SessionState = {
 export const TEXT_COPY_MS = 30_000;
 
 export type SessionOptions = {
+  /** Who is writing, for the comments and suggestions this browser makes. */
+  me: Author;
   ownerId: string;
   draftId: string;
   kv: KeyValueStore;
@@ -109,8 +114,12 @@ export async function openSession(opts: SessionOptions) {
   // a document that was kept is written again as it changes; one still waiting for its room is not
   if (kept) persistence.start(kept.epoch);
 
-  const undoManager = new Y.UndoManager(ytext);
+  const threads = createThreads(doc, ytext, opts.me);
+  // an accepted suggestion is an edit by the person who accepts it, so their Undo takes it back
+  const undoManager = new Y.UndoManager(ytext, { trackedOrigins: new Set([ACCEPT_ORIGIN]) });
+  let picked: (id: string) => void = () => undefined;
   const extension: Extension = [
+    threadHighlights(threads, (id) => picked(id)),
     yCollab(ytext, awareness, { undoManager }),
     keymap.of(yUndoManagerKeymap),
   ];
@@ -153,6 +162,14 @@ export async function openSession(opts: SessionOptions) {
     draftId,
     ytext,
     awareness,
+    /** Comments and suggestions on the words of the draft. */
+    threads,
+    /** The open comments and suggestions as Markdown, for when live editing stops. */
+    exportNotes: () => exportThreads(threads.list()),
+    /** What to do when a marked word is clicked (open its thread). */
+    onPickThread(fn: (id: string) => void) {
+      picked = fn;
+    },
     /** Goes into the editor's extensions in place of its own history. */
     extension,
     text: () => ytext.toString(),

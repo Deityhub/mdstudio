@@ -32,6 +32,7 @@ const open = async (
   const refreshed: string[] = [];
   const stale: string[] = [];
   const session = await openSession({
+    me: { id: "u1", name: "Ada" },
     ownerId: "owner",
     draftId: "d1",
     kv,
@@ -137,6 +138,35 @@ describe("a live draft's session", () => {
     expect(session.state.refused).toBe(true);
     await settle(4100);
     expect(session.state.refused).toBe(false);
+  });
+
+  it("carries a comment from one person to the other, anchored to the same words", async () => {
+    const wire = new Wire();
+    await wire.room.seed("Ship on Friday.");
+    const a = await open(wire);
+    const b = await open(wire, memory(), { me: { id: "u2", name: "Bea" } });
+    await settle();
+    const from = a.session.text().indexOf("Friday");
+    const r = a.session.threads.add({ kind: "comment", from, to: from + 6, body: "Which Friday?" });
+    expect(r.ok).toBe(true);
+    await settle(1000);
+    const [t] = b.session.threads.list();
+    expect(t).toMatchObject({ body: "Which Friday?", author: { name: "Ada" }, text: "Friday" });
+    // an accepted suggestion is the accepter's own edit: their Undo takes it back
+    const s = b.session.threads.add({
+      kind: "suggestion",
+      from,
+      to: from + 6,
+      body: "",
+      proposed: "Monday",
+    });
+    if (!s.ok) throw new Error();
+    b.session.threads.accept(s.id);
+    await settle(1000);
+    expect(a.session.text()).toBe("Ship on Monday.");
+    b.session.undo();
+    await settle(1000);
+    expect(a.session.text()).toBe("Ship on Friday.");
   });
 
   it("asks the server to refresh its text copy after this browser's edits go quiet, once", async () => {

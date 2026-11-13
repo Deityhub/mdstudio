@@ -568,6 +568,34 @@ describe("a draft edited live with other people", () => {
     expect((await cloud())[0]?.content).toBe("# Normal again");
   });
 
+  it("keeps the name and folder given on this device when it goes live, and when it stops", async () => {
+    const { b } = await shared();
+    await b.store.save({
+      ...(await b.store.get("d1"))!,
+      name: "My name",
+      folder: "Work",
+      updatedAt: 150,
+    });
+    await goLive();
+    await b.run();
+    expect(await b.store.get("d1")).toMatchObject({ name: "My name", folder: "Work" });
+    // renamed while live: that is not pushed (the room carries the text), but it is not lost either
+    await b.store.save({ ...(await b.store.get("d1"))!, name: "Renamed live", updatedAt: 300 });
+    await roomWrites("# Notes\n\nfrom the room");
+    await b.run();
+    expect((await b.store.get("d1"))?.name).toBe("Renamed live");
+    await disableCollab(db, U, "d1", ++clock);
+    await b.run();
+    expect(await b.store.get("d1")).toMatchObject({
+      name: "Renamed live",
+      folder: "Work",
+      content: "# Notes\n\nfrom the room",
+    });
+    // and now that it is ordinary again, the name goes up with the next round
+    await b.run();
+    expect((await cloud())[0]).toMatchObject({ name: "Renamed live", folder: "Work" });
+  });
+
   it("is not counted as unsynced when signing out", async () => {
     const { b } = await shared();
     await goLive();

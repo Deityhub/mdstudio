@@ -94,7 +94,19 @@ function applier(deps: SyncDeps, report: SyncReport) {
   const { userId, store, meta } = deps;
   const note = (list: string[], v: string) => void (list.includes(v) || list.push(v));
 
-  async function writeRemote(local: MdDocument | undefined, rd: ServerDoc, id: string) {
+  /**
+   * `keepLabels` leaves the name and folder this device has: a live draft's text is taken from the
+   * room, but its name and folder are not part of that, and are not sent while it is live, so the
+   * server's copy of them may be older than what was given here.
+   */
+  async function writeRemote(
+    local: MdDocument | undefined,
+    rd: ServerDoc,
+    id: string,
+    keepLabels = false,
+  ) {
+    const name = keepLabels && local ? local.name : rd.name;
+    const folder = keepLabels && local ? local.folder : rd.folder;
     const next: MdDocument = {
       id,
       content: rd.content,
@@ -103,11 +115,11 @@ function applier(deps: SyncDeps, report: SyncReport) {
       createdAt: local?.createdAt ?? rd.createdAt,
       // The edit time travels with the text, so a later comparison is between like clocks.
       updatedAt: rd.editedAt || rd.updatedAt,
-      ...(rd.name ? { name: rd.name } : {}),
-      ...(rd.folder ? { folder: rd.folder } : {}),
+      ...(name ? { name } : {}),
+      ...(folder ? { folder } : {}),
     };
     await store.save(next, quiet);
-    if (rd.folder) await store.folders.add(rd.folder);
+    if (folder) await store.folders.add(folder);
     note(report.applied, id);
   }
 
@@ -149,7 +161,7 @@ function applier(deps: SyncDeps, report: SyncReport) {
           await deps.snapshot?.(local);
           note(report.replaced, id);
         }
-        if (!local || localHash !== remoteHash) await writeRemote(local, rd, id);
+        if (!local || localHash !== remoteHash) await writeRemote(local, rd, id, true);
       }
       await meta.set({
         id,
@@ -162,7 +174,8 @@ function applier(deps: SyncDeps, report: SyncReport) {
     if (m?.collab) {
       // Live editing stopped: the room's last text is the draft's, whatever this device's copy says.
       if (local && localHash !== remoteHash) await deps.snapshot?.(local);
-      if (!local || localHash !== remoteHash) await writeRemote(local, rd, id);
+      if (!local || localHash !== remoteHash) await writeRemote(local, rd, id, true);
+      // (the name and folder kept here are not what the cloud has: they go up with the next round)
       await meta.set({ id, version: rd.version, hash: remoteHash! });
       await deps.onLeaveLive?.(id);
       return true;
