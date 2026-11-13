@@ -6,6 +6,7 @@ import {
   detachShared,
   isMine,
   openShared,
+  openTarget,
   reconcileShared,
   removeShared,
   removeSharedFor,
@@ -111,5 +112,35 @@ describe("shared drafts on this device", () => {
     await removeSharedFor(store, kv, "me");
     const left = (await store.list()).map((d) => d.id).sort();
     expect(left).toEqual([own.id, sharedLocalId(OWNER, "two00002")].sort());
+  });
+});
+
+describe("opening a draft from its link", () => {
+  it("opens the person's own draft when they are its owner, and makes no copy", async () => {
+    const own = await store.create({ id: "abc12345", title: "Mine" } as never);
+    const id = await openTarget(store, OWNER, item({ ownerId: OWNER, id: own.id }));
+    expect(id).toBe("abc12345");
+    expect(await store.list()).toHaveLength(1);
+  });
+
+  it("makes the local copy for an invited person, as the library does", async () => {
+    const id = await openTarget(store, "me", item());
+    expect(id).toBe(sharedLocalId(OWNER, "abc12345"));
+    expect((await store.get(id))?.shared?.userId).toBe("me");
+  });
+
+  it("removes a copy an owner already ended up with, so no duplicate of their own draft stays", async () => {
+    const own = await store.create({ id: "abc12345", title: "Mine" } as never);
+    await store.save({
+      id: sharedLocalId(OWNER, "abc12345"),
+      title: "Mine",
+      content: "",
+      images: {},
+      createdAt: 1,
+      updatedAt: 1,
+      shared: { ownerId: OWNER, id: "abc12345", userId: OWNER, ownerName: null },
+    });
+    await reconcileShared(store, kv, OWNER, []);
+    expect((await store.list()).map((d) => d.id)).toEqual([own.id]);
   });
 });

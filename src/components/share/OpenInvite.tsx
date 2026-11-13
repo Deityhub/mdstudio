@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { accountStore, cloudReady, useAccount } from "@/lib/account/store";
 import { CollabError, collabApi } from "@/lib/collab/api";
-import { openShared } from "@/lib/collab/shared";
+import { openTarget } from "@/lib/collab/shared";
 import { documentStore } from "@/lib/storage/documentStore";
 import { AuthExpiredError, UnverifiedError } from "@/lib/sync/api";
 
@@ -15,7 +15,7 @@ type Step = "working" | "signin" | "confirm" | "denied" | "failed";
 
 /**
  * What a draft's address (/c/<link>, from an invitation) does: sign in if needed and stay on this
- * page, then open the draft in the live editor. A person who was not invited, and an address that
+ * page, then open the draft in the live editor (the owner is taken to their own draft). A person who was not invited, and an address that
  * leads nowhere, get the same answer, so it never says whether a draft exists.
  */
 export function OpenInvite({ link }: { link: string }) {
@@ -44,7 +44,7 @@ export function OpenInvite({ link }: { link: string }) {
     collabApi
       .open(link)
       .then(async (item) => {
-        const id = await openShared(documentStore, user.id, item);
+        const id = await openTarget(documentStore, user.id, item);
         if (live) void navigate({ to: "/editor/$docId", params: { docId: id }, replace: true });
       })
       .catch((error) => {

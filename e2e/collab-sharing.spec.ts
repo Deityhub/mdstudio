@@ -215,3 +215,19 @@ test("the invitation email links straight to the draft", async ({ playwright }) 
   const anon = await playwright.request.newContext({ baseURL: SITE });
   expect((await anon.get(link.pathname.replace("/c/", "/api/collab/link/"))).status()).toBe(401);
 });
+
+test("the owner opening the draft link lands on their own draft, not a second copy", async ({
+  browser,
+}) => {
+  const { a, b, contexts, beaAddress, draft } = await twoPeople(browser);
+  await startAndInvite(a, beaAddress);
+  await a.keyboard.press("Escape");
+  const { link } = await (await a.request.get(`/api/collab/${draft}`)).json();
+  await a.goto(new URL(link).pathname);
+  await expect(a).toHaveURL(new RegExp(`/editor/${draft}$`), { timeout: 15_000 });
+  await expect(status(a)).toHaveText(/Live/, { timeout: 15_000 });
+  await expect(nav(a).getByText("Notes")).toHaveCount(1);
+  await expect(shared(a)).toHaveCount(0);
+  void b;
+  for (const c of contexts) await c.close();
+});
