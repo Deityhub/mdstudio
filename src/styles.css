@@ -591,3 +591,16 @@ mark.share-hl[data-active] {
 .cm-thread-suggestion {
   background: color-mix(in oklch, var(--primary) 22%, transparent);
 }
+
+/* A local image in a draft edited together that this browser does not have: the picture is in someone else's browser */
+.md-preview img[data-unshared] {
+  display: inline-block;
+  min-width: 10rem;
+  min-height: 3rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.85em;
+}

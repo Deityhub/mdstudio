@@ -68,6 +68,13 @@ async function refreshCloud(userId: string | undefined) {
 
 let runner: ReturnType<typeof createRunner> | null = null;
 export const requestSync = (wait = 0) => runner?.request(wait);
+let pullNow: (() => void) | null = null;
+/**
+ * A round that also pulls, even while the live channel is up (a round then only pushes). For when
+ * what is needed is the cloud's view of a draft, not this device's changes: it was stopped or
+ * removed elsewhere and the event saying so may not have come.
+ */
+export const requestPull = () => pullNow?.();
 
 /** Chooses drafts for the cloud; the next round uploads them. */
 export async function addToCloud(userId: string, ids: string[]) {
@@ -170,6 +177,10 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
       },
     });
     runner = r;
+    pullNow = () => {
+      policy.owePull();
+      r.request(0);
+    };
     void refreshCloud(userId);
     // Live updates: another device's change arrives over the socket and is applied without a
     // pull. While it is up the timer poll is off; if it drops, polling comes back by itself.
@@ -233,7 +244,10 @@ export function useSync(userId: string | undefined, handlers: Handlers): SyncSta
       document.removeEventListener("visibilitychange", onFocus);
       live.stop();
       r.stop();
-      if (runner === r) runner = null;
+      if (runner === r) {
+        runner = null;
+        pullNow = null;
+      }
       setStatus({ state: "idle" });
     };
   }, [userId]);

@@ -252,7 +252,9 @@ export function CollabDialog({
         {state?.live && (
           <p className="text-sm text-muted-foreground">
             Comments and suggestions end with editing together. The open ones are kept in this
-            draft's History when you stop.
+            draft's History when you stop. Images added from a computer are stored in that browser
+            only, so the others see a broken picture; host them or use image addresses (links) to
+            share them.
           </p>
         )}
         {problem && (

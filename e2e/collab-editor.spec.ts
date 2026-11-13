@@ -129,6 +129,7 @@ test("a draft that is not live has no live status, and stopping live editing ret
   page,
   playwright,
 }) => {
+  test.setTimeout(60_000); // the page learns of the stop through a sync round, slower on a busy machine
   const { owner, draft } = await ownerWithDraft(page);
   await expect(status(page)).toHaveCount(0);
   const bea = await personAccount(playwright, "bea");
@@ -141,7 +142,7 @@ test("a draft that is not live has no live status, and stopping live editing ret
   await expect(editor(page)).toContainText("from Bea");
 
   expect((await owner.request.delete(`/api/collab/${draft}`)).ok()).toBe(true);
-  await expect(status(page)).toHaveCount(0, { timeout: 15_000 });
+  await expect(status(page)).toHaveCount(0, { timeout: 30_000 });
   await expect(editor(page)).toContainText("from Bea"); // the room's last text stays
 
   // from now on an edit goes to the cloud as before

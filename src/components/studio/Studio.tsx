@@ -19,11 +19,13 @@ import { PUBLISH_AFTER_CONNECT, PublishDialog } from "@/components/studio/Publis
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollabDialog } from "@/components/studio/CollabDialog";
 import { LiveComments } from "@/components/studio/LiveComments";
+import { LocalImagesDialog } from "@/components/studio/LocalImagesDialog";
 import { type Composing, ThreadDialog } from "@/components/studio/ThreadDialog";
 import { CollabStatus } from "@/components/studio/CollabStatus";
 import type { SharedRow } from "@/components/studio/Library";
 import { CollabError, collabApi } from "@/lib/collab/api";
 import { useCollabSession, useSessionState, useThreads } from "@/lib/collab/hooks";
+import { sortLocalImages, warnLocalImages as noteLocalImages } from "@/lib/collab/images";
 import { detachShared, openShared, removeShared } from "@/lib/collab/shared";
 import { useSharedWithMe } from "@/lib/collab/sharedHooks";
 import { ShareDialog } from "@/components/studio/ShareDialog";
@@ -31,7 +33,7 @@ import { clearShares, useShares } from "@/lib/share/hooks";
 import {
   addToCloud,
   removeFromCloud,
-  requestSync,
+  requestPull,
   syncLabel,
   syncNow,
   useCloud,
@@ -573,7 +575,7 @@ export function Studio({ docId }: { docId: string }) {
       // find out now what became of the draft, instead of trying for a long time
       onRefused: () => {
         if (doc?.shared) return sharedRefresh.current();
-        requestSync(0);
+        requestPull();
         return new Promise((r) => setTimeout(r, 3000)); // the round runs in the background
       },
     },
@@ -595,6 +597,7 @@ export function Studio({ docId }: { docId: string }) {
   const liveThreads = useThreads(collab && collabReady ? collab : null);
   const [composing, setComposing] = useState<Composing | null>(null);
   const [activeThread, setActiveThread] = useState<string | null>(null);
+  const [imagesDialog, setImagesDialog] = useState<"mine" | "missing" | null>(null);
   useEffect(() => {
     // a click on marked words opens the thread they belong to
     collab?.onPickThread((id) => {
@@ -662,7 +665,13 @@ export function Studio({ docId }: { docId: string }) {
         if (plain) tellDetached([plain]);
         void refreshShared();
       });
-    } else requestSync(0); // the owner's own draft: the cloud is asked what became of it
+      return;
+    }
+    // the owner's own draft: the cloud is asked what became of it, and again a moment later, because
+    // a round leaves a draft alone while its latest edits are still waiting to be saved
+    requestPull();
+    const again = setTimeout(() => requestPull(), 1500);
+    return () => clearTimeout(again);
     // only when the connection ends, not on every keystroke
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collabState.status]);
@@ -772,6 +781,12 @@ export function Studio({ docId }: { docId: string }) {
   // meanwhile, so under continuous typing the same work is started again and again and never ends.)
   const [deferred, easedDone] = useEasedValue(content, doc?.id ?? null);
   const images = doc?.images ?? NO_IMAGES;
+  // Images stored in only one browser are not shared with the others in a draft edited together
+  const localImages = useMemo(
+    () => (collabReady ? sortLocalImages(deferred, images) : { mine: [], missing: [] }),
+    [collabReady, deferred, images],
+  );
+  const imageNotes = noteLocalImages(localImages, hostingOn && cloudOn);
   // KaTeX loads only when a document has math; bumping this re-renders once it is ready.
   const [mathVersion, setMathVersion] = useState(0);
   useEffect(() => {
@@ -853,8 +868,13 @@ export function Studio({ docId }: { docId: string }) {
   );
   useLayoutEffect(() => {
     syncPreview(previewBody.current);
+    // in a draft edited together, a local image this browser does not have is marked, not left as a broken picture
+    if (collabReady)
+      previewBody.current
+        ?.querySelectorAll('img[src^="./images/"], img[src^="images/"]')
+        .forEach((img) => img.setAttribute("data-unshared", ""));
     easedDone(); // the update is on screen: how long it took sets the pace of the next
-  }, [html, syncPreview, easedDone]);
+  }, [html, syncPreview, easedDone, collabReady]);
   const issues = useMemo(
     () => runChecks(deferred, profile, checkConfig).issues,
     [deferred, profile, checkConfig],
@@ -961,6 +981,14 @@ export function Studio({ docId }: { docId: string }) {
       refs.push(`![${labelOf(name)}](./images/${name})`);
       if (kb(data) > 500)
         toast.warning(`${name} is ${kb(data)} KB. Large embedded images make the file heavy.`);
+      if (collabReady)
+        toast.warning("Only you can see this image", {
+          id: "live-local-image",
+          description:
+            hostingOn && cloudOn
+              ? "The others in this draft see a broken picture. Host it from the note in the footer, or use an image address."
+              : "The others in this draft see a broken picture. Use an image address (a link to the picture) instead.",
+        });
     }
     if (Object.keys(next).length !== Object.keys(doc.images).length) update({ images: next });
     editor.current?.insert(refs.join("\n"));
@@ -1947,6 +1975,26 @@ export function Studio({ docId }: { docId: string }) {
               <span>{Object.keys(images).length} images</span>
               {!online && <span>Offline, your drafts are still saved here</span>}
               {liveTarget && <CollabStatus state={collabState} waiting={waiting} />}
+              {imageNotes.mine && (
+                <button
+                  type="button"
+                  data-testid="local-images-note"
+                  className="text-warning underline-offset-2 hover:underline"
+                  onClick={() => setImagesDialog("mine")}
+                >
+                  {imageNotes.mine.label}
+                </button>
+              )}
+              {imageNotes.missing && (
+                <button
+                  type="button"
+                  data-testid="missing-images-note"
+                  className="underline-offset-2 hover:underline"
+                  onClick={() => setImagesDialog("missing")}
+                >
+                  {imageNotes.missing.label}
+                </button>
+              )}
               {account && syncStatus.state !== "idle" && (
                 <span
                   data-testid="sync-status"
@@ -2114,6 +2162,14 @@ export function Studio({ docId }: { docId: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        <LocalImagesDialog
+          note={imagesDialog ? imageNotes[imagesDialog] : null}
+          names={imagesDialog ? localImages[imagesDialog] : []}
+          onClose={() => setImagesDialog(null)}
+          {...(hostingOn && cloudOn && doc && imagesDialog === "mine"
+            ? { onHost: () => hostImages(doc) }
+            : {})}
+        />
         <ThreadDialog
           composing={composing}
           onClose={() => setComposing(null)}

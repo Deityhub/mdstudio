@@ -1,21 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openDialog, shared, startAndInvite, status, twoPeople } from "./collab-people";
+import { bothInDraft, openDialog, status } from "./collab-people";
 import { editor } from "./sync-helpers";
 
 // Comments and suggestions on the words of a draft edited together, in two real browsers.
 
-async function bothInDraft(browser: Parameters<typeof twoPeople>[0]) {
-  const people = await twoPeople(browser);
-  await startAndInvite(people.a, people.beaAddress);
-  await people.a.keyboard.press("Escape");
-  await people.b.reload();
-  await shared(people.b)
-    .getByRole("button", { name: /^Notes/ })
-    .click();
-  await expect(status(people.b)).toHaveText(/Live/, { timeout: 15_000 });
-  await expect(status(people.a)).toHaveText(/Live/, { timeout: 15_000 });
-  return people;
-}
 const panel = (p: Page) => p.getByTestId("live-comments");
 const openPanel = async (p: Page) => {
   if (!(await panel(p).isVisible()))
