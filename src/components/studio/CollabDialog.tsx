@@ -41,12 +41,15 @@ export function CollabDialog({
   open,
   onOpenChange,
   beforeStart,
+  beforeStop,
 }: {
   draft: MdDocument | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Saves the draft and brings the cloud up to date, so the room starts from the latest text. */
   beforeStart: () => Promise<void>;
+  /** Runs before it stops: keeps the open comments and suggestions in the draft's History (they end with it). */
+  beforeStop?: () => Promise<unknown>;
 }) {
   const [state, setState] = useState<CollabState | null>(null);
   const [busy, setBusy] = useState<"start" | "stop" | "invite" | null>(null);
@@ -101,6 +104,7 @@ export function CollabDialog({
     });
   const stop = () =>
     run("stop", async () => {
+      await beforeStop?.();
       await collabApi.stop(draft.id);
       setState((s) => (s ? { ...s, live: false, editors: [] } : s));
       requestSync(0);
@@ -245,6 +249,12 @@ export function CollabDialog({
           </div>
         )}
 
+        {state?.live && (
+          <p className="text-sm text-muted-foreground">
+            Comments and suggestions end with editing together. The open ones are kept in this
+            draft's History when you stop.
+          </p>
+        )}
         {problem && (
           <p role="alert" className="text-sm text-destructive">
             {problem}

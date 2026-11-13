@@ -17,11 +17,14 @@ import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { ReviewComments } from "@/components/studio/ReviewComments";
 import { PUBLISH_AFTER_CONNECT, PublishDialog } from "@/components/studio/PublishDialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollabDialog } from "@/components/studio/CollabDialog";
+import { LiveComments } from "@/components/studio/LiveComments";
+import { type Composing, ThreadDialog } from "@/components/studio/ThreadDialog";
 import { CollabStatus } from "@/components/studio/CollabStatus";
 import type { SharedRow } from "@/components/studio/Library";
 import { CollabError, collabApi } from "@/lib/collab/api";
-import { useCollabSession, useSessionState } from "@/lib/collab/hooks";
+import { useCollabSession, useSessionState, useThreads } from "@/lib/collab/hooks";
 import { detachShared, openShared, removeShared } from "@/lib/collab/shared";
 import { useSharedWithMe } from "@/lib/collab/sharedHooks";
 import { ShareDialog } from "@/components/studio/ShareDialog";
@@ -63,6 +66,8 @@ import {
   Tags,
   History,
   MessageSquare,
+  MessageSquarePlus,
+  PencilLine,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -557,19 +562,26 @@ export function Studio({ docId }: { docId: string }) {
           ? { ownerId: account.id, draftId: doc.id }
           : null
       : null;
-  const openSession = useCollabSession(liveTarget, {
-    // this browser kept state of an earlier room: its text is not lost, it is in History
-    onStale: (text) => {
-      if (doc) void historyStore.save({ ...doc, content: text }, Date.now(), "replaced");
+  const openSession = useCollabSession(
+    liveTarget,
+    {
+      // this browser kept state of an earlier room: its text is not lost, it is in History
+      onStale: (text) => {
+        if (doc) void historyStore.save({ ...doc, content: text }, Date.now(), "replaced");
+      },
+      // the room keeps turning this browser away (removed, stopped or deleted while it was offline):
+      // find out now what became of the draft, instead of trying for a long time
+      onRefused: () => {
+        if (doc?.shared) return sharedRefresh.current();
+        requestSync(0);
+        return new Promise((r) => setTimeout(r, 3000)); // the round runs in the background
+      },
     },
-    // the room keeps turning this browser away (removed, stopped or deleted while it was offline):
-    // find out now what became of the draft, instead of trying for a long time
-    onRefused: () => {
-      if (doc?.shared) return sharedRefresh.current();
-      requestSync(0);
-      return new Promise((r) => setTimeout(r, 3000)); // the round runs in the background
+    {
+      id: account?.id ?? "",
+      name: account?.displayName?.trim() || account?.email.split("@")[0] || "Someone",
     },
-  });
+  );
   // the session of the draft on screen, not of the one just left (it closes a moment later)
   const collab =
     openSession &&
@@ -579,6 +591,18 @@ export function Studio({ docId }: { docId: string }) {
       : null;
   const collabState = useSessionState(collab);
   const collabReady = !!collab && collabState.ready;
+  // Comments and suggestions on the words of a draft edited together
+  const liveThreads = useThreads(collab && collabReady ? collab : null);
+  const [composing, setComposing] = useState<Composing | null>(null);
+  const [activeThread, setActiveThread] = useState<string | null>(null);
+  useEffect(() => {
+    // a click on marked words opens the thread they belong to
+    collab?.onPickThread((id) => {
+      setActiveThread(id);
+      if (overlay) setMobilePanel("comments");
+      else setPanel("comments");
+    });
+  }, [collab, overlay]);
   // The live editor opens once the draft's saved copy shows the room's text (see below).
   const [mirrored, setMirrored] = useState(false);
   const waiting = !!liveTarget && !(collabReady && mirrored);
@@ -1341,6 +1365,25 @@ export function Studio({ docId }: { docId: string }) {
     setTimeout(() => editor.current?.goToLine(line), 100);
   };
   const ownShare = doc ? shares.byDraft.get(doc.id) : undefined;
+  const startCompose = (kind: Composing["kind"]) => {
+    const snap = editor.current?.getSnapshot();
+    if (!snap || snap.from === snap.to)
+      return void toast.info("Select some words in the draft first");
+    setComposing({ kind, from: snap.from, to: snap.to, text: snap.text.slice(snap.from, snap.to) });
+  };
+  const submitThread = (c: Composing, body: string, proposed: string) => {
+    if (!collab) return "empty";
+    const r = collab.threads.add({
+      kind: c.kind,
+      from: c.from,
+      to: c.to,
+      body,
+      ...(c.kind === "suggestion" && { proposed }),
+    });
+    if (!r.ok) return r.error;
+    setActiveThread(r.id);
+    return undefined;
+  };
   const panelButtons = (
     [
       ["checks", errCount ? AlertTriangle : CheckCircle2, "Checks"],
@@ -1348,7 +1391,10 @@ export function Studio({ docId }: { docId: string }) {
       ["meta", Tags, "Front matter"],
       ["history", History, "History"],
       // comments belong to a draft that is in the cloud; the panel reads them when it is opened
-      ...(inCloud ? ([["comments", MessageSquare, "Comments"]] as const) : []),
+      // (and the people in a draft edited together comment on its words)
+      ...(inCloud || (collab && collabReady)
+        ? ([["comments", MessageSquare, "Comments"]] as const)
+        : []),
     ] as const
   ).map(([p, Icon, label]) => (
     <Button
@@ -1448,7 +1494,39 @@ export function Studio({ docId }: { docId: string }) {
             })}
         />
       )}
-      {activePanel === "comments" && doc && (
+      {activePanel === "comments" && doc && collab && collabReady && (
+        <Tabs defaultValue="team">
+          {inCloud && (
+            <TabsList className="mb-3 grid w-full grid-cols-2">
+              <TabsTrigger value="team">Team</TabsTrigger>
+              <TabsTrigger value="reviewers">Reviewers</TabsTrigger>
+            </TabsList>
+          )}
+          <TabsContent value="team">
+            <LiveComments
+              threads={liveThreads}
+              actions={collab.threads}
+              userId={account?.id ?? ""}
+              isOwner={!doc.shared}
+              activeId={activeThread}
+              canSelect
+              onComment={() => startCompose("comment")}
+              onSuggest={() => startCompose("suggestion")}
+              onGo={(t) => {
+                setMobilePanel(null);
+                setView("editor");
+                setTimeout(() => editor.current?.selectRange(t.from, t.to), 100);
+              }}
+            />
+          </TabsContent>
+          {inCloud && (
+            <TabsContent value="reviewers">
+              <ReviewComments draftId={doc.id} share={ownShare} onGo={goToLine} />
+            </TabsContent>
+          )}
+        </Tabs>
+      )}
+      {activePanel === "comments" && doc && !(collab && collabReady) && (
         <ReviewComments draftId={doc.id} share={ownShare} onGo={goToLine} />
       )}
       {activePanel === "meta" && (
@@ -1919,6 +1997,16 @@ export function Studio({ docId }: { docId: string }) {
           open={collabTarget !== null}
           onOpenChange={(open) => !open && setCollabTarget(null)}
           beforeStart={bringCloudUpToDate}
+          beforeStop={async () => {
+            // the comments live in the room and go with it: the open ones are kept as text
+            const notes = collab && collabTarget?.id === doc?.id ? collab.exportNotes() : "";
+            if (collab && doc && notes)
+              await historyStore.save(
+                { id: doc.id, title: doc.title, content: collab.text() + notes },
+                Date.now(),
+                "manual",
+              );
+          }}
         />
         <PublishDialog
           draft={publishTarget && doc && publishTarget.id === doc.id ? doc : publishTarget}
@@ -1965,6 +2053,36 @@ export function Studio({ docId }: { docId: string }) {
           config={checkConfig}
           onChange={chooseCheckConfig}
         />
+        {selRect && !aiEdit && collab && collabReady && (
+          <div
+            className="fixed z-40 hidden gap-1 md:flex"
+            style={{
+              left: Math.max(8, Math.min(selRect.x + 52, window.innerWidth - 220)),
+              top: selRect.top > 48 ? selRect.top - 36 : selRect.bottom + 6,
+            }}
+          >
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 gap-1 px-2 shadow-md"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => startCompose("comment")}
+              aria-label="Comment on the selection"
+            >
+              <MessageSquarePlus className="size-3.5" /> Comment
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 gap-1 px-2 shadow-md"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => startCompose("suggestion")}
+              aria-label="Suggest an edit for the selection"
+            >
+              <PencilLine className="size-3.5" /> Suggest
+            </Button>
+          </div>
+        )}
         {selRect && !aiEdit && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1987,6 +2105,11 @@ export function Studio({ docId }: { docId: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        <ThreadDialog
+          composing={composing}
+          onClose={() => setComposing(null)}
+          onSubmit={submitThread}
+        />
         <AiEditDialog edit={aiEdit} onClose={() => setAiEdit(null)} onAccept={acceptAi} />
         <AiIntegrationsDialog open={aiIntegrations} onOpenChange={setAiIntegrations} />
         <ShortcutsDialog

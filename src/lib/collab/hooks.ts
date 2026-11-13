@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { accountStore } from "../account/store";
 import { indexedDbStore } from "../storage/documentStore";
 import type { Session, SessionState } from "./session";
+import type { Thread } from "./thread-rules";
 
 /**
  * Opens a live draft's session while `target` is set, and closes it when it changes or the page
@@ -11,10 +12,13 @@ import type { Session, SessionState } from "./session";
 export function useCollabSession(
   target: { ownerId: string; draftId: string } | null,
   handlers: { onStale: (text: string) => void; onRefused: () => Promise<unknown> | void },
+  me: { id: string; name: string },
 ): Session | null {
   const [session, setSession] = useState<Session | null>(null);
   // a new session after the room changed under the one kept here
   const [generation, setGeneration] = useState(0);
+  const meId = me.id;
+  const meName = me.name;
   const ownerId = target?.ownerId;
   const draftId = target?.draftId;
   const latest = useLatest(handlers);
@@ -26,6 +30,7 @@ export function useCollabSession(
     let opened: Session | null = null;
     void import("./session").then(async ({ openSession }) => {
       const made = await openSession({
+        me: { id: meId, name: meName },
         ownerId,
         draftId,
         kv: indexedDbStore,
@@ -46,7 +51,7 @@ export function useCollabSession(
       opened?.destroy();
       setSession(null);
     };
-  }, [ownerId, draftId, generation, latest]);
+  }, [ownerId, draftId, generation, latest, meId, meName]);
 
   return ownerId && draftId ? session : null;
 }
@@ -67,4 +72,25 @@ function useLatest<T>(value: T) {
   const [ref] = useState(() => ({ current: value }));
   ref.current = value;
   return ref;
+}
+
+/** The comments and suggestions of the open live draft, read again whenever they or the text change. */
+export function useThreads(session: Session | null): Thread[] {
+  const [list, setList] = useState<Thread[]>([]);
+  useEffect(() => {
+    if (!session) return setList([]);
+    let frame = 0;
+    const read = () => setList(session.threads.list());
+    read();
+    // many changes in a moment (typing) are one read
+    const off = session.threads.observe(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(read);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      off();
+    };
+  }, [session]);
+  return list;
 }

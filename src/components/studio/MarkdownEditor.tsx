@@ -42,6 +42,8 @@ export type EditorHandle = {
   apply: (edit: Edit) => void;
   insert: (text: string) => void;
   goToLine: (line: number) => void;
+  /** Selects a range and scrolls it into view (a comment's words). */
+  selectRange: (from: number, to: number) => void;
   /** Puts the cursor at the start of a line (1-based) and scrolls only if it is out of view. */
   placeCursor: (line: number) => void;
   /** Scrolls to a fraction of the document; returns the resulting scroll position. */
@@ -276,6 +278,15 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
       v.dispatch({
         selection: { anchor: l.from },
         effects: EditorView.scrollIntoView(l.from, { y: "start", yMargin: 40 }),
+      });
+      v.focus();
+    },
+    selectRange(from, to) {
+      const v = view.current!;
+      const end = v.state.doc.length;
+      v.dispatch({
+        selection: { anchor: Math.min(from, end), head: Math.min(to, end) },
+        effects: EditorView.scrollIntoView(Math.min(from, end), { y: "center" }),
       });
       v.focus();
     },

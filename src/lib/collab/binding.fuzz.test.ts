@@ -30,6 +30,7 @@ afterEach(() => vi.useRealTimers());
 
 async function editor(wire: Wire) {
   const session = await openSession({
+    me: { id: "u", name: "U" },
     ownerId: "o",
     draftId: "d",
     kv: kv(),
