@@ -12,14 +12,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type AccountUser, changePassword, updateDisplayName } from "@/lib/account/client";
+import {
+  type AccountUser,
+  changePassword,
+  requestEmailChange,
+  updateDisplayName,
+} from "@/lib/account/client";
 import { accountStore } from "@/lib/account/store";
 import { SettingsRow } from "./SettingsRow";
 
 /** Who is signed in, and what they can change about themselves (each change in its own dialog). */
 export function AccountSection({ user }: { user: AccountUser }) {
   const label = user.displayName || user.email;
-  const [editing, setEditing] = useState<"name" | "password" | null>(null);
+  const [editing, setEditing] = useState<"name" | "email" | "password" | null>(null);
   const hasPassword = user.hasPassword !== false;
   return (
     <section aria-label="Account">
@@ -42,9 +47,20 @@ export function AccountSection({ user }: { user: AccountUser }) {
       </SettingsRow>
       <SettingsRow
         title="Email"
-        description={user.emailVerified ? "Confirmed." : "Not confirmed yet."}
+        description={
+          hasPassword
+            ? `${user.email}. ${user.emailVerified ? "Confirmed." : "Not confirmed yet."}`
+            : `${user.email}. Set a password first to change it.`
+        }
       >
-        <span className="text-sm text-muted-foreground">{user.email}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!hasPassword}
+          onClick={() => setEditing("email")}
+        >
+          Edit
+        </Button>
       </SettingsRow>
       <SettingsRow
         title="Password"
@@ -62,6 +78,7 @@ export function AccountSection({ user }: { user: AccountUser }) {
       {editing === "name" && (
         <NameDialog onClose={() => setEditing(null)} name={user.displayName ?? ""} />
       )}
+      {editing === "email" && <EmailDialog onClose={() => setEditing(null)} />}
       {editing === "password" && (
         <PasswordDialog onClose={() => setEditing(null)} hasPassword={hasPassword} />
       )}
@@ -148,6 +165,57 @@ function NameDialog({ onClose, name }: { onClose: () => void; name: string }) {
         maxLength={60}
         autoFocus
         onChange={(e) => setValue(e.target.value)}
+      />
+    </FormDialog>
+  );
+}
+
+function EmailDialog({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [current, setCurrent] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    setBusy(true);
+    const r = await requestEmailChange(email, current);
+    setBusy(false);
+    if ("error" in r) return void toast.error(r.error);
+    toast.success("Check your new inbox", {
+      description: `We sent a link to ${r.to}. Your address changes when you open it.`,
+    });
+    onClose();
+  }
+  return (
+    <FormDialog
+      onClose={onClose}
+      title="Change email"
+      description="We email a link to the new address. Until you open it, your account keeps its current one."
+      submit="Send link"
+      busy={busy}
+      disabled={!email.includes("@") || !current}
+      onSubmit={save}
+    >
+      <Label htmlFor="account-email" className="sr-only">
+        New email address
+      </Label>
+      <Input
+        id="account-email"
+        type="email"
+        autoComplete="email"
+        placeholder="New email address"
+        autoFocus
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <Label htmlFor="account-email-password" className="sr-only">
+        Current password
+      </Label>
+      <Input
+        id="account-email-password"
+        type="password"
+        autoComplete="current-password"
+        placeholder="Current password"
+        value={current}
+        onChange={(e) => setCurrent(e.target.value)}
       />
     </FormDialog>
   );

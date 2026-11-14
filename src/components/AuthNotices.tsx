@@ -25,10 +25,12 @@ export function AuthNotices() {
     if (code) toast.error(authMessage(code));
     if (url.searchParams.get("verified"))
       toast.success("Email confirmed", { description: "You can now store drafts in your cloud." });
+    if (url.searchParams.get("email_changed"))
+      toast.success("Email changed", { description: "Sign in with the new address from now on." });
     const github = url.searchParams.get("github_error");
     if (github) toast.error(GITHUB_ERRORS[github] ?? GITHUB_ERRORS["github_failed"]!);
     if (url.searchParams.get("github") === "connected") toast.success("GitHub connected");
-    const names = ["auth_error", "verified", "github_error", "github"];
+    const names = ["auth_error", "verified", "email_changed", "github_error", "github"];
     if (names.some((n) => url.searchParams.has(n))) {
       for (const n of names) url.searchParams.delete(n);
       window.history.replaceState(null, "", url);
