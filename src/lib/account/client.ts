@@ -12,6 +12,8 @@ export type AccountUser = {
   avatarUrl?: string | null;
   /** False for an account that signs in only with GitHub or Google (it may set a password). */
   hasPassword?: boolean;
+  /** The GitHub and Google identities linked to the account. */
+  linked?: ("github" | "google")[];
 };
 export type Account = {
   user: AccountUser | null;
@@ -53,6 +55,9 @@ const MESSAGES: Record<string, string> = {
   suspended: "This account has been suspended.",
   wrong_password: "That isn't your current password.",
   same: "Choose a password different from the current one.",
+  already_linked: "That account is already linked to a different mdstudio account.",
+  provider_taken: "This account already has one linked. Unlink it first to link another.",
+  last_method: "Set a password first: it would be your only way to sign in.",
   same_email: "That is the address this account already uses.",
   password_required: "Set a password first (under Password), then change your email.",
   email_change_failed: "That link is invalid or has expired. Ask for a new one in Settings.",
@@ -252,4 +257,10 @@ export async function changePassword(next: string, current?: string) {
 export async function requestEmailChange(email: string, current: string) {
   const r = await send("/api/auth/email", "POST", { email, current });
   return "error" in r ? { error: String(r.error) } : { ok: true as const, to: String(r["to"]) };
+}
+
+/** Unlinks GitHub or Google, unless it is the account's last way to sign in. */
+export async function unlinkProvider(provider: "github" | "google") {
+  const r = await send(`/api/auth/links/${provider}`, "DELETE", {});
+  return "error" in r ? { error: String(r.error) } : { ok: true as const };
 }

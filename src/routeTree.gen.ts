@@ -61,6 +61,7 @@ import { Route as ApiAiIntegrationsIdRouteImport } from './routes/api/ai.integra
 import { Route as ApiAuthEmailConfirmRouteImport } from './routes/api/auth/email.confirm'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google.callback'
+import { Route as ApiAuthLinksProviderRouteImport } from './routes/api/auth/links.$provider'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 import { Route as ApiCollabIdEditorsRouteImport } from './routes/api/collab.$id.editors'
 import { Route as ApiCollabLinkSlugRouteImport } from './routes/api/collab.link.$slug'
@@ -341,6 +342,11 @@ const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
   path: '/callback',
   getParentRoute: () => ApiAuthGoogleRoute,
 } as any)
+const ApiAuthLinksProviderRoute = ApiAuthLinksProviderRouteImport.update({
+  id: '/api/auth/links/$provider',
+  path: '/api/auth/links/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
   id: '/resend',
   path: '/resend',
@@ -497,6 +503,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/links/$provider': typeof ApiAuthLinksProviderRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
   '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
@@ -570,6 +577,7 @@ export interface FileRoutesByTo {
   '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/links/$provider': typeof ApiAuthLinksProviderRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
   '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
@@ -644,6 +652,7 @@ export interface FileRoutesById {
   '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/links/$provider': typeof ApiAuthLinksProviderRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
   '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
@@ -719,6 +728,7 @@ export interface FileRouteTypes {
     | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
+    | '/api/auth/links/$provider'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
     | '/api/collab/link/$slug'
@@ -792,6 +802,7 @@ export interface FileRouteTypes {
     | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
+    | '/api/auth/links/$provider'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
     | '/api/collab/link/$slug'
@@ -865,6 +876,7 @@ export interface FileRouteTypes {
     | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
+    | '/api/auth/links/$provider'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
     | '/api/collab/link/$slug'
@@ -930,6 +942,7 @@ export interface RootRouteChildren {
   ApiGithubReposRoute: typeof ApiGithubReposRouteWithChildren
   ApiSyncPullRoute: typeof ApiSyncPullRoute
   ApiSyncPushRoute: typeof ApiSyncPushRoute
+  ApiAuthLinksProviderRoute: typeof ApiAuthLinksProviderRoute
   ApiDocumentsIdRevisionsRoute: typeof ApiDocumentsIdRevisionsRouteWithChildren
   ApiGithubPublicationsIdRoute: typeof ApiGithubPublicationsIdRoute
   ApiSSlugCommentsRoute: typeof ApiSSlugCommentsRouteWithChildren
@@ -1300,6 +1313,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/google/callback'
       preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
       parentRoute: typeof ApiAuthGoogleRoute
+    }
+    '/api/auth/links/$provider': {
+      id: '/api/auth/links/$provider'
+      path: '/api/auth/links/$provider'
+      fullPath: '/api/auth/links/$provider'
+      preLoaderRoute: typeof ApiAuthLinksProviderRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/verify/resend': {
       id: '/api/auth/verify/resend'
@@ -1728,6 +1748,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGithubReposRoute: ApiGithubReposRouteWithChildren,
   ApiSyncPullRoute: ApiSyncPullRoute,
   ApiSyncPushRoute: ApiSyncPushRoute,
+  ApiAuthLinksProviderRoute: ApiAuthLinksProviderRoute,
   ApiDocumentsIdRevisionsRoute: ApiDocumentsIdRevisionsRouteWithChildren,
   ApiGithubPublicationsIdRoute: ApiGithubPublicationsIdRoute,
   ApiSSlugCommentsRoute: ApiSSlugCommentsRouteWithChildren,
