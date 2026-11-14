@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Cloud,
   Eye,
@@ -6,6 +6,7 @@ import {
   Github,
   ImageIcon,
   LogOut,
+  Settings,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
@@ -142,6 +143,16 @@ export function AccountMenu() {
                 <ImageIcon className="size-4" /> Manage images…
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem
+              onSelect={() => void navigate({ to: "/settings", search: { tab: "account" } })}
+            >
+              <UserRound className="size-4" /> Account
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => void navigate({ to: "/settings", search: { tab: "editor" } })}
+            >
+              <Settings className="size-4" /> Settings
+            </DropdownMenuItem>
             {user.isAdmin && (
               <DropdownMenuItem
                 onSelect={() =>
@@ -178,6 +189,11 @@ export function AccountMenu() {
 
   return (
     <>
+      <Button asChild variant="ghost" size="icon">
+        <Link to="/settings" search={{ tab: "" }} aria-label="Settings" title="Settings">
+          <Settings className="size-4" />
+        </Link>
+      </Button>
       <Button
         variant="ghost"
         size="icon"

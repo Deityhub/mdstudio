@@ -1,4 +1,5 @@
-import { ArrowUpRight, Github } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowUpRight, Github, Settings } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,11 @@ export function SiteHeader() {
       />
       <div className="flex items-center gap-1">
         <ThemeToggle />
+        <Button asChild variant="ghost" size="icon">
+          <Link to="/settings" search={{ tab: "" }} aria-label="Settings" title="Settings">
+            <Settings className="size-4" />
+          </Link>
+        </Button>
         <Button asChild variant="ghost">
           <a
             href={SITE.repo}
