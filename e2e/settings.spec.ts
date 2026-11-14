@@ -78,19 +78,35 @@ test("the account tab changes the name and the password, and signs other devices
   expect(login.status()).toBe(200);
 
   await page.goto("/settings?tab=account");
-  await page.getByLabel("Display name").fill("Ada L.");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .getByText("Display name", { exact: true })
+    .locator("xpath=ancestor::div[contains(@class,'justify-between')][1]")
+    .getByRole("button", { name: "Edit" })
+    .click();
+  const nameDialog = page.getByRole("dialog", { name: "Display name" });
+  await nameDialog.getByLabel("Display name").fill("Ada L.");
+  await nameDialog.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("region", { name: "Account" })).toContainText("Ada L.");
 
   const next = "a brand new long password";
-  await page.getByLabel("Current password").fill("not the password at all");
-  await page.getByLabel("New password").fill(next);
-  await page.getByRole("button", { name: "Change password" }).click();
+  const openPassword = async () => {
+    await page
+      .getByText("Password", { exact: true })
+      .locator("xpath=ancestor::div[contains(@class,'justify-between')][1]")
+      .getByRole("button", { name: "Edit" })
+      .click();
+    return page.getByRole("dialog", { name: "Change password" });
+  };
+  let dialog = await openPassword();
+  await dialog.getByLabel("Current password").fill("not the password at all");
+  await dialog.getByLabel("New password").fill(next);
+  await dialog.getByRole("button", { name: "Change password" }).click();
   await expect(page.getByText("That isn't your current password.")).toBeVisible();
 
-  await page.getByLabel("Current password").fill(password);
-  await page.getByRole("button", { name: "Change password" }).click();
+  await dialog.getByLabel("Current password").fill(password);
+  await dialog.getByRole("button", { name: "Change password" }).click();
   await expect(page.getByText("Your other devices were signed out.")).toBeVisible();
+  await expect(dialog).toBeHidden();
 
   // this browser stays signed in; the other device does not
   await page.reload();
@@ -99,4 +115,11 @@ test("the account tab changes the name and the password, and signs other devices
     ((await (await otherContext.request.get("/api/auth/me")).json()) as { user: unknown }).user,
   ).toBeNull();
   await otherContext.close();
+});
+
+test("the settings content sits in the middle of the page", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/settings");
+  const box = (await page.getByRole("region", { name: "Editor" }).boundingBox())!;
+  expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThan(8);
 });

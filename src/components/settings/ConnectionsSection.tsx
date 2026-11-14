@@ -20,7 +20,7 @@ export function ConnectionsSection({ userId }: { userId: string }) {
   }, [account.githubPublish]);
 
   return (
-    <section aria-label="Connections" className="max-w-2xl">
+    <section aria-label="Connections">
       <SettingsRow
         title="Cloud drafts"
         description={`${cloud.linked.size} of ${cloud.limit} drafts are kept in your account and synced between devices.`}

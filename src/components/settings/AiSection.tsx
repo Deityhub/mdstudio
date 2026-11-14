@@ -7,7 +7,7 @@ import { SettingsRow } from "./SettingsRow";
 export function AiSection() {
   const [open, setOpen] = useState(false);
   return (
-    <section aria-label="AI" className="max-w-2xl">
+    <section aria-label="AI">
       <SettingsRow
         title="AI integrations"
         description="Choose a provider (OpenAI, Anthropic, Gemini, Ollama or any compatible gateway), its model and key. Keys are not saved to disk or sent to mdstudio."

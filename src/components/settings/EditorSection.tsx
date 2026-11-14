@@ -40,7 +40,7 @@ export function EditorSection() {
   };
 
   return (
-    <section aria-label="Editor" className="max-w-2xl">
+    <section aria-label="Editor">
       <SettingsRow title="Theme" description="Follows your system unless you pick one.">
         <div role="group" aria-label="Theme" className="flex gap-1">
           {THEMES.map((t) => (
