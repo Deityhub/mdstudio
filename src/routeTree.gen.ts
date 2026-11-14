@@ -41,6 +41,8 @@ import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
+import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
+import { Route as ApiAuthProfileRouteImport } from './routes/api/auth/profile'
 import { Route as ApiAuthResetRouteImport } from './routes/api/auth/reset'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
@@ -235,6 +237,16 @@ const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
 const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
   id: '/api/auth/me',
   path: '/api/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasswordRoute = ApiAuthPasswordRouteImport.update({
+  id: '/api/auth/password',
+  path: '/api/auth/password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthProfileRoute = ApiAuthProfileRouteImport.update({
+  id: '/api/auth/profile',
+  path: '/api/auth/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthResetRoute = ApiAuthResetRouteImport.update({
@@ -453,6 +465,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/profile': typeof ApiAuthProfileRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
@@ -522,6 +536,8 @@ export interface FileRoutesByTo {
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/profile': typeof ApiAuthProfileRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
@@ -592,6 +608,8 @@ export interface FileRoutesById {
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/profile': typeof ApiAuthProfileRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
@@ -663,6 +681,8 @@ export interface FileRouteTypes {
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/password'
+    | '/api/auth/profile'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
@@ -732,6 +752,8 @@ export interface FileRouteTypes {
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/password'
+    | '/api/auth/profile'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
@@ -801,6 +823,8 @@ export interface FileRouteTypes {
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/password'
+    | '/api/auth/profile'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
@@ -870,6 +894,8 @@ export interface RootRouteChildren {
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
+  ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
+  ApiAuthProfileRoute: typeof ApiAuthProfileRoute
   ApiAuthResetRoute: typeof ApiAuthResetRoute
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
@@ -1108,6 +1134,20 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/me'
       fullPath: '/api/auth/me'
       preLoaderRoute: typeof ApiAuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/password': {
+      id: '/api/auth/password'
+      path: '/api/auth/password'
+      fullPath: '/api/auth/password'
+      preLoaderRoute: typeof ApiAuthPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/profile': {
+      id: '/api/auth/profile'
+      path: '/api/auth/profile'
+      fullPath: '/api/auth/profile'
+      preLoaderRoute: typeof ApiAuthProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/reset': {
@@ -1625,6 +1665,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
+  ApiAuthPasswordRoute: ApiAuthPasswordRoute,
+  ApiAuthProfileRoute: ApiAuthProfileRoute,
   ApiAuthResetRoute: ApiAuthResetRoute,
   ApiAuthSignupRoute: ApiAuthSignupRoute,
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,

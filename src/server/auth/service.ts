@@ -26,6 +26,8 @@ export type PublicUser = {
   isAdmin: boolean;
   /** The picture a social sign-in brought, shown in the account menu. */
   avatarUrl?: string | null;
+  /** False for an account that only signs in with GitHub or Google (it may set a password). */
+  hasPassword?: boolean;
 };
 type Signed = { user: PublicUser; token: string };
 
@@ -47,6 +49,7 @@ const publicUser = (u: {
   emailVerifiedAt: number | null;
   role?: string;
   avatarUrl?: string | null;
+  passwordHash?: string | null;
 }): PublicUser => ({
   id: u.id,
   email: u.email,
@@ -54,6 +57,7 @@ const publicUser = (u: {
   emailVerified: u.emailVerifiedAt !== null,
   isAdmin: u.role === "admin",
   avatarUrl: u.avatarUrl ?? null,
+  ...(u.passwordHash !== undefined && { hasPassword: u.passwordHash !== null }),
 });
 
 /** The role a new account gets: admin when it is the very first account, in one statement so two sign-ups cannot both win. */
@@ -106,7 +110,7 @@ export async function signup(
     return { error: "email_taken" };
   }
   const [made] = await db.select({ role: users.role }).from(users).where(eq(users.id, user.id));
-  return startSession(db, publicUser({ ...user, role: made?.role ?? "user" }), now);
+  return startSession(db, publicUser({ ...user, passwordHash, role: made?.role ?? "user" }), now);
 }
 
 // Verified against this when the email is unknown, so both failures take the same time.
@@ -165,6 +169,7 @@ export async function userForToken(
       email: users.email,
       displayName: users.displayName,
       avatarUrl: users.avatarUrl,
+      passwordHash: users.passwordHash,
       emailVerifiedAt: users.emailVerifiedAt,
       role: users.role,
       suspendedAt: users.suspendedAt,

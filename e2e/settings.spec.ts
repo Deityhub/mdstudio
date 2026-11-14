@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startDraft } from "./draft";
-import { account, skipPicker } from "./sync-helpers";
+import { account, password, skipPicker } from "./sync-helpers";
 
 const unique = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -61,4 +61,65 @@ test("the account menu has a Settings item that opens the editor section", async
   await page.getByRole("button", { name: /^Account:/ }).click();
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Editor", selected: true })).toBeVisible();
+});
+
+test("the account tab changes the name and the password, and signs other devices out", async ({
+  page,
+  browser,
+}) => {
+  const address = `settings-${unique()}@example.com`;
+  await account(page, "Create account", address);
+  await skipPicker(page);
+  // a second device, signed in with the same password
+  const otherContext = await browser.newContext();
+  const login = await otherContext.request.post("/api/auth/login", {
+    data: { email: address, password },
+  });
+  expect(login.status()).toBe(200);
+
+  await page.goto("/settings?tab=account");
+  await page
+    .getByText("Display name", { exact: true })
+    .locator("xpath=ancestor::div[contains(@class,'justify-between')][1]")
+    .getByRole("button", { name: "Edit" })
+    .click();
+  const nameDialog = page.getByRole("dialog", { name: "Display name" });
+  await nameDialog.getByLabel("Display name").fill("Ada L.");
+  await nameDialog.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("region", { name: "Account" })).toContainText("Ada L.");
+
+  const next = "a brand new long password";
+  const openPassword = async () => {
+    await page
+      .getByText("Password", { exact: true })
+      .locator("xpath=ancestor::div[contains(@class,'justify-between')][1]")
+      .getByRole("button", { name: "Edit" })
+      .click();
+    return page.getByRole("dialog", { name: "Change password" });
+  };
+  const dialog = await openPassword();
+  await dialog.getByLabel("Current password").fill("not the password at all");
+  await dialog.getByLabel("New password").fill(next);
+  await dialog.getByRole("button", { name: "Change password" }).click();
+  await expect(page.getByText("That isn't your current password.")).toBeVisible();
+
+  await dialog.getByLabel("Current password").fill(password);
+  await dialog.getByRole("button", { name: "Change password" }).click();
+  await expect(page.getByText("Your other devices were signed out.")).toBeVisible();
+  await expect(dialog).toBeHidden();
+
+  // this browser stays signed in; the other device does not
+  await page.reload();
+  await expect(page.getByRole("tab", { name: "Account" })).toBeVisible();
+  expect(
+    ((await (await otherContext.request.get("/api/auth/me")).json()) as { user: unknown }).user,
+  ).toBeNull();
+  await otherContext.close();
+});
+
+test("the settings content sits in the middle of the page", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/settings");
+  const box = (await page.getByRole("region", { name: "Editor" }).boundingBox())!;
+  expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThan(8);
 });

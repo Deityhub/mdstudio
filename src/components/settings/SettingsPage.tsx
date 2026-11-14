@@ -42,7 +42,7 @@ export function SettingsPage({ tab, onTab }: { tab: string; onTab: (tab: Setting
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-6">
+      <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="sr-only">Settings</h1>
         <Tabs value={current} onValueChange={(v) => onTab(v as SettingsTab)}>
           <TabsList className="mb-5 flex h-auto w-full flex-wrap justify-start">
