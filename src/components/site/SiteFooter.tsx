@@ -15,6 +15,9 @@ export function SiteFooter() {
           <Link className="hover:text-foreground" to="/guides">
             Guides
           </Link>
+          <Link className="hover:text-foreground" to="/settings" search={{ tab: "" }}>
+            Settings
+          </Link>
           <Link className="hover:text-foreground" to="/privacy">
             Privacy
           </Link>
