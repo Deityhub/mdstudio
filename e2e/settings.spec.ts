@@ -97,7 +97,7 @@ test("the account tab changes the name and the password, and signs other devices
       .click();
     return page.getByRole("dialog", { name: "Change password" });
   };
-  let dialog = await openPassword();
+  const dialog = await openPassword();
   await dialog.getByLabel("Current password").fill("not the password at all");
   await dialog.getByLabel("New password").fill(next);
   await dialog.getByRole("button", { name: "Change password" }).click();
