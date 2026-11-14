@@ -12,6 +12,9 @@ import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { VersionTag } from "@/components/VersionTag";
 import { AccountMenu } from "@/components/studio/AccountMenu";
+import type { SearchEntry } from "@/lib/search/rank";
+import { onJump, registerSearchSource, takeJump } from "@/lib/search/registry";
+import { SearchButton } from "@/components/search/SearchButton";
 import { cloudReady, useAccount } from "@/lib/account/store";
 import { askToConfirmEmail } from "@/lib/account/verify-prompt";
 import { ReviewComments } from "@/components/studio/ReviewComments";
@@ -1197,6 +1200,28 @@ export function Studio({ docId }: { docId: string }) {
     await navigator.clipboard.writeText(text);
     toast.success(`${label} copied`);
   };
+  // shared by the Export menu and search
+  const downloadMd = () => {
+    warnLocalImages();
+    download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8");
+  };
+  const copyMd = () => {
+    warnLocalImages();
+    void copy(out(), "Markdown");
+  };
+  const copyHtml = () =>
+    exportAsync(async () => {
+      const { html } = await renderExportBody(out(true), profile, {});
+      await copy(html, "HTML");
+    });
+  const downloadHtml = () =>
+    exportAsync(async () =>
+      download(
+        `${fileBase()}.html`,
+        await standaloneDocument(doc?.title ?? "", out(true), profile, {}),
+        "text/html;charset=utf-8",
+      ),
+    );
 
   /* ---------- history ---------- */
   const saveVersion = async () => {
@@ -1349,6 +1374,22 @@ export function Studio({ docId }: { docId: string }) {
     } else refreshList();
   };
 
+  // Search: the palette reads this page's entries when it searches (filled in below, after the
+  // handlers exist), and a draft opened from a match in its text goes to that line once showing.
+  const searchEntries = useRef<() => SearchEntry[]>(() => []);
+  const jumpTo = useRef<(line: number) => void>(() => {});
+  useEffect(() => registerSearchSource("studio", () => searchEntries.current()), []);
+  const docLoaded = doc?.id;
+  useEffect(() => {
+    if (!docLoaded) return;
+    const check = () => {
+      const line = takeJump(docLoaded);
+      if (line) jumpTo.current(line);
+    };
+    check();
+    return onJump(check);
+  }, [docLoaded]);
+
   if (missing)
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
@@ -1411,6 +1452,66 @@ export function Studio({ docId }: { docId: string }) {
     setMobilePanel(null);
     setTimeout(() => editor.current?.goToLine(line), 100);
   };
+
+  /* ---------- search ---------- */
+  searchEntries.current = () => {
+    const cmd = (title: string, run: () => void, keywords = ""): SearchEntry => ({
+      id: `studio:${title}`,
+      group: "Commands",
+      title,
+      keywords,
+      run,
+    });
+    const open = (p: NonNullable<Panel>) => (overlay ? setMobilePanel(p) : setPanel(p));
+    const cloudDraft = !!doc && inCloud && !doc.shared;
+    return [
+      cmd("New draft", () => void newDoc(), "create add"),
+      cmd("Import files…", () => fileInput.current?.click(), "open upload markdown zip"),
+      cmd("Import a folder…", () => folderInput.current?.click(), "open upload directory"),
+      cmd("Download .md", downloadMd, "export markdown file save"),
+      cmd("Copy Markdown", copyMd, "export clipboard"),
+      cmd("Copy rendered HTML", copyHtml, "export clipboard"),
+      cmd("Download standalone .html", downloadHtml, "export html file"),
+      cmd("Download all drafts (.zip)", () => exportAsync(exportAll), "export archive backup"),
+      cmd("Show the editor only", () => setView("editor"), "view source"),
+      cmd("Show editor and preview", () => setView("split"), "view split side by side"),
+      cmd("Show the preview only", () => setView("preview"), "view rendered"),
+      cmd("Checks", () => open("checks"), "panel portability issues lint"),
+      cmd("Outline", () => open("outline"), "panel headings contents"),
+      cmd("Front matter", () => open("meta"), "panel metadata yaml"),
+      cmd("History", () => open("history"), "panel versions revisions"),
+      cmd(
+        "Drafts list",
+        () => (compact || focus ? setMobileLibrary(true) : setLibrary((v) => !v)),
+        "library sidebar folders",
+      ),
+      cmd("Focus mode", () => setFocus((f) => !f), "distraction free zen"),
+      cmd("Insert link", openLink, "url"),
+      cmd("Insert image", () => setImageDialog({ open: true, initialAlt: "" }), "picture"),
+      cmd("Insert table", () => setTableDialog(true), "grid"),
+      cmd("Save a version", () => void saveVersion(), "history snapshot"),
+      cmd("Writing check rules", () => setRulesOpen(true), "checker settings standards"),
+      cmd("AI integrations", () => setAiIntegrations(true), "provider model key"),
+      cmd("Keyboard shortcuts", () => setShortcuts(true), "keys hotkeys"),
+      ...(cloudDraft && doc
+        ? [
+            cmd("Share…", () => setShareTarget(doc), "link review publish"),
+            cmd("Edit together…", () => setCollabTarget(doc), "collaborate invite live"),
+            ...(githubPublish
+              ? [cmd("Publish to GitHub…", () => setPublishTarget(doc), "commit gist")]
+              : []),
+          ]
+        : []),
+      ...outline.map((h): SearchEntry => ({
+        id: `heading:${h.line}`,
+        group: "Headings",
+        title: h.text || "(empty heading)",
+        hint: `Line ${h.line}`,
+        run: () => goToLine(h.line),
+      })),
+    ];
+  };
+  jumpTo.current = goToLine;
   const ownShare = doc ? shares.byDraft.get(doc.id) : undefined;
   const startCompose = (kind: Composing["kind"]) => {
     const snap = editor.current?.getSnapshot();
@@ -1677,20 +1778,10 @@ export function Studio({ docId }: { docId: string }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel>Markdown</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => {
-                    warnLocalImages();
-                    download(`${fileBase()}.md`, out(), "text/markdown;charset=utf-8");
-                  }}
-                >
+                <DropdownMenuItem onClick={downloadMd}>
                   <Download className="size-4" /> Download .md
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    warnLocalImages();
-                    void copy(out(), "Markdown");
-                  }}
-                >
+                <DropdownMenuItem onClick={copyMd}>
                   <Copy className="size-4" /> Copy Markdown
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -1713,27 +1804,10 @@ export function Studio({ docId }: { docId: string }) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>HTML</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() =>
-                    exportAsync(async () => {
-                      const { html } = await renderExportBody(out(true), profile, {});
-                      await copy(html, "HTML");
-                    })
-                  }
-                >
+                <DropdownMenuItem onClick={copyHtml}>
                   <Copy className="size-4" /> Copy rendered HTML
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    exportAsync(async () =>
-                      download(
-                        `${fileBase()}.html`,
-                        await standaloneDocument(doc?.title ?? "", out(true), profile, {}),
-                        "text/html;charset=utf-8",
-                      ),
-                    )
-                  }
-                >
+                <DropdownMenuItem onClick={downloadHtml}>
                   <Download className="size-4" /> Download standalone .html
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -1786,6 +1860,7 @@ export function Studio({ docId }: { docId: string }) {
                 <span className="hidden xl:inline">Publish</span>
               </Button>
             )}
+            <SearchButton />
             <ThemeToggle className="hidden sm:inline-flex" />
             <AccountMenu />
           </div>

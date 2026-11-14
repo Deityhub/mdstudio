@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SearchButton } from "@/components/search/SearchButton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { accountStore, useAccount } from "@/lib/account/store";
@@ -38,6 +39,7 @@ export function SettingsPage({ tab, onTab }: { tab: string; onTab: (tab: Setting
             <Button asChild variant="ghost" size="sm">
               <Link to="/editor">Back to the editor</Link>
             </Button>
+            <SearchButton />
             <ThemeToggle />
           </div>
         </div>

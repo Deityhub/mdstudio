@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { AiCloudSession } from "@/components/AiCloudSession";
 import { AuthNotices } from "@/components/AuthNotices";
+import { SearchHost } from "@/components/search/SearchHost";
 import { Toaster } from "@/components/ui/sonner";
 import { jsonLd, jsonLdScript, pageHead, SITE } from "@/lib/site/seo";
 import { registerServiceWorker } from "@/lib/pwa/register";
@@ -141,6 +142,7 @@ function RootComponent() {
       <Toaster position="bottom-right" />
       <AuthNotices />
       <AiCloudSession />
+      <SearchHost />
     </QueryClientProvider>
   );
 }
