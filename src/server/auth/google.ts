@@ -3,7 +3,8 @@
 // the one call made in the callback.
 import type { Db } from "../db";
 import type { PublicUser } from "./service";
-import { type SocialFailure, socialSignIn } from "./social";
+import { linkSocial } from "./links";
+import { type SocialFailure, type SocialProfile, socialSignIn } from "./social";
 
 export type GoogleConfig = { clientId: string; clientSecret: string };
 
@@ -37,14 +38,15 @@ export const googleAuthorizeUrl = (
     code_challenge_method: "S256",
   });
 
-export async function googleSignIn(
-  db: Db,
+type Input = { code: string; verifier: string; redirectUri: string };
+
+/** Who Google says the person is, after the code was exchanged; nothing is stored. */
+async function googleProfile(
   cfg: GoogleConfig,
-  input: { code: string; verifier: string; redirectUri: string },
-  fetchFn: typeof fetch = fetch,
-  now = Date.now(),
+  input: Input,
+  fetchFn: typeof fetch,
   base?: string,
-): Promise<{ user: PublicUser; token: string } | { error: "google_failed" } | SocialFailure> {
+): Promise<SocialProfile | { error: "google_failed" }> {
   const urls = googleUrls(base);
   const failed = { error: "google_failed" } as const;
   try {
@@ -78,19 +80,41 @@ export async function googleSignIn(
     };
     if (typeof profile.sub !== "string" || !profile.sub) return failed;
     const text = (v: unknown) => (typeof v === "string" && v ? v : null);
-    return socialSignIn(
-      db,
-      "google",
-      {
-        id: profile.sub,
-        email: text(profile.email),
-        verified: profile.email_verified === true || profile.email_verified === "true",
-        name: text(profile.name),
-        avatar: text(profile.picture),
-      },
-      now,
-    );
+    return {
+      id: profile.sub,
+      email: text(profile.email),
+      verified: profile.email_verified === true || profile.email_verified === "true",
+      name: text(profile.name),
+      avatar: text(profile.picture),
+    };
   } catch {
     return failed; // Google unreachable, or an answer that was not JSON
   }
+}
+
+export async function googleSignIn(
+  db: Db,
+  cfg: GoogleConfig,
+  input: Input,
+  fetchFn: typeof fetch = fetch,
+  now = Date.now(),
+  base?: string,
+): Promise<{ user: PublicUser; token: string } | { error: "google_failed" } | SocialFailure> {
+  const profile = await googleProfile(cfg, input, fetchFn, base);
+  return "error" in profile ? profile : socialSignIn(db, "google", profile, now);
+}
+
+/** Adds the person's Google identity to the signed-in account (see links.ts). */
+export async function googleLink(
+  db: Db,
+  cfg: GoogleConfig,
+  input: Input,
+  userId: string,
+  fetchFn: typeof fetch = fetch,
+  now = Date.now(),
+  base?: string,
+) {
+  const profile = await googleProfile(cfg, input, fetchFn, base);
+  if ("error" in profile) return { ok: false as const, error: profile.error };
+  return linkSocial(db, "google", profile, userId, now);
 }

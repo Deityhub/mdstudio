@@ -2,7 +2,8 @@
 // are used; the access token is never stored, it lives for the two calls made in the callback.
 import type { Db } from "../db";
 import type { PublicUser } from "./service";
-import { type SocialFailure, socialSignIn } from "./social";
+import { linkSocial } from "./links";
+import { type SocialFailure, type SocialProfile, socialSignIn } from "./social";
 
 export type GithubConfig = { clientId: string; clientSecret: string };
 type Failure = { error: "github_failed" } | SocialFailure;
@@ -47,13 +48,14 @@ const api = (token: string) => ({
   },
 });
 
-export async function githubSignIn(
-  db: Db,
+type Input = { code: string; verifier: string; redirectUri: string };
+
+/** Who GitHub says the person is, after the code was exchanged; nothing is stored. */
+async function githubProfile(
   cfg: GithubConfig,
-  input: { code: string; verifier: string; redirectUri: string },
-  fetchFn: typeof fetch = fetch,
-  now = Date.now(),
-): Promise<{ user: PublicUser; token: string } | Failure> {
+  input: Input,
+  fetchFn: typeof fetch,
+): Promise<SocialProfile | { error: "github_failed" }> {
   const tokenRes = await fetchFn("https://github.com/login/oauth/access_token", {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
@@ -90,16 +92,36 @@ export async function githubSignIn(
 
   const verified = emails.filter((e) => e.verified);
   const email = (verified.find((e) => e.primary) ?? verified[0])?.email ?? null;
-  return socialSignIn(
-    db,
-    "github",
-    {
-      id: String(profile.id),
-      email,
-      verified: email !== null, // GitHub only lists addresses it has verified
-      name: profile.name ?? profile.login ?? null,
-      avatar: profile.avatar_url ?? null,
-    },
-    now,
-  );
+  return {
+    id: String(profile.id),
+    email,
+    verified: email !== null, // GitHub only lists addresses it has verified
+    name: profile.name ?? profile.login ?? null,
+    avatar: profile.avatar_url ?? null,
+  };
+}
+
+export async function githubSignIn(
+  db: Db,
+  cfg: GithubConfig,
+  input: Input,
+  fetchFn: typeof fetch = fetch,
+  now = Date.now(),
+): Promise<{ user: PublicUser; token: string } | Failure> {
+  const profile = await githubProfile(cfg, input, fetchFn);
+  return "error" in profile ? profile : socialSignIn(db, "github", profile, now);
+}
+
+/** Adds the person's GitHub identity to the signed-in account (see links.ts). */
+export async function githubLink(
+  db: Db,
+  cfg: GithubConfig,
+  input: Input,
+  userId: string,
+  fetchFn: typeof fetch = fetch,
+  now = Date.now(),
+) {
+  const profile = await githubProfile(cfg, input, fetchFn);
+  if ("error" in profile) return { ok: false as const, error: profile.error };
+  return linkSocial(db, "github", profile, userId, now);
 }

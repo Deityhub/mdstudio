@@ -16,9 +16,10 @@ import {
   type AccountUser,
   changePassword,
   requestEmailChange,
+  unlinkProvider,
   updateDisplayName,
 } from "@/lib/account/client";
-import { accountStore } from "@/lib/account/store";
+import { accountStore, useAccount } from "@/lib/account/store";
 import { SettingsRow } from "./SettingsRow";
 
 /** Who is signed in, and what they can change about themselves (each change in its own dialog). */
@@ -74,6 +75,7 @@ export function AccountSection({ user }: { user: AccountUser }) {
           {hasPassword ? "Edit" : "Set password"}
         </Button>
       </SettingsRow>
+      <SignInMethods user={user} />
       {/* mounted only while open, so each opening starts empty or from what is saved */}
       {editing === "name" && (
         <NameDialog onClose={() => setEditing(null)} name={user.displayName ?? ""} />
@@ -83,6 +85,63 @@ export function AccountSection({ user }: { user: AccountUser }) {
         <PasswordDialog onClose={() => setEditing(null)} hasPassword={hasPassword} />
       )}
     </section>
+  );
+}
+
+const PROVIDERS = [
+  { id: "github", name: "GitHub" },
+  { id: "google", name: "Google" },
+] as const;
+
+/** GitHub and Google sign-ins: link another one, or unlink one while another way remains. */
+function SignInMethods({ user }: { user: AccountUser }) {
+  const account = useAccount();
+  const linked = user.linked ?? [];
+  const [busy, setBusy] = useState(false);
+  const lastMethod = user.hasPassword === false && linked.length < 2;
+  const shown = PROVIDERS.filter((p) => linked.includes(p.id) || account[p.id]);
+  if (!shown.length) return null;
+  return (
+    <>
+      {shown.map((p) => {
+        const isLinked = linked.includes(p.id);
+        return (
+          <SettingsRow
+            key={p.id}
+            title={`Sign in with ${p.name}`}
+            description={
+              isLinked
+                ? lastMethod
+                  ? "Linked. It is your only way to sign in: set a password to be able to unlink it."
+                  : "Linked."
+                : `Link a ${p.name} account to sign in with it too. It can have a different email address.`
+            }
+          >
+            {isLinked ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy || lastMethod}
+                onClick={async () => {
+                  setBusy(true);
+                  const r = await unlinkProvider(p.id);
+                  setBusy(false);
+                  if ("error" in r) return void toast.error(r.error);
+                  await accountStore.refresh();
+                  toast.success(`${p.name} unlinked`);
+                }}
+              >
+                Unlink
+              </Button>
+            ) : (
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/auth/${p.id}?link=1`}>Link</a>
+              </Button>
+            )}
+          </SettingsRow>
+        );
+      })}
+    </>
   );
 }
 
