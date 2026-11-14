@@ -87,6 +87,32 @@ describe("folders", () => {
     expect(await store.folders.list()).toEqual(["Notes"]);
     expect((await store.get(d.id))?.folder).toBe("Notes");
   });
+  it("drops a folder when its last draft is removed, and keeps it while others remain", async () => {
+    const store = createDocumentStore(memoryStore());
+    await store.folders.add("Blog");
+    const a = await store.create({ content: "a", folder: "Blog" });
+    const b = await store.create({ content: "b", folder: "blog" });
+    await store.remove(a.id);
+    expect(await store.folders.list()).toEqual(["Blog"]);
+    await store.remove(b.id);
+    expect(await store.folders.list()).toEqual([]);
+  });
+  it("leaves other folders, loose drafts and never-filled folders alone", async () => {
+    const store = createDocumentStore(memoryStore());
+    await store.folders.add("Empty");
+    await store.folders.add("Other");
+    await store.create({ content: "o", folder: "Other" });
+    const loose = await store.create({ content: "l" });
+    await store.remove(loose.id);
+    expect(await store.folders.list()).toEqual(["Empty", "Other"]);
+  });
+  it("does not drop the folder when a draft is only moved out of it", async () => {
+    const store = createDocumentStore(memoryStore());
+    await store.folders.add("Blog");
+    const d = await store.create({ content: "a", folder: "Blog" });
+    await store.save({ ...d, folder: undefined });
+    expect(await store.folders.list()).toEqual(["Blog"]);
+  });
   it("does not show up among the documents", async () => {
     const store = createDocumentStore(memoryStore());
     await store.folders.add("Blog");
