@@ -35,6 +35,7 @@ import { Route as ApiAdminSettingsRouteImport } from './routes/api/admin.setting
 import { Route as ApiAdminUsersRouteImport } from './routes/api/admin.users'
 import { Route as ApiAiIntegrationsRouteImport } from './routes/api/ai.integrations'
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
+import { Route as ApiAuthEmailRouteImport } from './routes/api/auth/email'
 import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
 import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
@@ -57,6 +58,7 @@ import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAdminPlansNameRouteImport } from './routes/api/admin.plans.$name'
 import { Route as ApiAdminUsersIdRouteImport } from './routes/api/admin.users.$id'
 import { Route as ApiAiIntegrationsIdRouteImport } from './routes/api/ai.integrations.$id'
+import { Route as ApiAuthEmailConfirmRouteImport } from './routes/api/auth/email.confirm'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google.callback'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
@@ -209,6 +211,11 @@ const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiAssetsRoute,
 } as any)
+const ApiAuthEmailRoute = ApiAuthEmailRouteImport.update({
+  id: '/api/auth/email',
+  path: '/api/auth/email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthForgotRoute = ApiAuthForgotRouteImport.update({
   id: '/api/auth/forgot',
   path: '/api/auth/forgot',
@@ -318,6 +325,11 @@ const ApiAiIntegrationsIdRoute = ApiAiIntegrationsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiAiIntegrationsRoute,
+} as any)
+const ApiAuthEmailConfirmRoute = ApiAuthEmailConfirmRouteImport.update({
+  id: '/confirm',
+  path: '/confirm',
+  getParentRoute: () => ApiAuthEmailRoute,
 } as any)
 const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
   id: '/callback',
@@ -459,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/email': typeof ApiAuthEmailRouteWithChildren
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
@@ -481,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
+  '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
@@ -530,6 +544,7 @@ export interface FileRoutesByTo {
   '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/email': typeof ApiAuthEmailRouteWithChildren
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
@@ -552,6 +567,7 @@ export interface FileRoutesByTo {
   '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
+  '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
@@ -602,6 +618,7 @@ export interface FileRoutesById {
   '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/email': typeof ApiAuthEmailRouteWithChildren
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
@@ -624,6 +641,7 @@ export interface FileRoutesById {
   '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
+  '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
@@ -675,6 +693,7 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
+    | '/api/auth/email'
     | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/google'
@@ -697,6 +716,7 @@ export interface FileRouteTypes {
     | '/api/admin/plans/$name'
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
+    | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
@@ -746,6 +766,7 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
+    | '/api/auth/email'
     | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/google'
@@ -768,6 +789,7 @@ export interface FileRouteTypes {
     | '/api/admin/plans/$name'
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
+    | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
@@ -817,6 +839,7 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
+    | '/api/auth/email'
     | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/google'
@@ -839,6 +862,7 @@ export interface FileRouteTypes {
     | '/api/admin/plans/$name'
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
+    | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
     | '/api/auth/verify/resend'
@@ -888,6 +912,7 @@ export interface RootRouteChildren {
   ApiAdminSettingsRoute: typeof ApiAdminSettingsRoute
   ApiAdminUsersRoute: typeof ApiAdminUsersRouteWithChildren
   ApiAiIntegrationsRoute: typeof ApiAiIntegrationsRouteWithChildren
+  ApiAuthEmailRoute: typeof ApiAuthEmailRouteWithChildren
   ApiAuthForgotRoute: typeof ApiAuthForgotRoute
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
   ApiAuthGoogleRoute: typeof ApiAuthGoogleRouteWithChildren
@@ -1094,6 +1119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssetsIdRouteImport
       parentRoute: typeof ApiAssetsRoute
     }
+    '/api/auth/email': {
+      id: '/api/auth/email'
+      path: '/api/auth/email'
+      fullPath: '/api/auth/email'
+      preLoaderRoute: typeof ApiAuthEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/forgot': {
       id: '/api/auth/forgot'
       path: '/api/auth/forgot'
@@ -1247,6 +1279,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/ai/integrations/$id'
       preLoaderRoute: typeof ApiAiIntegrationsIdRouteImport
       parentRoute: typeof ApiAiIntegrationsRoute
+    }
+    '/api/auth/email/confirm': {
+      id: '/api/auth/email/confirm'
+      path: '/confirm'
+      fullPath: '/api/auth/email/confirm'
+      preLoaderRoute: typeof ApiAuthEmailConfirmRouteImport
+      parentRoute: typeof ApiAuthEmailRoute
     }
     '/api/auth/github/callback': {
       id: '/api/auth/github/callback'
@@ -1559,6 +1598,18 @@ const ApiAiIntegrationsRouteChildren: ApiAiIntegrationsRouteChildren = {
 const ApiAiIntegrationsRouteWithChildren =
   ApiAiIntegrationsRoute._addFileChildren(ApiAiIntegrationsRouteChildren)
 
+interface ApiAuthEmailRouteChildren {
+  ApiAuthEmailConfirmRoute: typeof ApiAuthEmailConfirmRoute
+}
+
+const ApiAuthEmailRouteChildren: ApiAuthEmailRouteChildren = {
+  ApiAuthEmailConfirmRoute: ApiAuthEmailConfirmRoute,
+}
+
+const ApiAuthEmailRouteWithChildren = ApiAuthEmailRoute._addFileChildren(
+  ApiAuthEmailRouteChildren,
+)
+
 interface ApiAuthGithubRouteChildren {
   ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
 }
@@ -1659,6 +1710,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminSettingsRoute: ApiAdminSettingsRoute,
   ApiAdminUsersRoute: ApiAdminUsersRouteWithChildren,
   ApiAiIntegrationsRoute: ApiAiIntegrationsRouteWithChildren,
+  ApiAuthEmailRoute: ApiAuthEmailRouteWithChildren,
   ApiAuthForgotRoute: ApiAuthForgotRoute,
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
   ApiAuthGoogleRoute: ApiAuthGoogleRouteWithChildren,

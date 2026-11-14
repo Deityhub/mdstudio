@@ -53,6 +53,9 @@ const MESSAGES: Record<string, string> = {
   suspended: "This account has been suspended.",
   wrong_password: "That isn't your current password.",
   same: "Choose a password different from the current one.",
+  same_email: "That is the address this account already uses.",
+  password_required: "Set a password first (under Password), then change your email.",
+  email_change_failed: "That link is invalid or has expired. Ask for a new one in Settings.",
   unauthorized: "You were signed out. Sign in again.",
   signups_closed: "New accounts aren't being created right now.",
 };
@@ -243,4 +246,10 @@ export async function updateDisplayName(displayName: string) {
 export async function changePassword(next: string, current?: string) {
   const r = await send("/api/auth/password", "POST", { next, ...(current && { current }) });
   return "error" in r ? { error: String(r.error) } : { ok: true as const };
+}
+
+/** Emails a confirmation link to the new address; the address changes when the link is opened. */
+export async function requestEmailChange(email: string, current: string) {
+  const r = await send("/api/auth/email", "POST", { email, current });
+  return "error" in r ? { error: String(r.error) } : { ok: true as const, to: String(r["to"]) };
 }

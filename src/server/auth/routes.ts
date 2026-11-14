@@ -23,6 +23,12 @@ import { SESSION_MS, login, logout, signup, userForToken } from "./service";
 import { verifyTurnstile } from "./turnstile";
 import { confirmVerification, hasLiveVerification, sendVerification } from "./verify";
 import { withUser } from "./guard";
+import {
+  confirmEmailChange,
+  emailChangeMail,
+  emailChangedNotice,
+  requestEmailChange,
+} from "./email-change";
 import { changePassword, updateProfile } from "./profile";
 
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
@@ -258,6 +264,67 @@ export const passwordHandler = (request: Request) =>
     await endSessions(request, user.id, "signed_out");
     return json({ ok: true });
   });
+
+/**
+ * `POST { email, current }`: emails a link to the NEW address; nothing changes until it is opened.
+ * Needs the current password (wrong guesses share the password limit) and a server that sends mail,
+ * since the new address must be proven. Three links an hour per account.
+ */
+export const emailChangeHandler = (request: Request) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    const mailer = await getMailer(request);
+    if (!mailer) return json({ error: "email_unavailable" }, 503);
+    const input = (await body(request)) as { email?: unknown; current?: unknown } | null;
+    if (typeof input?.email !== "string") return json({ error: "invalid" }, 400);
+    const guesses = `password:${user.id}`;
+    const max = limit(request, "LOGIN_FAIL_LIMIT", 10);
+    const wait = await lockedOut(db, guesses, max);
+    if (wait !== null) return tooMany(wait);
+    const result = await requestEmailChange(db, user.id, {
+      email: input.email,
+      ...(typeof input.current === "string" && { current: input.current }),
+    });
+    if (!result.ok) {
+      if (result.error === "wrong_password") await hit(db, guesses, max, FAIL_WINDOW);
+      const status = { wrong_password: 401, email_taken: 409 }[result.error as string] ?? 400;
+      return json({ error: result.error }, status);
+    }
+    await clearLimit(db, guesses);
+    const sends = await hit(
+      db,
+      `email-change:${user.id}`,
+      limit(request, "VERIFY_EMAIL_LIMIT", 3),
+      HOUR,
+    );
+    if (!sends.allowed) return tooMany(sends.retryAfter);
+    try {
+      await mailer(emailChangeMail(siteOrigin(request), result.token, result.to));
+    } catch (error) {
+      console.error("Couldn't send the email-change link", error);
+      return json({ error: "email_failed" }, 502);
+    }
+    return json({ ok: true, to: result.to });
+  });
+
+/** The link in that email: makes the new address the account's, then goes to the settings. */
+export async function emailConfirmHandler(request: Request) {
+  const token = new URL(request.url).searchParams.get("token") ?? "";
+  const db = await getDb(request);
+  const done = await confirmEmailChange(db, token, Date.now(), readToken(request) ?? undefined);
+  if (!done.ok)
+    return redirect(
+      `/settings?tab=account&auth_error=${done.error === "email_taken" ? "email_taken" : "email_change_failed"}`,
+    );
+  await endSessions(request, done.userId, "signed_out");
+  const mailer = await getMailer(request);
+  if (mailer)
+    await afterResponse(
+      request,
+      mailer(emailChangedNotice(siteOrigin(request), done.oldEmail, done.newEmail)),
+    );
+  return redirect("/settings?tab=account&email_changed=1");
+}
 
 export async function logoutHandler(request: Request) {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
