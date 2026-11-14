@@ -23,6 +23,7 @@ import { SESSION_MS, login, logout, signup, userForToken } from "./service";
 import { verifyTurnstile } from "./turnstile";
 import { confirmVerification, hasLiveVerification, sendVerification } from "./verify";
 import { withUser } from "./guard";
+import { changePassword, updateProfile } from "./profile";
 
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   Response.json(body, { status, headers: { "cache-control": "no-store", ...headers } });
@@ -219,6 +220,43 @@ export const resendHandler = (request: Request) =>
       return json({ error: "email_failed" }, 502);
     }
     return json({ ok: true, sent: true });
+  });
+
+/** `PATCH { displayName }`: the name other people see (cursors, comments, who shared a draft). */
+export const profileHandler = (request: Request) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    const result = await updateProfile(db, user.id, await body(request));
+    return result.ok ? json({ user: result.user }) : json({ error: result.error }, 400);
+  });
+
+/**
+ * `POST { current?, next }`: changes the password, or sets one for an account that signs in only
+ * with GitHub or Google. Wrong guesses of the current one are limited per account (a stolen
+ * session cannot be used to try passwords). Other devices are signed out; this one stays.
+ */
+export const passwordHandler = (request: Request) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    const token = readToken(request);
+    const input = (await body(request)) as { current?: unknown; next?: unknown } | null;
+    if (!token || typeof input?.next !== "string") return json({ error: "invalid" }, 400);
+    const key = `password:${user.id}`;
+    const max = limit(request, "LOGIN_FAIL_LIMIT", 10);
+    const wait = await lockedOut(db, key, max);
+    if (wait !== null) return tooMany(wait);
+    const result = await changePassword(db, user.id, token, {
+      next: input.next,
+      ...(typeof input.current === "string" && { current: input.current }),
+    });
+    if (!result.ok) {
+      if (result.error === "wrong_password") await hit(db, key, max, FAIL_WINDOW);
+      return json({ error: result.error }, result.error === "wrong_password" ? 401 : 400);
+    }
+    await clearLimit(db, key);
+    // the other devices' sockets close with their sessions; this browser's reconnects at once
+    await endSessions(request, user.id, "signed_out");
+    return json({ ok: true });
   });
 
 export async function logoutHandler(request: Request) {
