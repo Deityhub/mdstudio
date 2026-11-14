@@ -34,7 +34,8 @@ const SHORTCUTS: { group: string; items: [string, string][] }[] = [
   {
     group: "Editor",
     items: [
-      ["Ctrl/⌘ F", "Search"],
+      ["Ctrl/⌘ F", "Find in this draft"],
+      ["Ctrl/⌘ Shift P", "Search drafts, commands and settings (Ctrl/⌘ K outside the text)"],
       ["Ctrl/⌘ Z / Shift Z", "Undo / redo"],
       ["Ctrl/⌘ /", "Show this list"],
       ["Alt F10", "Move focus to the toolbar (arrows to move, Esc to return)"],
