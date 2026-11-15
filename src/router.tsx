@@ -3,6 +3,7 @@ import { createRouter } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { getRequestNonce } from "./lib/server/csp";
+import { PageLoader } from "./components/PageLoader";
 import { routeTree } from "./routeTree.gen";
 
 // Undefined in dev and in the browser; set by the security-headers middleware in production.
@@ -18,6 +19,7 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    defaultPendingComponent: PageLoader,
     defaultPreloadStaleTime: 0,
     ...(nonce && { ssr: { nonce } }),
   });

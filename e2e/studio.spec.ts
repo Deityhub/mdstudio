@@ -196,7 +196,9 @@ test("the drafts and the panels share the pane on the left", async ({ page }) =>
   await open(page);
   const panels = page.getByRole("navigation", { name: "Panels" });
   const drafts = page.getByRole("complementary").getByRole("navigation", { name: "Drafts" });
-  const toggle = page.getByRole("banner").getByRole("button", { name: "Toggle drafts" });
+  const toggle = page
+    .getByRole("navigation", { name: "Panels" })
+    .getByRole("button", { name: "Drafts" });
   // the drafts show first, with the panel buttons to their left
   await expect(drafts).toBeVisible();
   await expect(checks).toBeHidden();
@@ -1135,7 +1137,9 @@ test("in focus mode the drafts button opens the list as a panel and focus mode s
 }) => {
   await open(page);
   const focus = page.getByRole("toolbar").getByRole("button", { name: "Focus mode" });
-  const toggle = page.getByRole("banner").getByRole("button", { name: "Toggle drafts" });
+  const toggle = page
+    .getByRole("navigation", { name: "Panels" })
+    .getByRole("button", { name: "Drafts" });
   const sidebar = page.getByRole("complementary").getByRole("navigation", { name: "Drafts" });
 
   // normal mode: the button still opens and closes the sidebar in place
@@ -1242,14 +1246,25 @@ test("one button for what leaves the studio: Export for a local draft, with the 
   await expect(bar.getByRole("button", { name: "preview view" })).toBeVisible();
 });
 
-test("the account sits in the side strip from 1280px, and in the top bar below it", async ({
+test("the account sits in the side strip from 768px, and in the top bar on a phone", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await open(page);
-  const strip = page.getByRole("navigation", { name: "Panels" });
+  const strip = page.getByRole("navigation", { name: "Panels", exact: true });
+  const bar = page.getByRole("banner");
   await expect(strip.getByRole("button", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByRole("banner").getByRole("button", { name: "Sign in" })).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Sign in" })).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Toggle drafts" })).toHaveCount(0);
+  // a narrower window keeps the strip, with the search, theme and account in it
   await page.setViewportSize({ width: 1000, height: 800 });
-  await expect(page.getByRole("banner").getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(strip.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(strip.getByRole("button", { name: "Drafts" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Sign in" })).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Toggle drafts" })).toHaveCount(0);
+  // only a phone drops the strip, and then the top bar has the account and the drafts toggle
+  await page.setViewportSize({ width: 600, height: 800 });
+  await expect(strip).toBeHidden();
+  await expect(bar.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Toggle drafts" })).toBeVisible();
 });

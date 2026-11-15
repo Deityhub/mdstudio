@@ -106,7 +106,10 @@ test("stopping editing together keeps the open comments in the draft's History",
   await expect(panel(a).getByText("Please expand this")).toBeVisible();
 
   // the panel shares the left pane with the drafts, whose menu has Share
-  await a.getByRole("banner").getByRole("button", { name: "Toggle drafts" }).click();
+  await a
+    .getByRole("navigation", { name: "Panels" })
+    .getByRole("button", { name: "Drafts" })
+    .click();
   const dialog = await openDialog(a);
   await expect(
     dialog.getByText(/Comments and suggestions end with editing together/),

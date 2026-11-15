@@ -1707,18 +1707,13 @@ export function Studio({ docId }: { docId: string }) {
             <Button
               variant="ghost"
               size="icon"
-              className="size-10 shrink-0"
-              // Where the sidebar is not shown (phones, focus mode) the drafts open as a panel from the left
+              className="inline-flex md:hidden size-10 shrink-0"
               onClick={() => toggleSide("drafts")}
               aria-label="Toggle drafts"
             >
               <PanelLeft className="size-4" />
             </Button>
-            <Logo
-              variant={phone ? "mark" : "full"}
-              textClassName="text-base sm:text-lg"
-              markClassName="size-6"
-            />
+            <Logo textClassName="text-base max-md:sr-only sm:text-lg" markClassName="size-6" />
             {/* the page's heading for assistive tech; the preview's own headings follow it */}
             <h1 className="sr-only">{doc?.title ?? "Editor"}</h1>
             <VersionTag className="hidden sm:inline-block" />
@@ -1880,11 +1875,11 @@ export function Studio({ docId }: { docId: string }) {
                 <span className="hidden lg:inline">Share</span>
               </Button>
             )}
-            {/* from 1280px these live in the side strip */}
-            <SearchButton className="xl:hidden" />
-            <ThemeToggle className="hidden sm:inline-flex xl:hidden" />
-            {/* from 1280px the account sits in the side strip */}
-            {compact && <AccountMenu />}
+            {/* from 768px these live in the side strip */}
+            <SearchButton className="md:hidden" />
+            <ThemeToggle className="hidden sm:inline-flex md:hidden" />
+            {/* mounted once: it owns its dialogs, so a hidden twin would open them twice */}
+            {phone && <AccountMenu />}
           </div>
           <input
             ref={fileInput}
@@ -1952,41 +1947,38 @@ export function Studio({ docId }: { docId: string }) {
                   </Button>
                 ))}
               </div>
-              <div className="hidden md:flex xl:hidden">{panelButtons}</div>
             </div>
           </div>
         </header>
 
         <div className="flex min-h-0 flex-1">
           {/* Panel buttons, on the left beside the pane they open */}
-          {!compact && (
-            <nav
-              aria-label="Panels"
-              className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border py-2"
+          <nav
+            aria-label="Panels"
+            className="hidden w-12 shrink-0 flex-col items-center gap-1 border-r border-border py-2 md:flex"
+          >
+            <Button
+              variant={library && !panel ? "secondary" : "ghost"}
+              size="icon"
+              className="size-10 shrink-0"
+              onClick={() => toggleSide("drafts")}
+              aria-label="Drafts"
+              aria-pressed={library && !panel}
+              title="Drafts"
             >
-              <Button
-                variant={library && !panel ? "secondary" : "ghost"}
-                size="icon"
-                className="size-10 shrink-0"
-                onClick={() => toggleSide("drafts")}
-                aria-label="Drafts"
-                aria-pressed={library && !panel}
-                title="Drafts"
-              >
-                <Files className="size-4" />
-              </Button>
-              {panelButtons}
-              <div className="flex-1" />
-              <SearchButton className="size-10 shrink-0" />
-              <ThemeToggle className="size-10 shrink-0" />
-              <Button asChild variant="ghost" size="icon" className="size-10 shrink-0">
-                <Link to="/settings" search={{ tab: "" }} aria-label="Settings" title="Settings">
-                  <Settings className="size-4" />
-                </Link>
-              </Button>
-              <AccountMenu settings={false} menuSide="right" />
-            </nav>
-          )}
+              <Files className="size-4" />
+            </Button>
+            {panelButtons}
+            <div className="flex-1" />
+            <SearchButton className="size-10 shrink-0" />
+            <ThemeToggle className="size-10 shrink-0" />
+            <Button asChild variant="ghost" size="icon" className="size-10 shrink-0">
+              <Link to="/settings" search={{ tab: "" }} aria-label="Settings" title="Settings">
+                <Settings className="size-4" />
+              </Link>
+            </Button>
+            {!phone && <AccountMenu settings={false} menuSide="right" />}
+          </nav>
           {/* The left pane: the drafts, or the panel chosen beside it */}
           {sideOpen && (
             <div className="relative flex shrink-0 flex-col" style={{ width: libraryWidth }}>

@@ -1,3 +1,4 @@
+import { PageLoader } from "@/components/PageLoader";
 import { useEffect } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { AppShell, PageTitle } from "@/components/site/AppShell";
@@ -20,7 +21,7 @@ export function SettingsPage({ tab, onTab }: { tab: string; onTab: (tab: Setting
   const account = useAccount();
   // this page asks who is signed in itself, like the dashboard
   useEffect(() => void accountStore.refresh(), []);
-  if (!account.loaded) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+  if (!account.loaded) return <PageLoader />;
   const user = account.user;
   const current = parseSettingsTab(tab, !!user);
   return (
