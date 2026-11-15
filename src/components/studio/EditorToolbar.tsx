@@ -369,7 +369,7 @@ export const EditorToolbar = forwardRef<ToolbarHandle, Props>(function EditorToo
 
   const tableMenu = (
     <ToolMenu icon={Table} label="Table" active={ctx.table} hint={hintFor("table")} editor={editor}>
-      <DropdownMenuItem onClick={onOpenTable}>Insert table…</DropdownMenuItem>
+      <DropdownMenuItem onClick={onOpenTable}>Insert table</DropdownMenuItem>
       <DropdownMenuSeparator />
       {TABLE_OPS.map((op, i) =>
         op === "-" ? (

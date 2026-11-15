@@ -1,12 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { chooseTheme } from "./theme";
 
+// the theme button is in the editor's side strip (and on the shared page)
 test.describe("theme toggle", () => {
   test("switches to dark, persists across reloads and paints dark immediately", async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/");
+    await page.goto("/editor");
     const html = page.locator("html");
     await expect(html).not.toHaveClass(/dark/);
 
@@ -23,7 +24,7 @@ test.describe("theme toggle", () => {
 
   test("System follows the OS again, live, and forgets the earlier choice", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/");
+    await page.goto("/editor");
     const html = page.locator("html");
     await chooseTheme(page, "Dark");
     await expect(html).toHaveClass(/dark/);
@@ -46,7 +47,7 @@ test.describe("theme toggle", () => {
 
   test("an explicit choice ignores the OS", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/");
+    await page.goto("/editor");
     await chooseTheme(page, "Light");
     await page.emulateMedia({ colorScheme: "dark" });
     await expect(page.locator("html")).not.toHaveClass(/dark/);
@@ -102,7 +103,11 @@ test("the logo links home from the home page and from the editor", async ({ page
 
   await page.goto("/editor");
   await expect(page.locator(".cm-content")).toBeVisible();
-  await page.getByRole("link", { name: "mdstudio", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  // the page is server-rendered: a click before it has hydrated is not a navigation, so try until it is
+  await expect(async () => {
+    await page.getByRole("link", { name: "mdstudio", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/, { timeout: 1500 });
+  }).toPass();
+  // the home page's own heading: the URL changes a moment before the page does
+  await expect(page.getByRole("heading", { level: 1, name: /write once/i })).toBeVisible();
 });

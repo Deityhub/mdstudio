@@ -35,16 +35,21 @@ Radius: `--radius: 0.5rem` (sm/md/lg/xl derived). Shadows: minimal, soft; prefer
 
 ## Components (shadcn variants)
 - Button: `default` (primary), `secondary` (active toggle), `ghost` (toolbar icons, 40×40 touch targets on mobile), `outline`, `destructive`.
-- Dialog (AI writer, delete confirmation), Sheet (library and panels below 1280px), DropdownMenu (export), Select (profile, provider), Tabs, Tooltip, Input/Textarea/Label, Switch (normalize), Sonner toasts. Only these shadcn components are kept in `src/components/ui/`; add new ones when a feature needs them.
+- Dialog (AI writer, delete confirmation), Sheet (library and panels below 1280px), DropdownMenu (export), Select (profile, provider), Tabs, Tooltip, Input/Textarea/Label, Switch (normalize; 44×24px, the accent track when on and a muted track when off, a knob in its own colours that never takes the page background), Sonner toasts. Only these shadcn components are kept in `src/components/ui/`; add new ones when a feature needs them.
 - Icons: lucide-react, 16px in toolbars.
+
+## Page frames
+- **Public pages** (`SiteHeader`, `SiteFooter`, `SitePieces`): content up to 1200px; tiles are `border bg-muted`, chips are small labels (`accent`, `line`, `warn`), a call to action is a band on `bg-accent`. Reading pages (guides, legal) use `DocLayout`: a sticky contents column on the left from 1280px.
+- **App pages** (`AppShell`: Settings, Admin): a top bar on the page background with the same hairline as the public header (its contents the width of the page's content; **Back to the editor** is the primary button, the account a ghost icon), a menu of sections on the left (the active one on `bg-accent` with the primary along its left edge; chips on phones), a title with a line under it, and rows grouped in bordered cards on `bg-card` (a light lift off the page; the controls inside are outlines on the card's own colour, not darker wells).
+- **Standalone screens** (`Standalone`: private-link gate, invitation, password reset, 404, load error): a bar like the app pages' (page background, primary Open the editor), and a centred bordered `bg-card` box.
 
 ## Preview styling (`.md-preview`)
 GitHub-like prose on `bg-paper`: max-width ~72ch, headings in Fraunces, links primary with underline, blockquote left border `border`, tables bordered with zebra `muted`, code `code-bg` + mono, task-list checkboxes, images max-width 100%.
 
 ## Layout & breakpoints
 - `< 768px` phone: single pane (Editor / Preview toggle), horizontally scrollable toolbar, panel buttons in a bottom nav, library and panels in sheets, condensed status bar.
-- `768-1279px`: split view with scroll sync; the library opens as a left sheet and the panels as a right sheet.
-- `>= 1280px` desktop: docked library sidebar (about 240px, collapsible) | editor | preview (scroll-synced) | docked side panel (about 288px, Checks/Outline/Front matter).
+- `768-1279px`: split view with scroll sync; the library and the panels open as a sheet from the left.
+- `>= 1280px` desktop: panel buttons (48px) | one docked pane (288px, resizable; the library or the chosen panel) | editor | preview (scroll-synced). Nothing docks on the right.
 - Focus mode: hides chrome, centers the editor.
 - Touch targets >= 40px on phones (toolbar buttons shrink to 36px from 768px up, where a pointer is the norm); dialogs scroll within the viewport.
 

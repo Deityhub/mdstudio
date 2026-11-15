@@ -32,6 +32,7 @@ import { sortLocalImages, warnLocalImages as noteLocalImages } from "@/lib/colla
 import { detachShared, openShared, removeShared } from "@/lib/collab/shared";
 import { useSharedWithMe } from "@/lib/collab/sharedHooks";
 import { ShareDialog } from "@/components/studio/ShareDialog";
+import { ShareChooser } from "@/components/studio/ShareChooser";
 import { clearShares, useShares } from "@/lib/share/hooks";
 import {
   addToCloud,
@@ -53,6 +54,7 @@ import {
   SlidersHorizontal,
   FolderUp,
   Share2,
+  Send,
   Github,
   FileUp,
   MonitorDown,
@@ -60,6 +62,8 @@ import {
   Copy,
   Columns2,
   PanelLeft,
+  Files,
+  Settings,
   FileText,
   Eye,
   AlertTriangle,
@@ -97,7 +101,7 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteNotice } from "@/components/SiteNotice";
 import { cn } from "@/lib/utils";
-import { CHECKS_OPEN_MIN_WIDTH, clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/ui/layout";
+import { clampLibraryWidth, LIBRARY_WIDTH } from "@/lib/ui/layout";
 import { HistoryPanel } from "@/components/studio/HistoryPanel";
 import { Library } from "@/components/studio/Library";
 import { historyStore, type Revision } from "@/lib/storage/history";
@@ -340,8 +344,6 @@ export function Studio({ docId }: { docId: string }) {
     if (p) setProfile(p);
     setNormalize(localStorage.getItem("md:normalize") === "1");
     setCheckConfig(loadConfig());
-    // Checks start open only on wide screens; below that the editor keeps the room until asked.
-    if (window.matchMedia(`(min-width: ${CHECKS_OPEN_MIN_WIDTH}px)`).matches) setPanel("checks");
     const w = localStorage.getItem("md:library-width");
     if (w) setLibraryWidth(clampLibraryWidth(w));
   }, []);
@@ -1293,6 +1295,7 @@ export function Studio({ docId }: { docId: string }) {
     if (account) await syncNow(account.id);
   };
   // the draft whose share dialog is open
+  const [shareChoice, setShareChoice] = useState<MdDocument | null>(null);
   const [shareTarget, setShareTarget] = useState<MdDocument | null>(null);
   const [collabTarget, setCollabTarget] = useState<MdDocument | null>(null);
   // the draft whose publish-to-GitHub dialog is open
@@ -1444,9 +1447,19 @@ export function Studio({ docId }: { docId: string }) {
   };
 
   const errCount = issues.filter((i) => i.severity !== "info").length;
-  const showLibrary = library && !focus && !compact;
-  const showPanel = panel && !focus && !compact;
   const activePanel = overlay ? mobilePanel : panel;
+  // The drafts and every panel share one pane on the left (on phones and in focus mode they open
+  // as a panel over the page instead). A panel takes the pane; closing it gives the pane back to
+  // the drafts if they were showing.
+  const toggleSide = (p: "drafts" | NonNullable<Panel>) => {
+    if (overlay) return p === "drafts" ? setMobileLibrary(true) : setMobilePanel(p);
+    if (p !== "drafts") return setPanel(panel === p ? null : p);
+    if (panel) {
+      setPanel(null);
+      setLibrary(true);
+    } else setLibrary((v) => !v);
+  };
+  const sideOpen = !overlay && (panel !== null || library);
   const goToLine = (line: number) => {
     setView("editor");
     setMobilePanel(null);
@@ -1466,8 +1479,8 @@ export function Studio({ docId }: { docId: string }) {
     const cloudDraft = !!doc && inCloud && !doc.shared;
     return [
       cmd("New draft", () => void newDoc(), "create add"),
-      cmd("Import files…", () => fileInput.current?.click(), "open upload markdown zip"),
-      cmd("Import a folder…", () => folderInput.current?.click(), "open upload directory"),
+      cmd("Import files", () => fileInput.current?.click(), "open upload markdown zip"),
+      cmd("Import a folder", () => folderInput.current?.click(), "open upload directory"),
       cmd("Download .md", downloadMd, "export markdown file save"),
       cmd("Copy Markdown", copyMd, "export clipboard"),
       cmd("Copy rendered HTML", copyHtml, "export clipboard"),
@@ -1480,11 +1493,7 @@ export function Studio({ docId }: { docId: string }) {
       cmd("Outline", () => open("outline"), "panel headings contents"),
       cmd("Front matter", () => open("meta"), "panel metadata yaml"),
       cmd("History", () => open("history"), "panel versions revisions"),
-      cmd(
-        "Drafts list",
-        () => (compact || focus ? setMobileLibrary(true) : setLibrary((v) => !v)),
-        "library sidebar folders",
-      ),
+      cmd("Drafts list", () => toggleSide("drafts"), "library sidebar folders"),
       cmd("Focus mode", () => setFocus((f) => !f), "distraction free zen"),
       cmd("Insert link", openLink, "url"),
       cmd("Insert image", () => setImageDialog({ open: true, initialAlt: "" }), "picture"),
@@ -1495,10 +1504,10 @@ export function Studio({ docId }: { docId: string }) {
       cmd("Keyboard shortcuts", () => setShortcuts(true), "keys hotkeys"),
       ...(cloudDraft && doc
         ? [
-            cmd("Share…", () => setShareTarget(doc), "link review publish"),
-            cmd("Edit together…", () => setCollabTarget(doc), "collaborate invite live"),
+            cmd("Share", () => setShareTarget(doc), "link review publish"),
+            cmd("Edit together", () => setCollabTarget(doc), "collaborate invite live"),
             ...(githubPublish
-              ? [cmd("Publish to GitHub…", () => setPublishTarget(doc), "commit gist")]
+              ? [cmd("Publish to GitHub", () => setPublishTarget(doc), "commit gist")]
               : []),
           ]
         : []),
@@ -1532,6 +1541,8 @@ export function Studio({ docId }: { docId: string }) {
     setActiveThread(r.id);
     return undefined;
   };
+  // one menu for what leaves the studio: publishing too, once the draft is in the cloud
+  const canPublish = inCloud && githubPublish;
   const panelButtons = (
     [
       ["checks", errCount ? AlertTriangle : CheckCircle2, "Checks"],
@@ -1550,8 +1561,9 @@ export function Studio({ docId }: { docId: string }) {
       variant={activePanel === p ? "secondary" : "ghost"}
       size="icon"
       className="relative size-10 shrink-0"
-      onClick={() => (overlay ? setMobilePanel(p) : setPanel(panel === p ? null : p))}
+      onClick={() => toggleSide(p)}
       aria-label={label}
+      aria-pressed={activePanel === p}
       title={label}
     >
       <Icon className="size-4" />
@@ -1586,10 +1598,9 @@ export function Studio({ docId }: { docId: string }) {
             cloudOn ? void addToCloud(account.id, [d.id]) : askToConfirmEmail(),
           onRemove: (d: MdDocument) => void removeFromCloud(account.id, d.id),
           ...(cloudOn && {
-            onShare: (d: MdDocument) => setShareTarget(d),
+            onShare: (d: MdDocument) => setShareChoice(d),
             shared: sharedIds,
             sharedPrivately: privateIds,
-            onCollab: (d: MdDocument) => setCollabTarget(d),
             live: cloudDrafts.live,
           }),
           ...(cloudOn && githubPublish && { onPublish: (d: MdDocument) => setPublishTarget(d) }),
@@ -1691,25 +1702,31 @@ export function Studio({ docId }: { docId: string }) {
       <div className="studio-shell flex h-dvh flex-col overflow-hidden bg-background text-foreground">
         <SiteNotice />
         {/* Top bar */}
-        <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b border-border px-2 py-2 sm:px-3">
-          <div className="flex min-w-0 items-center gap-1">
+        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-2 py-2 sm:px-3">
+          <div className="order-1 flex min-w-0 flex-1 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               className="size-10 shrink-0"
               // Where the sidebar is not shown (phones, focus mode) the drafts open as a panel from the left
-              onClick={() => (compact || focus ? setMobileLibrary(true) : setLibrary((v) => !v))}
+              onClick={() => toggleSide("drafts")}
               aria-label="Toggle drafts"
             >
               <PanelLeft className="size-4" />
             </Button>
-            <Logo textClassName="text-base sm:text-lg" markClassName="size-6" />
+            <Logo
+              variant={phone ? "mark" : "full"}
+              textClassName="text-base sm:text-lg"
+              markClassName="size-6"
+            />
+            {/* the page's heading for assistive tech; the preview's own headings follow it */}
+            <h1 className="sr-only">{doc?.title ?? "Editor"}</h1>
             <VersionTag className="hidden sm:inline-block" />
             <span className="ml-2 hidden min-w-0 truncate text-sm text-muted-foreground xl:block">
               / {doc?.title ?? "…"}
             </span>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="order-2 flex shrink-0 items-center gap-1 sm:order-3">
             {install && (
               <Button
                 variant="ghost"
@@ -1740,14 +1757,14 @@ export function Studio({ docId }: { docId: string }) {
                   className="h-8 px-2 sm:px-3"
                   aria-label="Import Markdown"
                 >
-                  <Upload className="size-4" /> <span className="hidden sm:inline">Import</span>
+                  <Upload className="size-4" /> <span className="hidden lg:inline">Import</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
                   <FileUp className="size-4" />
                   <div className="flex flex-col">
-                    <span>Files or a ZIP…</span>
+                    <span>Files or a ZIP</span>
                     <span className="text-xs text-muted-foreground">
                       Markdown, text, or an exported archive
                     </span>
@@ -1756,7 +1773,7 @@ export function Studio({ docId }: { docId: string }) {
                 <DropdownMenuItem onSelect={() => folderInput.current?.click()}>
                   <FolderUp className="size-4" />
                   <div className="flex flex-col">
-                    <span>A folder…</span>
+                    <span>A folder</span>
                     <span className="text-xs text-muted-foreground">
                       Folders become library folders
                     </span>
@@ -1770,13 +1787,28 @@ export function Studio({ docId }: { docId: string }) {
                   variant="default"
                   size="sm"
                   className="h-8 px-2 sm:px-3"
-                  aria-label="Export"
+                  aria-label={canPublish ? "Publish" : "Export"}
                 >
-                  <Download className="size-4" />
-                  <span className="hidden sm:inline">Export</span>
+                  {canPublish ? <Send className="size-4" /> : <Download className="size-4" />}
+                  <span className="hidden lg:inline">{canPublish ? "Publish" : "Export"}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
+                {canPublish && doc && (
+                  <>
+                    <DropdownMenuLabel>Publish</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setPublishTarget(doc)}>
+                      <Github className="size-4" />
+                      <div className="flex flex-col">
+                        <span>Publish to GitHub</span>
+                        <span className="text-xs text-muted-foreground">
+                          A commit, a pull request or a gist
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuLabel>Markdown</DropdownMenuLabel>
                 <DropdownMenuItem onClick={downloadMd}>
                   <Download className="size-4" /> Download .md
@@ -1836,33 +1868,23 @@ export function Studio({ docId }: { docId: string }) {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
-            {cloudOn && doc && cloudDrafts.linked.has(doc.id) && (
+            {inCloud && doc && (
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 px-2 sm:px-3"
                 aria-label="Share"
-                onClick={() => setShareTarget(doc)}
+                onClick={() => setShareChoice(doc)}
               >
                 <Share2 className="size-4" />
-                <span className="hidden sm:inline">Share</span>
+                <span className="hidden lg:inline">Share</span>
               </Button>
             )}
-            {cloudOn && githubPublish && doc && cloudDrafts.linked.has(doc.id) && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-2 sm:px-3"
-                aria-label="Publish to GitHub"
-                onClick={() => setPublishTarget(doc)}
-              >
-                <Github className="size-4" />
-                <span className="hidden xl:inline">Publish</span>
-              </Button>
-            )}
-            <SearchButton />
-            <ThemeToggle className="hidden sm:inline-flex" />
-            <AccountMenu />
+            {/* from 1280px these live in the side strip */}
+            <SearchButton className="xl:hidden" />
+            <ThemeToggle className="hidden sm:inline-flex xl:hidden" />
+            {/* from 1280px the account sits in the side strip */}
+            {compact && <AccountMenu />}
           </div>
           <input
             ref={fileInput}
@@ -1887,10 +1909,11 @@ export function Studio({ docId }: { docId: string }) {
               e.target.value = "";
             }}
           />
-          <div className="col-span-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          {/* on a phone this is a second row; from 640px its two parts join the first */}
+          <div className="order-3 grid min-w-0 basis-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:contents">
             <Select value={profile} onValueChange={(v) => chooseProfile(v as Profile)}>
               <SelectTrigger
-                className="h-10 w-full min-w-0 sm:max-w-50 [&_.text-xs]:hidden"
+                className="h-10 w-full min-w-0 sm:order-2 sm:h-8 sm:w-44 [&_.text-xs]:hidden"
                 aria-label="Target platform"
               >
                 <SelectValue />
@@ -1903,7 +1926,7 @@ export function Studio({ docId }: { docId: string }) {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1 sm:order-2">
               <div className="flex items-center rounded-md border border-border p-0.5">
                 {(
                   [
@@ -1916,7 +1939,10 @@ export function Studio({ docId }: { docId: string }) {
                     key={v}
                     variant={effectiveView === v ? "secondary" : "ghost"}
                     size="icon"
-                    className={cn("size-10 shrink-0", v === "split" && "hidden md:inline-flex")}
+                    className={cn(
+                      "size-10 shrink-0 sm:size-8",
+                      v === "split" && "hidden md:inline-flex",
+                    )}
                     onClick={() => setView(v)}
                     aria-label={`${v} view`}
                     aria-pressed={effectiveView === v}
@@ -1932,10 +1958,51 @@ export function Studio({ docId }: { docId: string }) {
         </header>
 
         <div className="flex min-h-0 flex-1">
-          {/* Library */}
-          {showLibrary && (
+          {/* Panel buttons, on the left beside the pane they open */}
+          {!compact && (
+            <nav
+              aria-label="Panels"
+              className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border py-2"
+            >
+              <Button
+                variant={library && !panel ? "secondary" : "ghost"}
+                size="icon"
+                className="size-10 shrink-0"
+                onClick={() => toggleSide("drafts")}
+                aria-label="Drafts"
+                aria-pressed={library && !panel}
+                title="Drafts"
+              >
+                <Files className="size-4" />
+              </Button>
+              {panelButtons}
+              <div className="flex-1" />
+              <SearchButton className="size-10 shrink-0" />
+              <ThemeToggle className="size-10 shrink-0" />
+              <Button asChild variant="ghost" size="icon" className="size-10 shrink-0">
+                <Link to="/settings" search={{ tab: "" }} aria-label="Settings" title="Settings">
+                  <Settings className="size-4" />
+                </Link>
+              </Button>
+              <AccountMenu settings={false} menuSide="right" />
+            </nav>
+          )}
+          {/* The left pane: the drafts, or the panel chosen beside it */}
+          {sideOpen && (
             <div className="relative flex shrink-0 flex-col" style={{ width: libraryWidth }}>
-              {libraryContent}
+              {panel ? (
+                <aside
+                  aria-label={panel === "meta" ? "Front matter" : panel}
+                  className="flex min-h-0 flex-1 flex-col border-r border-sidebar-border bg-sidebar"
+                >
+                  <div className="border-b border-border px-4 py-3 font-display text-base font-semibold capitalize">
+                    {panel === "meta" ? "Front matter" : panel}
+                  </div>
+                  {panelContent}
+                </aside>
+              ) : (
+                libraryContent
+              )}
               <div
                 role="separator"
                 aria-orientation="vertical"
@@ -2106,21 +2173,6 @@ export function Studio({ docId }: { docId: string }) {
               </span>
             </footer>
           </main>
-
-          {/* Side panel */}
-          {!compact && (
-            <div className="flex shrink-0 border-l border-border">
-              {showPanel && (
-                <aside className="flex w-72 flex-col overflow-hidden">
-                  <div className="border-b border-border px-4 py-3 font-display text-base font-semibold capitalize">
-                    {panel === "meta" ? "Front matter" : panel}
-                  </div>
-                  {panelContent}
-                </aside>
-              )}
-              <div className="flex w-12 flex-col items-center gap-1 py-2">{panelButtons}</div>
-            </div>
-          )}
         </div>
         <nav
           aria-label="Document panels"
@@ -2128,6 +2180,18 @@ export function Studio({ docId }: { docId: string }) {
         >
           {panelButtons}
         </nav>
+        <ShareChooser
+          open={shareChoice !== null}
+          onOpenChange={(open) => !open && setShareChoice(null)}
+          onReview={() => {
+            if (shareChoice) setShareTarget(shareChoice);
+            setShareChoice(null);
+          }}
+          onEdit={() => {
+            if (shareChoice) setCollabTarget(shareChoice);
+            setShareChoice(null);
+          }}
+        />
         <ShareDialog
           draft={shareTarget && doc && shareTarget.id === doc.id ? doc : shareTarget}
           open={shareTarget !== null}
@@ -2299,7 +2363,7 @@ export function Studio({ docId }: { docId: string }) {
           }}
         >
           <SheetContent
-            side="right"
+            side="left"
             className="flex h-dvh w-[min(92vw,380px)] flex-col gap-0 p-0"
             aria-describedby={undefined}
             // in focus mode, closing a panel puts the cursor back where the writing is

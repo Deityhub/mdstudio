@@ -210,7 +210,11 @@ on two lines.
           </div>
         </section>
 
-        <section className="border-t border-border py-16" aria-labelledby="features-heading">
+        <section
+          id="features"
+          className="scroll-mt-6 border-t border-border py-16"
+          aria-labelledby="features-heading"
+        >
           <h2 id="features-heading" className="font-display text-2xl font-semibold sm:text-3xl">
             Everything a Markdown writer needs
           </h2>

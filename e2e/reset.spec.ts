@@ -121,7 +121,7 @@ test("in the app: forgot password, the emailed page, a new password, signed in a
   await page.getByRole("button", { name: "Change password" }).click();
   await expect(page.getByRole("heading", { name: "Password changed" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Open the editor" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Open the editor" }).click();
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(newPassword);

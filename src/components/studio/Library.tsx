@@ -194,7 +194,7 @@ export function Library({
     limit: number;
     onAdd: (d: MdDocument) => void;
     onRemove: (d: MdDocument) => void;
-    /** Opens the share dialog for a cloud draft; `shared` holds the ids that have a live link. */
+    /** Opens the Share choice (review link or edit together) for a cloud draft; `shared` holds the ids that have a live link. */
     onShare?: (d: MdDocument) => void;
     /** Opens the dialog that publishes a cloud draft to GitHub (only where the server can). */
     onPublish?: (d: MdDocument) => void;
@@ -203,8 +203,7 @@ export function Library({
     sharedPrivately?: ReadonlySet<string>;
     /** Present when this server hosts images: moves a draft's local images to hosting. */
     onHostImages?: (d: MdDocument) => void;
-    /** Opens the dialog for editing a cloud draft together; `live` holds those already shared that way. */
-    onCollab?: (d: MdDocument) => void;
+    /** The ids of cloud drafts already edited together. */
     live?: ReadonlySet<string>;
   };
   /** Drafts others invited this account to edit; `docs` does not include these. */
@@ -405,7 +404,7 @@ export function Library({
                   setMoving(d);
                 }}
               >
-                <FolderInput className="size-3.5" /> Move to folder…
+                <FolderInput className="size-3.5" /> Move to folder
               </DropdownMenuItem>
               {cloud &&
                 (cloud.ids.has(d.id) ? (
@@ -423,17 +422,12 @@ export function Library({
                 ))}
               {cloud?.onShare && cloud.ids.has(d.id) && (
                 <DropdownMenuItem onSelect={() => cloud.onShare?.(d)}>
-                  <Share2 className="size-3.5" /> Share…
-                </DropdownMenuItem>
-              )}
-              {cloud?.onCollab && cloud.ids.has(d.id) && (
-                <DropdownMenuItem onSelect={() => cloud.onCollab?.(d)}>
-                  <Users className="size-3.5" /> Edit together…
+                  <Share2 className="size-3.5" /> Share
                 </DropdownMenuItem>
               )}
               {cloud?.onPublish && cloud.ids.has(d.id) && (
                 <DropdownMenuItem onSelect={() => cloud.onPublish?.(d)}>
-                  <Github className="size-3.5" /> Publish to GitHub…
+                  <Github className="size-3.5" /> Publish
                 </DropdownMenuItem>
               )}
               {cloud?.onHostImages && cloud.ids.has(d.id) && Object.keys(d.images).length > 0 && (

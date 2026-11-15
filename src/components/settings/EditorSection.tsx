@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { PROFILES, type Profile } from "@/lib/markdown/profiles";
 import { DEFAULT_CONFIG } from "@/lib/checker/config";
@@ -9,6 +16,7 @@ import { useThemeChoice } from "@/lib/ui/useThemeChoice";
 import { loadPrefs, savePrefs } from "@/lib/settings/prefs";
 import { RulesDialog } from "@/components/studio/RulesDialog";
 import { ShortcutsDialog } from "@/components/studio/ShortcutsDialog";
+import { Card, CardHeading } from "@/components/site/AppShell";
 import { SettingsRow } from "./SettingsRow";
 
 const THEMES: { id: Theme; label: string }[] = [
@@ -41,61 +49,71 @@ export function EditorSection() {
 
   return (
     <section aria-label="Editor">
-      <SettingsRow title="Theme" description="Follows your system unless you pick one.">
-        <div role="group" aria-label="Theme" className="flex gap-1">
-          {THEMES.map((t) => (
-            <Button
-              key={t.id}
-              size="sm"
-              variant={theme === t.id ? "secondary" : "ghost"}
-              aria-pressed={theme === t.id}
-              onClick={() => setTheme(t.id)}
-            >
-              {t.label}
-            </Button>
-          ))}
-        </div>
-      </SettingsRow>
-      <SettingsRow
-        title="Target platform"
-        description={PROFILES.find((p) => p.id === prefs.profile)?.hint}
-      >
-        <select
-          aria-label="Target platform"
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-          value={prefs.profile}
-          onChange={(e) => change({ profile: e.target.value as Profile })}
+      <Card>
+        <SettingsRow title="Theme" description="Follows your system unless you pick one.">
+          <div
+            role="group"
+            aria-label="Theme"
+            className="flex gap-0.5 rounded-md border border-border bg-background p-0.5"
+          >
+            {THEMES.map((t) => (
+              <Button
+                key={t.id}
+                size="sm"
+                className="h-9 sm:h-7"
+                variant={theme === t.id ? "secondary" : "ghost"}
+                aria-pressed={theme === t.id}
+                onClick={() => setTheme(t.id)}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
+        </SettingsRow>
+        <SettingsRow
+          title="Target platform"
+          description={PROFILES.find((p) => p.id === prefs.profile)?.hint}
         >
-          {PROFILES.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </SettingsRow>
-      <SettingsRow
-        title="Normalize on export"
-        description="Consistent bullets, fences and emphasis in exported Markdown. Your draft is not changed."
-      >
-        <Switch
-          aria-label="Normalize on export"
-          checked={prefs.normalize}
-          onCheckedChange={(on) => change({ normalize: on })}
-        />
-      </SettingsRow>
-      <SettingsRow
-        title="Writing checks"
-        description="Turn built-in checks on or off, set publication standards and add your own rules."
-      >
-        <Button variant="outline" size="sm" onClick={() => setRules(true)}>
-          Edit rules…
-        </Button>
-      </SettingsRow>
-      <SettingsRow title="Keyboard shortcuts">
-        <Button ref={back} variant="outline" size="sm" onClick={() => setKeys(true)}>
-          Show shortcuts
-        </Button>
-      </SettingsRow>
+          <Select value={prefs.profile} onValueChange={(v) => change({ profile: v as Profile })}>
+            <SelectTrigger aria-label="Target platform" className="w-52 bg-transparent">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PROFILES.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingsRow>
+        <SettingsRow
+          title="Normalize on export"
+          description="Consistent bullets, fences and emphasis in exported Markdown. Your draft is not changed."
+        >
+          <Switch
+            aria-label="Normalize on export"
+            checked={prefs.normalize}
+            onCheckedChange={(on) => change({ normalize: on })}
+          />
+        </SettingsRow>
+      </Card>
+      <CardHeading>Writing checks</CardHeading>
+      <Card>
+        <SettingsRow
+          title="Built-in and your own rules"
+          description="Turn built-in checks on or off, set publication standards and add your own rules."
+        >
+          <Button variant="outline" size="sm" onClick={() => setRules(true)}>
+            Edit rules
+          </Button>
+        </SettingsRow>
+        <SettingsRow title="Keyboard shortcuts">
+          <Button ref={back} variant="outline" size="sm" onClick={() => setKeys(true)}>
+            Show shortcuts
+          </Button>
+        </SettingsRow>
+      </Card>
       <RulesDialog
         open={rules}
         onOpenChange={setRules}

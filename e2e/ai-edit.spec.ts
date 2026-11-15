@@ -91,14 +91,14 @@ test("discarding leaves the draft alone, and the connection is remembered for ne
   await selectAll(page);
 
   await page.getByRole("button", { name: "AI actions", exact: true }).click();
-  await page.getByRole("menuitem", { name: "AI integrations…" }).click();
+  await page.getByRole("menuitem", { name: "AI integrations" }).click();
   await addOllama(page);
   await expect(page.getByText("Ready")).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
   await selectAll(page);
 
   await page.getByRole("button", { name: "AI actions", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Translate…" }).click();
+  await page.getByRole("menuitem", { name: "Translate" }).click();
   await page.getByLabel("Translate into").fill("French");
   await page.getByRole("button", { name: "Run", exact: true }).click();
   await expect(page.getByLabel("Line differences")).toContainText("Bonjour.");
@@ -107,7 +107,7 @@ test("discarding leaves the draft alone, and the connection is remembered for ne
 
   await page.reload();
   await page.getByRole("button", { name: "AI actions", exact: true }).click();
-  await page.getByRole("menuitem", { name: "AI integrations…" }).click();
+  await page.getByRole("menuitem", { name: "AI integrations" }).click();
   await expect(page.getByText("Ollama (this computer)").first()).toBeVisible();
 });
 
@@ -166,7 +166,7 @@ test("choosing an action sends nothing until the writer presses Run", async ({ p
   await page.keyboard.insertText("A long sentence.");
   await selectAll(page);
   await page.getByRole("button", { name: "AI actions", exact: true }).click();
-  await page.getByRole("menuitem", { name: "AI integrations…" }).click();
+  await page.getByRole("menuitem", { name: "AI integrations" }).click();
   await addOllama(page);
   await page.getByRole("button", { name: "Close" }).click();
   await selectAll(page);
@@ -188,6 +188,7 @@ test("a flagged check can be fixed with AI, reviewed and applied", async ({ page
   await startDraft(page);
   await selectAll(page);
   await page.keyboard.insertText("Hello <b>world</b>");
+  await page.getByRole("button", { name: "Checks", exact: true }).click();
   await page.getByRole("button", { name: "Fix with AI" }).first().click();
   await page.getByRole("button", { name: "Set up an integration" }).click();
   await addOllama(page);
@@ -206,6 +207,7 @@ test("a missing alt text offers to suggest one", async ({ page }) => {
   await startDraft(page);
   await selectAll(page);
   await page.keyboard.insertText("![](sunrise.png)");
+  await page.getByRole("button", { name: "Checks", exact: true }).click();
   await page.getByRole("button", { name: "Suggest alt text" }).click();
   await page.getByRole("button", { name: "Set up an integration" }).click();
   await addOllama(page);

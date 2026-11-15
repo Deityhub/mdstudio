@@ -20,6 +20,7 @@ import {
   updateDisplayName,
 } from "@/lib/account/client";
 import { accountStore, useAccount } from "@/lib/account/store";
+import { Card, CardHeading } from "@/components/site/AppShell";
 import { SettingsRow } from "./SettingsRow";
 
 /** Who is signed in, and what they can change about themselves (each change in its own dialog). */
@@ -29,52 +30,54 @@ export function AccountSection({ user }: { user: AccountUser }) {
   const hasPassword = user.hasPassword !== false;
   return (
     <section aria-label="Account">
-      <div className="flex items-center gap-3 border-b border-border pb-4">
-        <Avatar src={user.avatarUrl} label={label} />
+      <Card className="flex items-center gap-3 px-4 py-4 sm:px-5">
+        <Avatar src={user.avatarUrl} label={label} className="size-10 text-base" />
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{label}</p>
-          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          <p className="truncate text-base font-semibold">{label}</p>
+          <p className="truncate text-[13px] text-muted-foreground">{user.email}</p>
         </div>
-      </div>
-      <SettingsRow
-        title="Display name"
-        description={`Shown to people you edit with and in comments. ${
-          user.displayName ? user.displayName : "Not set: your email address is shown."
-        }`}
-      >
-        <Button variant="outline" size="sm" onClick={() => setEditing("name")}>
-          Edit
-        </Button>
-      </SettingsRow>
-      <SettingsRow
-        title="Email"
-        description={
-          hasPassword
-            ? `${user.email}. ${user.emailVerified ? "Confirmed." : "Not confirmed yet."}`
-            : `${user.email}. Set a password first to change it.`
-        }
-      >
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!hasPassword}
-          onClick={() => setEditing("email")}
+      </Card>
+      <Card>
+        <SettingsRow
+          title="Display name"
+          description={`Shown to people you edit with and in comments. ${
+            user.displayName ? user.displayName : "Not set: your email address is shown."
+          }`}
         >
-          Edit
-        </Button>
-      </SettingsRow>
-      <SettingsRow
-        title="Password"
-        description={
-          hasPassword
-            ? "Changing it signs your other devices out."
-            : "You sign in with GitHub or Google. A password lets you sign in with your email too."
-        }
-      >
-        <Button variant="outline" size="sm" onClick={() => setEditing("password")}>
-          {hasPassword ? "Edit" : "Set password"}
-        </Button>
-      </SettingsRow>
+          <Button variant="outline" size="sm" onClick={() => setEditing("name")}>
+            Edit
+          </Button>
+        </SettingsRow>
+        <SettingsRow
+          title="Email"
+          description={
+            hasPassword
+              ? `${user.email}. ${user.emailVerified ? "Confirmed." : "Not confirmed yet."}`
+              : `${user.email}. Set a password first to change it.`
+          }
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasPassword}
+            onClick={() => setEditing("email")}
+          >
+            Edit
+          </Button>
+        </SettingsRow>
+        <SettingsRow
+          title="Password"
+          description={
+            hasPassword
+              ? "Changing it signs your other devices out."
+              : "You sign in with GitHub or Google. A password lets you sign in with your email too."
+          }
+        >
+          <Button variant="outline" size="sm" onClick={() => setEditing("password")}>
+            {hasPassword ? "Edit" : "Set password"}
+          </Button>
+        </SettingsRow>
+      </Card>
       <SignInMethods user={user} />
       {/* mounted only while open, so each opening starts empty or from what is saved */}
       {editing === "name" && (
@@ -103,44 +106,48 @@ function SignInMethods({ user }: { user: AccountUser }) {
   if (!shown.length) return null;
   return (
     <>
-      {shown.map((p) => {
-        const isLinked = linked.includes(p.id);
-        return (
-          <SettingsRow
-            key={p.id}
-            title={`Sign in with ${p.name}`}
-            description={
-              isLinked
-                ? lastMethod
-                  ? "Linked. It is your only way to sign in: set a password to be able to unlink it."
-                  : "Linked."
-                : `Link a ${p.name} account to sign in with it too. It can have a different email address.`
-            }
-          >
-            {isLinked ? (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy || lastMethod}
-                onClick={async () => {
-                  setBusy(true);
-                  const r = await unlinkProvider(p.id);
-                  setBusy(false);
-                  if ("error" in r) return void toast.error(r.error);
-                  await accountStore.refresh();
-                  toast.success(`${p.name} unlinked`);
-                }}
-              >
-                Unlink
-              </Button>
-            ) : (
-              <Button asChild variant="outline" size="sm">
-                <a href={`/api/auth/${p.id}?link=1`}>Link</a>
-              </Button>
-            )}
-          </SettingsRow>
-        );
-      })}
+      <CardHeading>Sign-in methods</CardHeading>
+      <Card>
+        {shown.map((p) => {
+          const isLinked = linked.includes(p.id);
+          return (
+            <SettingsRow
+              key={p.id}
+              title={`Sign in with ${p.name}`}
+              description={
+                isLinked
+                  ? lastMethod
+                    ? "Linked. It is your only way to sign in: set a password to be able to unlink it."
+                    : "Linked."
+                  : `Link a ${p.name} account to sign in with it too. It can have a different email address.`
+              }
+            >
+              {isLinked ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={busy}
+                  disabled={lastMethod}
+                  onClick={async () => {
+                    setBusy(true);
+                    const r = await unlinkProvider(p.id);
+                    setBusy(false);
+                    if ("error" in r) return void toast.error(r.error);
+                    await accountStore.refresh();
+                    toast.success(`${p.name} unlinked`);
+                  }}
+                >
+                  Unlink
+                </Button>
+              ) : (
+                <Button asChild variant="outline" size="sm">
+                  <a href={`/api/auth/${p.id}?link=1`}>Link</a>
+                </Button>
+              )}
+            </SettingsRow>
+          );
+        })}
+      </Card>
     </>
   );
 }
@@ -183,7 +190,7 @@ function FormDialog({
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={busy || disabled}>
+            <Button type="submit" loading={busy} disabled={disabled}>
               {submit}
             </Button>
           </DialogFooter>

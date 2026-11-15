@@ -122,7 +122,7 @@ test("in the app: nothing is sent at sign-up, the first try at the cloud sends t
 
   // the menu route asks the same thing, without sending a second email
   await page.getByRole("button", { name: `Account: ${email}` }).click();
-  await page.getByRole("menuitem", { name: "Choose drafts for the cloud…" }).click();
+  await page.getByRole("menuitem", { name: "Choose drafts for the cloud" }).click();
   await expect(page.getByRole("dialog", { name: "Confirm your email" })).toBeVisible();
   await page.waitForTimeout(500);
   expect(sentTo(email)).toBe(1);
@@ -131,7 +131,7 @@ test("in the app: nothing is sent at sign-up, the first try at the cloud sends t
   await page.goto(link.toString());
   await expect(page.getByText("Email confirmed")).toBeVisible();
   await page.getByRole("button", { name: `Account: ${email}` }).click();
-  await page.getByRole("menuitem", { name: "Choose drafts for the cloud…" }).click();
+  await page.getByRole("menuitem", { name: "Choose drafts for the cloud" }).click();
   await expect(
     page.getByRole("dialog", { name: "Choose what to store in your cloud" }),
   ).toBeVisible();

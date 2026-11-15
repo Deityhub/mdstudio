@@ -53,7 +53,7 @@ test("an image added to a cloud draft is hosted and linked by address", async ({
   await expect(editor(page)).not.toContainText("./images/");
 
   await page.getByRole("button", { name: `Account: ${address}` }).click();
-  await page.getByRole("menuitem", { name: "Manage images…" }).click();
+  await page.getByRole("menuitem", { name: "Manage images" }).click();
   const dialog = page.getByRole("dialog", { name: "Your hosted images" });
   await expect(dialog.getByTestId("image-usage")).toContainText("1 of 10 images");
   await expect(dialog.getByText("photo.png")).toBeVisible();

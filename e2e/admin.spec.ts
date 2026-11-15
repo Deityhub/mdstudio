@@ -32,7 +32,7 @@ test("an admin looks after an account: suspend, limits, sign-in and the audit lo
   await expect(page.getByText("Accounts", { exact: true }).first()).toBeVisible();
   await page.getByRole("tab", { name: "Accounts" }).click();
   await page.getByLabel("Search accounts").fill(writerAddress);
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("button", { name: "Search", exact: true }).click();
   await page.getByRole("button", { name: writerAddress }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { name: writerAddress })).toBeVisible();

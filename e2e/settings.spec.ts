@@ -12,10 +12,13 @@ test("signed out, the settings page offers the editor and AI sections and keeps 
   await expect(page.getByRole("tab", { name: "AI" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Account" })).toHaveCount(0);
 
-  await page.getByLabel("Target platform").selectOption("commonmark");
+  await page.getByRole("combobox", { name: "Target platform" }).click();
+  await page.getByRole("option", { name: "Strict CommonMark" }).click();
   await page.getByRole("switch", { name: "Normalize on export" }).click();
   await page.reload();
-  await expect(page.getByLabel("Target platform")).toHaveValue("commonmark");
+  await expect(page.getByRole("combobox", { name: "Target platform" })).toContainText(
+    "Strict CommonMark",
+  );
   await expect(page.getByRole("switch", { name: "Normalize on export" })).toBeChecked();
 
   // a signed-in section is not reachable by address either
@@ -38,7 +41,7 @@ test("the account menu opens settings, which show the account and its connection
 
   await page.getByRole("tab", { name: "Connections" }).click();
   await expect(page).toHaveURL(/tab=connections/);
-  await page.getByRole("button", { name: "Choose drafts…" }).click();
+  await page.getByRole("button", { name: "Choose drafts" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
@@ -117,9 +120,12 @@ test("the account tab changes the name and the password, and signs other devices
   await otherContext.close();
 });
 
-test("the settings content sits in the middle of the page", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+test("the settings menu and content sit together in the middle of the page", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 800 });
   await page.goto("/settings");
-  const box = (await page.getByRole("region", { name: "Editor" }).boundingBox())!;
-  expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThan(8);
+  const menu = (await page.getByRole("tablist", { name: "Settings sections" }).boundingBox())!;
+  const content = (await page.getByRole("region", { name: "Editor" }).boundingBox())!;
+  // the menu on the left, the content beside it, and the pair centred
+  expect(content.x).toBeGreaterThan(menu.x + menu.width);
+  expect(Math.abs(menu.x - (1440 - (content.x + content.width)))).toBeLessThan(8);
 });
