@@ -129,3 +129,34 @@ test("the settings menu and content sit together in the middle of the page", asy
   expect(content.x).toBeGreaterThan(menu.x + menu.width);
   expect(Math.abs(menu.x - (1440 - (content.x + content.width)))).toBeLessThan(8);
 });
+
+test("the AI tab lists the integrations, adds one from a dialog, and updates or removes it", async ({
+  page,
+}) => {
+  await page.goto("/settings?tab=ai");
+  const section = page.getByRole("region", { name: "AI" });
+  await expect(section.getByText("No integrations yet")).toBeVisible();
+  await expect(section.getByRole("button", { name: "Manage" })).toHaveCount(0);
+
+  // add one: the dialog opens on a blank form and closes once it is saved
+  await section.getByRole("button", { name: "Add integration" }).click();
+  const dialog = page.getByRole("dialog", { name: "AI integrations" });
+  await dialog.getByLabel("AI provider").click();
+  await page.getByRole("option", { name: /Ollama/ }).click();
+  await dialog.getByLabel("Model IDs").fill("llama3.2");
+  await dialog.getByRole("button", { name: "Add integration" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(section.getByText("No integrations yet")).toBeHidden();
+  await expect(section.getByRole("listitem")).toHaveCount(1);
+  await expect(section.getByRole("listitem")).toContainText("Ollama");
+
+  // update it: straight to its form, and back to the page after saving
+  await section.getByRole("button", { name: "Update Ollama" }).click();
+  await dialog.getByLabel("Name (optional)").fill("My local");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(section.getByRole("listitem")).toContainText("My local");
+
+  await section.getByRole("button", { name: "Remove My local" }).click();
+  await expect(section.getByText("No integrations yet")).toBeVisible();
+});

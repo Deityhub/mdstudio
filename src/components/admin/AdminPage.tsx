@@ -1,3 +1,4 @@
+import { PageLoader } from "@/components/PageLoader";
 import { useEffect } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { AppShell, PageTitle } from "@/components/site/AppShell";
@@ -41,7 +42,7 @@ export function AdminPage({
   const account = useAccount();
   // the dashboard is the one page that asks who is signed in itself
   useEffect(() => void accountStore.refresh(), []);
-  if (!account.loaded) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+  if (!account.loaded) return <PageLoader />;
   if (!account.user?.isAdmin) return <NotFoundPage />;
   return (
     <AppShell

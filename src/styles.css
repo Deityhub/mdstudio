@@ -605,3 +605,37 @@ mark.share-hl[data-active] {
   color: var(--muted-foreground);
   font-size: 0.85em;
 }
+
+/* The page loader: the logo drawn in four beats, repeating. Still when motion is reduced. */
+@keyframes page-loader-draw {
+  0% { stroke-dashoffset: 1; }
+  35%, 85% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -1; }
+}
+@keyframes page-loader-page {
+  0%, 20% { opacity: 0; transform: translateX(-8px); }
+  45%, 85% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(0); }
+}
+.page-loader-source,
+.page-loader-lines,
+.page-loader-prompt {
+  stroke-dasharray: 1;
+  animation: page-loader-draw 2.2s ease-in-out infinite;
+}
+.page-loader-prompt { animation-delay: 0.15s; }
+.page-loader-lines { animation-delay: 0.6s; }
+.page-loader-page {
+  animation: page-loader-page 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-loader-source,
+  .page-loader-lines,
+  .page-loader-prompt,
+  .page-loader-page {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transform: none;
+  }
+}
