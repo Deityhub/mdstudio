@@ -480,8 +480,9 @@
 .cm-editor.cm-focused {
   outline: none;
 }
-.cm-scroller {
-  font-family: var(--font-mono);
+/* !important: CodeMirror's base theme sets "monospace" on the scroller with a selector that wins otherwise. */
+.cm-editor .cm-scroller {
+  font-family: var(--font-mono) !important;
   line-height: 1.7;
 }
 .cm-content {

@@ -310,10 +310,11 @@ function IntegrationForm({
         <Button
           variant="outline"
           className="mr-auto"
-          disabled={!valid || testing}
+          loading={testing}
+          disabled={!valid}
           onClick={() => void runTest()}
         >
-          {testing && <Loader2 className="size-4 animate-spin" />} Test connection
+          Test connection
         </Button>
         <Button variant="ghost" onClick={onCancel}>
           Cancel

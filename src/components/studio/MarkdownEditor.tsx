@@ -133,6 +133,7 @@ const MarkdownEditor = forwardRef<EditorHandle, Props>(function MarkdownEditor(p
         search({ top: true }),
         highlightSelectionMatches(),
         EditorView.lineWrapping,
+        EditorView.contentAttributes.of({ "aria-label": "Markdown source" }),
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         syntaxHighlighting(classHighlighter),
         keymap.of([

@@ -128,8 +128,17 @@ test("readers sign in to comment on selected words, reply, and take a comment ba
   // the owner, who is also a reader here, sees both and the author names are not addresses
   await expect(page.locator("body")).not.toContainText(reviewer.email);
 
+  // a slow server: the comment says it is being deleted until it is gone
+  await page.route("**/api/s/*/comments/*", async (route) => {
+    if (route.request().method() === "DELETE") await new Promise((r) => setTimeout(r, 1200));
+    await route.continue();
+  });
   await page.getByRole("button", { name: "Delete" }).first().click();
   await page.getByRole("button", { name: "Confirm delete" }).click();
+  const deleting = page.getByRole("button", { name: "Deleting" });
+  await expect(deleting).toBeDisabled();
+  await expect(deleting).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator("li[aria-busy=true]")).toContainText("Which Friday?");
   await expect(page.locator("p", { hasText: "Which Friday?" })).toHaveCount(0);
   await expect(page.locator("p", { hasText: "The 14th" })).toHaveCount(0); // the reply went with it
   await context.close();
@@ -195,5 +204,79 @@ test("a comment from an earlier copy is marked once the writer publishes an upda
   await signInOnPage(page, reviewer.email);
   await expect(page.getByText("Check this")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Earlier version")).toBeVisible();
+  await context.close();
+});
+
+test("the bar, the text and the footer share one width, and the text is centred without the comments", async ({
+  playwright,
+  browser,
+}) => {
+  const owner = await account(playwright, "layout-owner");
+  const { slug } = await shareDraft(owner, { comments: true });
+  const { context, page } = await reader(browser);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/s/${slug}`);
+  const widths = async () => ({
+    bar: (await page.getByRole("banner").locator("> div").boundingBox())!,
+    main: (await page.getByRole("main").boundingBox())!,
+    foot: (await page.getByRole("contentinfo").locator("> div").boundingBox())!,
+  });
+
+  // the comments are beside the text: the column is to its right, and the three widths agree
+  const aside = page.getByRole("complementary", { name: "Comments" });
+  await expect(aside).toBeVisible({ timeout: 20_000 });
+  // the page widens for the column a moment after it appears
+  await expect(async () => expect((await widths()).main.width).toBeGreaterThan(1100)).toPass();
+  const article = (await page.locator("article").boundingBox())!;
+  expect((await aside.boundingBox())!.x).toBeGreaterThan(article.x + article.width);
+  let w = await widths();
+  expect(Math.abs(w.bar.width - w.main.width)).toBeLessThan(2);
+  expect(Math.abs(w.foot.width - w.main.width)).toBeLessThan(2);
+
+  // hidden, the text is centred and the bar and the footer narrow to it
+  await page.getByRole("button", { name: "Hide comments" }).click();
+  await expect(aside).toBeHidden();
+  await expect(async () => {
+    w = await widths();
+    expect(w.main.width).toBeLessThan(1000);
+  }).toPass();
+  const centred = (await page.locator("article").boundingBox())!;
+  expect(Math.abs(centred.x + centred.width / 2 - 720)).toBeLessThan(8);
+  expect(Math.abs(w.bar.width - w.main.width)).toBeLessThan(2);
+  expect(Math.abs(w.foot.width - w.main.width)).toBeLessThan(2);
+
+  // and back
+  await page.getByRole("button", { name: "Show comments" }).click();
+  await expect(aside).toBeVisible();
+  await context.close();
+});
+
+test("a page with no comments yet is centred from the start, and makes room once there is one", async ({
+  playwright,
+  browser,
+}) => {
+  const owner = await account(playwright, "empty-owner");
+  const reviewer = await account(playwright, "empty-reviewer");
+  const { slug } = await shareDraft(owner, { comments: true });
+  const { context, page } = await reader(browser);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/s/${slug}`);
+  await page.getByRole("button", { name: "Sign in to read and write comments" }).click();
+  await signInOnPage(page, reviewer.email);
+  await expect(page.getByText("The writer is taking comments.")).toBeHidden({ timeout: 20_000 });
+
+  // signed in, with nothing written yet: the column is empty, so the text is centred and narrow
+  const main = async () => (await page.getByRole("main").boundingBox())!;
+  await expect(async () => expect((await main()).width).toBeLessThan(1000)).toPass();
+  const article = (await page.locator("article").boundingBox())!;
+  expect(Math.abs(article.x + article.width / 2 - 720)).toBeLessThan(8);
+  const bar = (await page.getByRole("banner").locator("> div").boundingBox())!;
+  expect(Math.abs(bar.width - (await main()).width)).toBeLessThan(2);
+
+  // writing the first comment puts the column beside the text, and the page widens for it
+  await selectWords(page, "Friday");
+  await page.getByRole("button", { name: "Comment on selection" }).click();
+  await expect(page.getByLabel("Add a comment")).toBeVisible();
+  await expect(async () => expect((await main()).width).toBeGreaterThan(1100)).toPass();
   await context.close();
 });

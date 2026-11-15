@@ -52,7 +52,8 @@ export function UserDialog({
   const [suspended, setSuspended] = useState(false);
   const [verified, setVerified] = useState(false);
   const [limits, setLimits] = useState<Record<string, LimitValue>>({});
-  const [saving, setSaving] = useState(false);
+  // which of the two Save buttons is working, so only that one shows it
+  const [saving, setSaving] = useState<"account" | "limits" | null>(null);
 
   const show = useCallback((d: UserDetail) => {
     setDetail(d);
@@ -100,9 +101,13 @@ export function UserDialog({
     : {};
   const limitChange = limitDiff(originalLimits, limits);
 
-  const save = async (change: Record<string, unknown>, done: string) => {
+  const save = async (
+    what: "account" | "limits",
+    change: Record<string, unknown>,
+    done: string,
+  ) => {
     if (!userId) return;
-    setSaving(true);
+    setSaving(what);
     try {
       show(await adminApi.updateUser(userId, change));
       toast.success(done);
@@ -110,7 +115,7 @@ export function UserDialog({
     } catch (e) {
       toast.error(explain(e));
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   };
 
@@ -198,14 +203,15 @@ export function UserDialog({
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
-                  disabled={saving || !Object.keys(accountChange).length}
-                  onClick={() => void save(accountChange, "Account updated")}
+                  loading={saving === "account"}
+                  disabled={saving !== null || !Object.keys(accountChange).length}
+                  onClick={() => void save("account", accountChange, "Account updated")}
                 >
                   Save account
                 </Button>
                 <ConfirmButton
                   onConfirm={() =>
-                    void adminApi
+                    adminApi
                       .signOut(a.id)
                       .then((r) => {
                         toast.success(
@@ -221,7 +227,7 @@ export function UserDialog({
                 <ConfirmButton
                   confirm="Delete for good?"
                   onConfirm={() =>
-                    void adminApi
+                    adminApi
                       .deleteUser(a.id)
                       .then(() => {
                         toast.success("Account deleted");
@@ -266,12 +272,13 @@ export function UserDialog({
                 values={limits}
                 inherited={detail.limits}
                 onChange={setLimits}
-                disabled={saving}
+                disabled={saving !== null}
               />
               <Button
                 size="sm"
-                disabled={saving || !Object.keys(limitChange).length}
-                onClick={() => void save({ limits: limitChange }, "Limits updated")}
+                loading={saving === "limits"}
+                disabled={saving !== null || !Object.keys(limitChange).length}
+                onClick={() => void save("limits", { limits: limitChange }, "Limits updated")}
               >
                 Save limits
               </Button>
@@ -294,7 +301,7 @@ export function UserDialog({
                       label: d.title,
                       meta: `${bytes(d.bytes)} · edited ${when(d.updatedAt)}`,
                     }))}
-                    onRemove={(id) => void remove("drafts", id)}
+                    onRemove={(id) => remove("drafts", id)}
                   />
                   <ContentList
                     title="Share links"
@@ -304,7 +311,7 @@ export function UserDialog({
                       label: s.title || "Untitled",
                       meta: `/s/${s.slug} · ${s.access} · ${s.live ? `until ${when(s.expiresAt)}` : "expired"}`,
                     }))}
-                    onRemove={(id) => void remove("shares", id)}
+                    onRemove={(id) => remove("shares", id)}
                   />
                   <ContentList
                     title="Images"
@@ -314,7 +321,7 @@ export function UserDialog({
                       label: i.fileName,
                       meta: `${bytes(i.bytes)} · ${when(i.createdAt)}`,
                     }))}
-                    onRemove={(id) => void remove("images", id)}
+                    onRemove={(id) => remove("images", id)}
                   />
                 </>
               )}
@@ -335,13 +342,13 @@ function ContentList({
   title: string;
   empty: string;
   rows: { id: string; label: string; meta: string }[];
-  onRemove: (id: string) => void;
+  onRemove: (id: string) => unknown;
 }) {
   return (
     <div className="space-y-1">
       <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</h4>
       {rows.length ? (
-        <ul className="divide-y divide-border rounded-md border border-border">
+        <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-muted">
           {rows.map((r) => (
             <li key={r.id} className="flex items-center gap-2 px-3 py-2">
               <div className="min-w-0 flex-1">

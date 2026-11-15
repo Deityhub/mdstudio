@@ -71,18 +71,19 @@ test("runs an editor command and goes to a setting", async ({ page }) => {
   await expect(page).toHaveURL(/\/settings\?tab=editor/);
 });
 
-test("works on other pages, and on the home page by shortcut only", async ({ page }) => {
+test("works on the public pages by shortcut, which have no search button", async ({ page }) => {
   await page.goto("/guides");
-  // a server-rendered page: the button works once the page has hydrated
+  // a server-rendered page: the shortcut works once the page has hydrated
+  await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveCount(0);
   await expect(async () => {
-    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await page.keyboard.press("ControlOrMeta+k");
     await expect(palette(page)).toBeVisible({ timeout: 1000 });
   }).toPass();
   await search(page, "privacy");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/privacy/);
 
-  // the home page has the shortcut but no button
+  // the home page too
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveCount(0);
   await expect(async () => {

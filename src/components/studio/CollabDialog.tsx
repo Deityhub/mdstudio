@@ -52,7 +52,9 @@ export function CollabDialog({
   beforeStop?: () => Promise<unknown>;
 }) {
   const [state, setState] = useState<CollabState | null>(null);
-  const [busy, setBusy] = useState<"start" | "stop" | "invite" | null>(null);
+  const [busy, setBusy] = useState<"start" | "stop" | "invite" | "remove" | null>(null);
+  // the person being removed, so only their button shows it
+  const [removing, setRemoving] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [copied, setCopied] = useState(false);
   const [problem, setProblem] = useState("");
@@ -126,11 +128,13 @@ export function CollabDialog({
       );
     });
   };
-  const uninvite = (person: Editor) =>
-    void run("invite", async () => {
+  const uninvite = (person: Editor) => {
+    setRemoving(person.id);
+    void run("remove", async () => {
       await collabApi.remove(draft.id, person.id);
       setState((s) => (s ? { ...s, editors: s.editors.filter((p) => p.id !== person.id) } : s));
-    });
+    }).finally(() => setRemoving(null));
+  };
 
   const copy = async () => {
     try {
@@ -235,7 +239,8 @@ export function CollabDialog({
                       size="icon"
                       className="size-7 shrink-0"
                       aria-label={`Remove ${p.email}`}
-                      pending={busy !== null}
+                      loading={removing === p.id}
+                      pending={busy !== null && removing !== p.id}
                       onClick={() => uninvite(p)}
                     >
                       <X className="size-4" />

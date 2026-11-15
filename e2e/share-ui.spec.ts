@@ -60,14 +60,19 @@ test("the library marks shared drafts, and the header button belongs to cloud dr
   await replaceText(page, "# Local only\n\nnot in the cloud");
   await expect(page.getByRole("button", { name: "Share", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Options for Local only" }).click();
-  await expect(page.getByRole("menuitem", { name: "Share…" })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Share", exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "New draft" }).click();
   await cloudDraft(page, "In the cloud");
   await expect(page.getByLabel("Shared publicly")).toHaveCount(0);
+  // the one Share button asks how: for review here, or to edit together
   await page.getByRole("button", { name: "Share", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Share" });
+  const chooser = page.getByRole("dialog", { name: "Share this draft" });
+  await expect(chooser.getByRole("button", { name: /Edit together/ })).toBeVisible();
+  await chooser.getByRole("button", { name: /Share for review/ }).click();
+  await expect(chooser).toBeHidden();
+  const dialog = page.getByRole("dialog", { name: "Share", exact: true });
   await dialog.getByRole("button", { name: "Publish" }).click();
   await expect(dialog.getByRole("textbox", { name: "Public link" })).toBeVisible();
   await dialog.getByRole("button", { name: "Close" }).first().click();
@@ -91,4 +96,15 @@ test("taking a draft out of the cloud also takes its public link down", async ({
   const { page: reader, close } = await stranger(browser);
   await expect.poll(async () => (await reader.goto(url))?.status(), { timeout: 20_000 }).toBe(404);
   await close();
+});
+
+test("the Share button also leads to editing together", async ({ page }) => {
+  await signIn(page);
+  await cloudDraft(page, "Two at once");
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Share this draft" })
+    .getByRole("button", { name: /Edit together/ })
+    .click();
+  await expect(page.getByRole("dialog", { name: "Edit together" })).toBeVisible();
 });

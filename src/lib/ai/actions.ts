@@ -24,11 +24,11 @@ export const AI_ACTIONS = [
   { id: "summarize", label: "Summarize", instruction: "Summarize it in a few sentences." },
   {
     id: "translate",
-    label: "Translate…",
+    label: "Translate",
     instruction: "Translate it into {input}.",
     needs: "language",
   },
-  { id: "custom", label: "Custom instruction…", instruction: "{input}", needs: "instruction" },
+  { id: "custom", label: "Custom instruction", instruction: "{input}", needs: "instruction" },
 ] as const;
 
 export type AiActionId = (typeof AI_ACTIONS)[number]["id"];

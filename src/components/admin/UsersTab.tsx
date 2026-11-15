@@ -23,9 +23,14 @@ export function UsersTab({
   );
   const [failed, setFailed] = useState(false);
 
+  const [busy, setBusy] = useState(false);
   const load = useCallback(() => {
     setFailed(false);
-    adminApi.users(term, page).then(setData, () => setFailed(true));
+    setBusy(true);
+    adminApi
+      .users(term, page)
+      .then(setData, () => setFailed(true))
+      .finally(() => setBusy(false));
   }, [term, page]);
   useEffect(load, [load]);
 
@@ -46,14 +51,14 @@ export function UsersTab({
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" loading={busy}>
           <Search className="size-4" /> Search
         </Button>
       </form>
       {failed && <p className="pt-3 text-sm text-destructive">Couldn't load accounts.</p>}
       {data && (
         <>
-          <div className="mt-3 overflow-x-auto rounded-md border border-border">
+          <div className="mt-3 overflow-x-auto rounded-md border border-border bg-muted">
             <table className="w-full min-w-160 text-left text-sm">
               <thead className="bg-muted/50 text-xs text-muted-foreground">
                 <tr>

@@ -6,6 +6,3 @@ export function clampLibraryWidth(value: unknown): number {
   if (typeof n !== "number" || !Number.isFinite(n)) return LIBRARY_WIDTH.default;
   return Math.min(LIBRARY_WIDTH.max, Math.max(LIBRARY_WIDTH.min, Math.round(n)));
 }
-
-/** The Checks panel starts open from this viewport width (Tailwind 2xl) and closed below it. */
-export const CHECKS_OPEN_MIN_WIDTH = 1536;

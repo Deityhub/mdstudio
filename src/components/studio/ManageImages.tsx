@@ -25,6 +25,7 @@ export function ManageImages({
   const [data, setData] = useState<{ assets: HostedImage[]; usage: ImageUsage } | null>(null);
   const [failed, setFailed] = useState(false);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const next = await listImages();
@@ -90,11 +91,17 @@ export function ManageImages({
                       <Button
                         size="sm"
                         variant="destructive"
+                        loading={deleting === a.id}
                         onClick={async () => {
-                          setConfirming(null);
-                          if (await deleteImage(a.id)) toast.success("Image deleted");
-                          else toast.error("Couldn't delete the image");
-                          await load();
+                          setDeleting(a.id);
+                          try {
+                            if (await deleteImage(a.id)) toast.success("Image deleted");
+                            else toast.error("Couldn't delete the image");
+                            await load();
+                          } finally {
+                            setDeleting(null);
+                            setConfirming(null);
+                          }
                         }}
                       >
                         Delete

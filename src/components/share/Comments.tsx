@@ -101,12 +101,26 @@ function One({
   className = "",
 }: {
   comment: ShareComment;
-  onDelete: (c: ShareComment) => void;
+  onDelete: (c: ShareComment) => unknown;
   className?: string;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const remove = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(comment);
+    } finally {
+      setDeleting(false);
+      setConfirming(false);
+    }
+  };
   return (
-    <li className={`grid gap-1 text-sm m-0! ${className}`}>
+    // while it is being deleted the comment is dimmed, and its button shows the work
+    <li
+      aria-busy={deleting || undefined}
+      className={`grid gap-1 text-sm m-0! transition-opacity ${deleting ? "opacity-60" : ""} ${className}`}
+    >
       <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{comment.author}</span>
         <span>{when(comment.createdAt)}</span>
@@ -119,20 +133,24 @@ function One({
         {comment.mine &&
           (confirming ? (
             <>
-              <button
+              <Button
                 type="button"
-                className="text-destructive underline-offset-4 hover:underline"
-                onClick={() => onDelete(comment)}
+                variant="ghost"
+                className="h-6 px-1.5 text-xs text-destructive hover:text-destructive"
+                loading={deleting}
+                onClick={() => void remove()}
               >
-                Confirm delete
-              </button>
-              <button
+                {deleting ? "Deleting" : "Confirm delete"}
+              </Button>
+              <Button
                 type="button"
-                className="underline-offset-4 hover:underline"
+                variant="ghost"
+                className="h-6 px-1.5 text-xs"
+                pending={deleting}
                 onClick={() => setConfirming(false)}
               >
                 Keep
-              </button>
+              </Button>
             </>
           ) : (
             <button
@@ -159,7 +177,7 @@ function ThreadView({
   thread: Thread;
   canReply: boolean;
   onReply: (parent: ShareComment, body: string) => Promise<void>;
-  onDelete: (c: ShareComment) => void;
+  onDelete: (c: ShareComment) => unknown;
 }) {
   const [replying, setReplying] = useState(false);
   return (
@@ -245,6 +263,7 @@ export function ShareComments({
   body,
   enabled,
   onSignedIn,
+  onSideChange,
 }: {
   slug: string;
   /** The rendered text, so the highlights can be made again whenever it is drawn again. */
@@ -253,6 +272,8 @@ export function ShareComments({
   enabled: boolean;
   /** A private page reads for the signed-in reader, so it is loaded again after a sign-in. */
   onSignedIn: (user: AccountUser) => void;
+  /** Tells the page whether the comments are showing in a column beside the text (or not). */
+  onSideChange?: (shown: boolean) => void;
 }) {
   const account = useAccount();
   const ready = enabled && cloudReady(account);
@@ -341,6 +362,9 @@ export function ShareComments({
       out.push({ key: thread.comment.id, kind: "thread", line: Infinity, thread, loose: true });
     return out;
   }, [byLine, loose, draft, ready, changed]);
+  // the column only counts as there while something is in it: the page makes room for it then
+  const side = enabled && wide && open && items.length > 0;
+  useEffect(() => onSideChange?.(side), [side, onSideChange]);
 
   // the highlights: the words of each comment, and of the one being written
   useLayoutEffect(() => {
@@ -503,7 +527,7 @@ export function ShareComments({
       ref={(el) => void (el ? cards.current.set(item.key, el) : cards.current.delete(item.key))}
       style={wide ? { top: layout.tops.get(item.key) ?? 0 } : undefined}
       onClick={() => item.kind !== "notice" && show(item.key)}
-      className={`m-0! list-none! rounded-md border bg-card p-3 text-sm shadow-sm ${
+      className={`m-0! list-none! rounded-md border bg-muted p-3.5 text-sm ${
         wide ? "absolute inset-x-0" : ""
       } ${active === item.key ? "border-primary ring-1 ring-primary" : "border-border"}`}
     >
@@ -585,14 +609,17 @@ export function ShareComments({
     <>
       {open &&
         (wide ? (
-          <aside
-            ref={aside}
-            aria-label="Comments"
-            className="relative"
-            style={{ minHeight: layout.height }}
-          >
-            <ul className="m-0! list-none! p-0!">{items.map(card)}</ul>
-          </aside>
+          // nothing in it: no column, so the page keeps no room for one
+          side && (
+            <aside
+              ref={aside}
+              aria-label="Comments"
+              className="relative"
+              style={{ minHeight: layout.height }}
+            >
+              <ul className="m-0! list-none! p-0!">{items.map(card)}</ul>
+            </aside>
+          )
         ) : (
           <aside
             aria-label="Comments"

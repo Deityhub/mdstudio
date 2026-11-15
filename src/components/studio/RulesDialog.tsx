@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -46,18 +53,18 @@ function SeveritySelect({
   onChange: (s: Severity) => void;
 }) {
   return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={(e) => onChange(e.target.value as Severity)}
-      className="h-8 shrink-0 rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-    >
-      {SEVERITIES.map((s) => (
-        <option key={s} value={s}>
-          {SEVERITY_LABEL[s]}
-        </option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={(v) => onChange(v as Severity)}>
+      <SelectTrigger aria-label={label} className="h-8 w-28 shrink-0">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {SEVERITIES.map((s) => (
+          <SelectItem key={s} value={s}>
+            {SEVERITY_LABEL[s]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

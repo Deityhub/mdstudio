@@ -43,6 +43,10 @@ export async function cloudDraft(page: Page, title: string, body = "first versio
 }
 export const openShare = async (page: Page, title: string) => {
   await page.getByRole("button", { name: `Options for ${title}` }).click();
-  await page.getByRole("menuitem", { name: "Share…" }).click();
-  return page.getByRole("dialog", { name: "Share" });
+  await page.getByRole("menuitem", { name: "Share", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Share this draft" })
+    .getByRole("button", { name: /Share for review/ })
+    .click();
+  return page.getByRole("dialog", { name: "Share", exact: true });
 };

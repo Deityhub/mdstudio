@@ -90,3 +90,47 @@ test("the home page links into the guides", async ({ page }) => {
   await page.getByRole("link", { name: "Open the editor" }).last().click();
   await expect(page).toHaveURL(/\/editor/);
 });
+
+test("the contents list follows the reading, and is hidden only when there is no room", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto("/guides/markdown-portability");
+  const list = page.getByRole("navigation", { name: "On this page" });
+  const links = list.getByRole("link");
+  await expect(list).toBeVisible();
+  // the first section is the one being read at the top
+  await expect(links.first()).toHaveAttribute("aria-current", "location");
+  // scrolling to a later section moves the mark to it, and the list stays in view beside the text
+  const last = links.last();
+  const id = (await last.getAttribute("href"))!.slice(1);
+  await page.locator(`h2[id="${id}"]`).scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(last).toHaveAttribute("aria-current", "location");
+  await expect(links.first()).not.toHaveAttribute("aria-current", "location");
+  await expect(list).toBeInViewport();
+  // with no room beside the text it is hidden
+  await page.setViewportSize({ width: 900, height: 700 });
+  await expect(list).toBeHidden();
+});
+
+test("the public header has no search, theme or repository links", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto("/guides");
+  const bar = page.getByRole("banner");
+  await expect(bar.getByRole("button", { name: "Search" })).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: /^Theme:/ })).toHaveCount(0);
+  await expect(bar.getByRole("link", { name: /github|self-host/i })).toHaveCount(0);
+  await expect(bar.getByRole("link", { name: "Settings" })).toBeVisible();
+  const footer = page.getByRole("contentinfo");
+  await expect(footer.getByRole("link", { name: "Settings" })).toHaveCount(0);
+  await expect(footer).not.toContainText("Chizoba");
+});
+
+test("the text is centred when the contents list is hidden", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 700 });
+  await page.goto("/guides/markdown-portability");
+  await expect(page.getByRole("navigation", { name: "On this page" })).toBeHidden();
+  const box = (await page.locator("article").boundingBox())!;
+  expect(Math.abs(box.x + box.width / 2 - 450)).toBeLessThan(8);
+});

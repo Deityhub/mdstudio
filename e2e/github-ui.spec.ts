@@ -9,7 +9,7 @@ async function openPublish(page: Page) {
   await page.goto("/editor");
   // the cloud draft arrives with the first sync
   await page.getByRole("button", { name: "Options for Notes" }).click({ timeout: 20_000 });
-  await page.getByRole("menuitem", { name: "Publish to GitHub…" }).click();
+  await page.getByRole("menuitem", { name: "Publish", exact: true }).click();
   return page.getByRole("dialog", { name: "Publish to GitHub" });
 }
 async function fillTarget(dialog: ReturnType<Page["getByRole"]>, path: string) {
@@ -110,7 +110,7 @@ test("a gist is created from the Gist tab, and the connection can be ended", asy
 
   const again = await (async () => {
     await page.getByRole("button", { name: "Options for Notes" }).click();
-    await page.getByRole("menuitem", { name: "Publish to GitHub…" }).click();
+    await page.getByRole("menuitem", { name: "Publish", exact: true }).click();
     return page.getByRole("dialog", { name: "Publish to GitHub" });
   })();
   // the gist is remembered, so the next publish updates it
