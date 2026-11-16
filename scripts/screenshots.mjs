@@ -121,6 +121,9 @@ const open = async (opts, { waitForPreview = true } = {}) => {
   await page.waitForTimeout(600);
   return page;
 };
+// the panel buttons sit in the strip on the left (Checks, Outline, Front matter, History)
+const panel = (page, name) =>
+  page.getByRole("navigation", { name: "Panels", exact: true }).getByRole("button", { name });
 const shot = async (page, name) => {
   await page.screenshot({ path: `${OUT}/${name}.png` });
   console.log(name);
@@ -128,7 +131,7 @@ const shot = async (page, name) => {
 const desktop = { viewport: { width: 1280, height: 800 }, colorScheme: "light" };
 
 try {
-  // 01 home
+  // 01 home (its hero shows public/home-editor-*.png; retake those separately when the editor changes)
   const home = await browser.newPage(desktop);
   await home.goto(BASE);
   await home.locator("#try-it textarea").waitFor();
@@ -140,13 +143,13 @@ try {
   // 02 split view with the checks panel, 03 checks, outline, front matter
   let page = await open(desktop);
   await shot(page, "02_editor_split_view"); // the side panel starts closed below 1536px
-  await page.getByRole("button", { name: "Checks" }).click();
+  await panel(page, "Checks").click();
   await page.waitForTimeout(300);
   await shot(page, "03_editor_checks_panel");
-  await page.getByRole("button", { name: "Outline" }).first().click();
+  await panel(page, "Outline").click();
   await page.waitForTimeout(300);
   await shot(page, "04_editor_outline_panel");
-  await page.getByRole("button", { name: "Front matter" }).first().click();
+  await panel(page, "Front matter").click();
   await page.waitForTimeout(300);
   await shot(page, "04_editor_frontmatter_panel");
   await page.getByRole("button", { name: "AI writer" }).click();
@@ -155,7 +158,7 @@ try {
   await page.keyboard.press("Escape");
 
   // 10 the checker rules dialog, with a standard turned on
-  await page.getByRole("button", { name: "Checks" }).click();
+  await panel(page, "Checks").click();
   await page.getByRole("button", { name: "Rules" }).click();
   const rules = page.getByRole("dialog", { name: "Checker rules" });
   await rules.getByRole("tab", { name: "Standards" }).click();
@@ -172,7 +175,7 @@ try {
   await page.keyboard.press("Escape");
 
   // 12 history: save a version, change the text, compare it with the current draft
-  await page.getByRole("button", { name: "History", exact: true }).click();
+  await panel(page, "History").click();
   // the first autosave already kept the sample as it is, so change it before saving a version
   await page.locator(".cm-line", { hasText: "## Highlights" }).click();
   await page.keyboard.press("End");
@@ -268,7 +271,8 @@ try {
   await wp.goto(`${BASE}/editor`);
   const draftMenu = (title) => wp.getByRole("button", { name: `Options for ${title}` });
   await draftMenu("Launch plan").click({ timeout: 30_000 });
-  await wp.getByRole("menuitem", { name: "Share…" }).click();
+  await wp.getByRole("menuitem", { name: "Share", exact: true }).click();
+  await wp.getByRole("dialog", { name: "Share this draft" }).getByText("Share for review").click();
   const share = wp.getByRole("dialog", { name: "Share" });
   await share.getByRole("combobox", { name: "Who can open it" }).click();
   await wp.getByRole("option", { name: "Only people I invite" }).click();
@@ -337,7 +341,7 @@ try {
 
   // publishing to GitHub: connecting, then the repository form
   await draftMenu("Launch plan").click();
-  await wp.getByRole("menuitem", { name: "Publish to GitHub…" }).click();
+  await wp.getByRole("menuitem", { name: "Publish", exact: true }).click();
   const publish = wp.getByRole("dialog", { name: "Publish to GitHub" });
   await publish.getByRole("button", { name: "Connect GitHub" }).waitFor();
   await wp.waitForTimeout(700); // the menu has closed and the dialog has settled
@@ -349,6 +353,38 @@ try {
   await publish.getByRole("textbox", { name: "File path" }).fill("posts/launch-plan.md");
   await wp.waitForTimeout(4500); // let the "GitHub connected" toast go
   await shot(wp, "20_publish_github");
+  await wp.keyboard.press("Escape");
+
+  // settings (the AI tab with an integration added), search, the admin dashboard (the first
+  // account is the admin) and the guides index
+  await wp.goto(`${BASE}/settings?tab=ai`);
+  await wp.getByRole("button", { name: "Add integration" }).click();
+  const ai = wp.getByRole("dialog", { name: "AI integrations" });
+  await ai.getByLabel("AI provider").click();
+  await wp.getByRole("option", { name: /Ollama/ }).click();
+  await ai.getByLabel("Model IDs").fill("llama3.2");
+  await ai.getByRole("button", { name: "Add integration" }).click();
+  await ai.waitFor({ state: "hidden" });
+  await wp.waitForTimeout(500);
+  await shot(wp, "21_settings_ai");
+
+  await wp.goto(`${BASE}/editor`);
+  await wp.locator(".cm-content").waitFor();
+  await wp.keyboard.press("ControlOrMeta+Shift+p");
+  await wp.getByRole("dialog", { name: "Search" }).getByRole("combobox").fill("share");
+  await wp.waitForTimeout(500);
+  await shot(wp, "22_search_palette");
+  await wp.keyboard.press("Escape");
+
+  await wp.goto(`${BASE}/admin`);
+  await wp.getByRole("heading", { name: "Overview" }).waitFor({ timeout: 20_000 });
+  await wp.waitForTimeout(600);
+  await shot(wp, "24_admin_dashboard");
+
+  const guides = await browser.newPage(desktop);
+  await guides.goto(`${BASE}/guides`);
+  await guides.locator("#latest-guide").waitFor();
+  await shot(guides, "23_guides_index");
 } finally {
   await browser.close();
   server.kill();

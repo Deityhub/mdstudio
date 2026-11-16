@@ -9,7 +9,7 @@ export const BRAND = {
   tagline: "Write once. Render the same everywhere.",
   homeTitle: "mdstudio: Markdown editor that renders the same everywhere",
   description:
-    "Open-source Markdown editor that checks your writing renders the same on GitHub and elsewhere. Write together, get review, publish. No sign-up.",
+    "Open-source Markdown editor that checks your writing and renders the same on GitHub and elsewhere. Write together, get review, publish. No sign-up.",
   imageAlt: "mdstudio: write once, render the same everywhere",
 } as const;
 
