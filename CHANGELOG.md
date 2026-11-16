@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.0 (2026-11-16)
+
+### Features
+
+- **ui:** list AI integrations in settings, add a page loader, keep the side strip on tablets
+- **ui:** polish the app frames, left panel strip and loading states
+- **search:** add a search palette for drafts, commands, settings and pages (#111)
+- **account:** link and unlink GitHub and Google sign-ins
+- **account:** change the email address with a link to the new one
+- **settings:** edit the name and password in dialogs and centre the page
+- **account:** change the display name and the password from settings
+- **settings:** add a settings page for the editor, AI and connections
+
+### Fixes
+
+- **library:** remove a folder when its last draft is deleted
+
 ## 0.6.0 (2026-11-13)
 
 ### Features
