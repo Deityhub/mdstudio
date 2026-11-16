@@ -1,9 +1,10 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
+import { guideCatalogue } from "./infra/guide-catalogue-plugin";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), guideCatalogue()],
   test: {
     environment: "jsdom",
     // Node 25 and later define their own localStorage, which hides jsdom's (and is empty without a

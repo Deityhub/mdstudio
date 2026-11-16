@@ -1,3 +1,12 @@
+---
+slug: markdown-math-and-diagrams
+title: "Math and Mermaid Diagrams in Markdown: Where They Work"
+description: "Where LaTeX math and Mermaid diagrams render in Markdown: GitHub and Obsidian support them, other platforms do not. How to write them and what to do instead."
+order: 7
+published: 2026-11-02T00:00:00Z
+updated: 2026-11-02T00:00:00Z
+---
+
 LaTeX math and Mermaid diagrams are two of the most useful extensions to Markdown, and two of the least portable. They render beautifully on some platforms and show up as raw source on others. This guide shows how to write them and where they work, so you can decide when to use them.
 
 ## Math in Markdown

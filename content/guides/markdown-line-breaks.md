@@ -1,3 +1,12 @@
+---
+slug: markdown-line-breaks
+title: Markdown Line Breaks and Paragraphs Explained
+description: "How line breaks work in Markdown: paragraphs, soft breaks and hard breaks, why trailing spaces are fragile, and which method renders the same everywhere."
+order: 5
+published: 2026-11-02T00:00:00Z
+updated: 2026-11-02T00:00:00Z
+---
+
 Line breaks are one of the most confusing parts of Markdown. You press Enter, and nothing happens in the preview, or everything runs together, or it works on one site and not another. The behavior is actually well defined, and once you know the rules you can pick the method that survives every platform.
 
 ## Paragraphs, soft breaks and hard breaks

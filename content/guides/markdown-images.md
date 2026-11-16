@@ -1,3 +1,12 @@
+---
+slug: markdown-images
+title: "Markdown Images: Paths, Alt Text and Portability"
+description: "How to add images in Markdown so they show up everywhere: relative paths, hosted URLs, base64 data URIs, alt text and the mistakes that break previews."
+order: 6
+published: 2026-11-02T00:00:00Z
+updated: 2026-11-02T00:00:00Z
+---
+
 Images are the most common reason a Markdown post looks broken after publishing. The text copies perfectly, and then every picture shows as a missing icon. The cause is almost always the path, and the fix is to understand where each kind of image link actually works.
 
 ## The basic syntax

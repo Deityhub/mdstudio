@@ -1,3 +1,12 @@
+---
+slug: markdown-for-devto-and-hashnode
+title: Writing Markdown for dev.to and Hashnode
+description: "Tips for writing blog posts in Markdown that publish cleanly to dev.to and Hashnode: front matter, images, code blocks, raw HTML and what to check first."
+order: 4
+published: 2026-11-02T00:00:00Z
+updated: 2026-11-02T00:00:00Z
+---
+
 dev.to and Hashnode both let you write posts in Markdown, which makes it tempting to draft in your own editor and paste the result. That works well, as long as you know where each platform differs from the Markdown you write locally. This guide covers the habits that make a post publish cleanly the first time.
 
 ## Both are Markdown, with their own rules

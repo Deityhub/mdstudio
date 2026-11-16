@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkPortability, getOutline } from "../markdown/markdown";
+import { checkPortability, getOutline, splitFrontMatter } from "../markdown/markdown";
 import { GUIDES, guideBySlug, guidePath, readingMinutes } from "./guides";
 import { SITE } from "./seo";
 
@@ -33,8 +33,23 @@ describe("guide catalogue", () => {
       expect(g.description.length, g.slug).toBeGreaterThanOrEqual(110);
       expect(g.description.length, g.slug).toBeLessThanOrEqual(160);
       expect(g.updated >= g.published, g.slug).toBe(true);
-      expect(g.published, g.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(g.published, g.slug).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+      expect(g.updated, g.slug).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
     }
+  });
+
+  it("takes everything from each guide's own front matter, in list order", () => {
+    for (const g of GUIDES) {
+      const { data } = splitFrontMatter(body(g.slug));
+      expect(data?.["slug"], g.slug).toBe(g.slug);
+      expect(data?.["title"], g.slug).toBe(g.title);
+      expect(data?.["description"], g.slug).toBe(g.description);
+      expect(String(data?.["published"]), g.slug).toBe(g.published);
+      expect(String(data?.["updated"]), g.slug).toBe(g.updated);
+    }
+    const orders = GUIDES.map((g) => g.order).filter((o) => o !== undefined);
+    expect(new Set(orders).size).toBe(orders.length);
+    expect(orders).toEqual([...orders].sort((a, b) => a - b));
   });
 
   it("looks guides up by slug and builds their paths", () => {

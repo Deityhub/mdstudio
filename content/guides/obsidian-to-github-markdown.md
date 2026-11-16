@@ -1,3 +1,12 @@
+---
+slug: obsidian-to-github-markdown
+title: "Obsidian to GitHub Markdown: Wiki-links, Callouts & More"
+description: "How to share Obsidian notes outside Obsidian: convert wiki-links, highlights, callouts and embeds so they render on GitHub, dev.to and static sites."
+order: 3
+published: 2026-11-02T00:00:00Z
+updated: 2026-11-02T00:00:00Z
+---
+
 Obsidian stores notes as plain Markdown files, which makes them easy to share, but Obsidian adds syntax that other tools do not understand. If you copy a note straight into a GitHub README, a dev.to post or a static site, some of it will break. This guide lists what to convert and how.
 
 ## What Obsidian adds to Markdown

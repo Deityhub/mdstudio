@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { LEGAL_PAGES } from "../src/lib/site/legal";
-import { SITE } from "../src/lib/site/seo";
+import { SITE } from "../src/lib/site/site";
 
 for (const p of LEGAL_PAGES) {
   test(`${p.slug}: a public, indexable page with the contact address`, async ({

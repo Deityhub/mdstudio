@@ -1,3 +1,12 @@
+---
+slug: markdown-portability
+title: "Portable Markdown: Why It Renders Differently Everywhere"
+description: Why the same Markdown looks different on GitHub, dev.to and Obsidian, and a checklist for making your writing render the same on every platform.
+order: 1
+published: 2026-11-02T00:00:00Z
+updated: 2026-11-02T00:00:00Z
+---
+
 Markdown looks like one language, but it is really a family of dialects. The same file can render perfectly on GitHub, lose a diagram on dev.to and print raw brackets in a static site generator. This guide explains why that happens and gives you a checklist for writing Markdown that renders the same everywhere.
 
 ## Why the same Markdown renders differently

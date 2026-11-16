@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { GUIDES } from "../src/lib/site/guides";
+import { readGuideCatalogue } from "../infra/guide-catalogue";
+
+// each guide says what it is in its own front matter
+const GUIDES = readGuideCatalogue();
 
 const ORIGIN = "https://mdstudio.deityhub.com";
 
@@ -133,4 +136,13 @@ test("the text is centred when the contents list is hidden", async ({ page }) =>
   await expect(page.getByRole("navigation", { name: "On this page" })).toBeHidden();
   const box = (await page.locator("article").boundingBox())!;
   expect(Math.abs(box.x + box.width / 2 - 450)).toBeLessThan(8);
+});
+
+test("a guide shows when it was published", async ({ page }) => {
+  await page.goto(`/guides/${GUIDES[0]!.slug}`);
+  await expect(page.locator("article time").first()).toHaveAttribute(
+    "datetime",
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/,
+  );
+  await expect(page.getByText(/^Published /)).toBeVisible();
 });

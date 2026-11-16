@@ -44,7 +44,7 @@ function GuidesIndex() {
         <ul className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4 pb-16">
           {GUIDES.map((g) => (
             <li key={g.slug} className={cn(TILE, "relative transition-colors hover:bg-accent")}>
-              <Chip>Updated {formatDate(g.updated)}</Chip>
+              <Chip>Updated {formatDate(g.updated.slice(0, 10))}</Chip>
               <h2 className="mt-2.5 font-display text-base font-semibold">
                 <Link
                   to="/guides/$slug"

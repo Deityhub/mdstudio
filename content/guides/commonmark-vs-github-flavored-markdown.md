@@ -1,3 +1,12 @@
+---
+slug: commonmark-vs-github-flavored-markdown
+title: "CommonMark vs GitHub Flavored Markdown: What Differs"
+description: "A clear comparison of CommonMark and GitHub Flavored Markdown: tables, task lists, strikethrough, footnotes, autolinks and alerts, and when each one matters."
+order: 2
+published: 2026-11-02T00:00:00Z
+updated: 2026-11-02T00:00:00Z
+---
+
 CommonMark and GitHub Flavored Markdown (GFM) are the two Markdown standards you will meet most often. GFM is a strict superset of CommonMark, which means every valid CommonMark document is also valid GFM, but not the other way round. Knowing exactly what GFM adds tells you when your text stops being universally portable.
 
 ## What CommonMark is
