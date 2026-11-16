@@ -3,8 +3,8 @@ slug: markdown-math-and-diagrams
 title: "Math and Mermaid Diagrams in Markdown: Where They Work"
 description: "Where LaTeX math and Mermaid diagrams render in Markdown: GitHub and Obsidian support them, other platforms do not. How to write them and what to do instead."
 order: 7
-published: 2026-11-02T00:00:00Z
-updated: 2026-11-02T00:00:00Z
+published: 2026-11-02T16:36:00Z
+updated: 2026-11-16T12:09:00Z
 ---
 
 LaTeX math and Mermaid diagrams are two of the most useful extensions to Markdown, and two of the least portable. They render beautifully on some platforms and show up as raw source on others. This guide shows how to write them and where they work, so you can decide when to use them.
@@ -49,9 +49,9 @@ Mermaid supports flowcharts, sequence diagrams, class diagrams, state diagrams, 
 | GitHub | Yes | Yes |
 | Obsidian | Yes | Yes |
 | Strict CommonMark | No | No |
-| dev.to and Hashnode | Not from plain syntax | Not from plain syntax |
+| Blogging platforms and site generators | Depends on the platform | Depends on the platform |
 
-Some platforms offer their own non-standard embed tags for math or diagrams. Those do not work anywhere else, which is the trade-off to weigh.
+Some platforms offer their own non-standard embed tags for math or diagrams, and others need a plugin or a setting. Check the one you publish to with a test post before you rely on it. Embed tags do not work anywhere else, which is the trade-off to weigh.
 
 ## What to do when the target does not support them
 
@@ -68,4 +68,4 @@ Rendering user-provided math and diagrams carries some risk, since both are pars
 
 ## Preview them against your target
 
-[mdstudio](https://mdstudio.deityhub.com/editor) renders math with KaTeX and diagrams with Mermaid in strict mode, in light and dark themes, and shows them only for the profiles whose platforms support them. On the GFM without HTML or Strict CommonMark profile, the checker warns that math and Mermaid are not portable, and the toolbar marks the tools that the target will not render. The editor is open source and keeps your drafts in your browser. For more on compatibility, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+[mdstudio](https://mdstudio.deityhub.com/editor) renders math with KaTeX and diagrams with Mermaid in strict mode, in light and dark themes, and only for the targets that support them. On GFM without HTML or Strict CommonMark the checker warns that math and Mermaid are not portable, and the toolbar marks the tools that target will not render. For more on compatibility, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).

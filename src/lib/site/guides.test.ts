@@ -38,7 +38,7 @@ describe("guide catalogue", () => {
     }
   });
 
-  it("takes everything from each guide's own front matter, in list order", () => {
+  it("takes everything from each guide's own front matter, newest first", () => {
     for (const g of GUIDES) {
       const { data } = splitFrontMatter(body(g.slug));
       expect(data?.["slug"], g.slug).toBe(g.slug);
@@ -46,10 +46,10 @@ describe("guide catalogue", () => {
       expect(data?.["description"], g.slug).toBe(g.description);
       expect(String(data?.["published"]), g.slug).toBe(g.published);
       expect(String(data?.["updated"]), g.slug).toBe(g.updated);
+      expect(g.minutes, g.slug).toBe(readingMinutes(splitFrontMatter(body(g.slug)).body));
     }
-    const orders = GUIDES.map((g) => g.order).filter((o) => o !== undefined);
-    expect(new Set(orders).size).toBe(orders.length);
-    expect(orders).toEqual([...orders].sort((a, b) => a - b));
+    const stamps = GUIDES.map((g) => g.published);
+    expect(stamps).toEqual([...stamps].sort().reverse());
   });
 
   it("looks guides up by slug and builds their paths", () => {

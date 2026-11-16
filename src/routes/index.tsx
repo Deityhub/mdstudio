@@ -242,10 +242,10 @@ function Index() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 id="guides-heading" className="font-display text-2xl font-semibold sm:text-3xl">
-                Guides to portable Markdown
+                Guides
               </h2>
               <p className="mt-3 max-w-2xl text-muted-foreground">
-                Where Markdown flavors differ, and how to write text that survives all of them.
+                Where Markdown flavors differ, and how to review, write together and publish it.
               </p>
             </div>
             <Button asChild variant="outline">

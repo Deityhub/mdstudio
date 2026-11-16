@@ -3,8 +3,8 @@ slug: markdown-images
 title: "Markdown Images: Paths, Alt Text and Portability"
 description: "How to add images in Markdown so they show up everywhere: relative paths, hosted URLs, base64 data URIs, alt text and the mistakes that break previews."
 order: 6
-published: 2026-11-02T00:00:00Z
-updated: 2026-11-02T00:00:00Z
+published: 2026-11-02T15:49:00Z
+updated: 2026-11-16T11:46:00Z
 ---
 
 Images are the most common reason a Markdown post looks broken after publishing. The text copies perfectly, and then every picture shows as a missing icon. The cause is almost always the path, and the fix is to understand where each kind of image link actually works.
@@ -23,7 +23,7 @@ You can add an optional title in quotes after the address. It usually shows as a
 
 1. **A hosted URL.** An absolute web address works anywhere the image is reachable. This is the most portable choice.
 2. **A relative path.** A path such as `images/chart.png` only works when the Markdown file and the image sit in the same place the renderer expects. It works in a repository README and in many static site generators. It fails when you paste the text into another site.
-3. **A platform upload.** On sites like dev.to, you upload through the editor and it gives you a hosted URL. Use that URL in the text.
+3. **A platform upload.** Many publishing tools let you upload through their own editor and give you a hosted URL. Use that URL in the text.
 4. **A base64 data URI.** The image data is embedded in the text itself. It is self-contained, but it makes the file huge and many platforms reject or strip it.
 
 ## Why local paths fail
@@ -49,4 +49,4 @@ Alt text is the description shown when an image fails to load, and what screen r
 
 ## Find broken image links before you publish
 
-[mdstudio](https://mdstudio.deityhub.com/editor) flags local image paths, embedded base64 images and images with missing alt text, with a click to jump to each one. When you insert an image, the dialog requires alt text. You can also export a self-contained Markdown or HTML file that embeds your local images, so the document works on its own. The editor is open source and keeps your drafts in your browser. For the wider picture, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+[mdstudio](https://mdstudio.deityhub.com/editor) flags local image paths, embedded base64 images and images with missing alt text, with a click to jump to each one, and its insert-image dialog will not accept an empty alt text. When a draft has to travel as one file, export a self-contained Markdown or HTML file that embeds the local images. When you publish to GitHub, the images are committed beside the file. On a self-hosted install it can also host the images for you and rewrite the paths. For the wider picture, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).

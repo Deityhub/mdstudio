@@ -37,10 +37,13 @@ Write Markdown in a full-featured editor with a formatting toolbar and a live pr
 - [Portable Markdown: why it renders differently everywhere](https://mdstudio.deityhub.com/guides/markdown-portability): the six things that break most often and a checklist
 - [CommonMark vs GitHub Flavored Markdown](https://mdstudio.deityhub.com/guides/commonmark-vs-github-flavored-markdown): tables, task lists, strikethrough, footnotes, alerts
 - [Obsidian to GitHub Markdown](https://mdstudio.deityhub.com/guides/obsidian-to-github-markdown): converting wiki-links, highlights, callouts and embeds
-- [Writing Markdown for dev.to and Hashnode](https://mdstudio.deityhub.com/guides/markdown-for-devto-and-hashnode): front matter, images, raw HTML
+- [Writing Markdown for blogging platforms](https://mdstudio.deityhub.com/guides/markdown-for-blogging-platforms): front matter, images, raw HTML, a test post
 - [Markdown line breaks and paragraphs](https://mdstudio.deityhub.com/guides/markdown-line-breaks): soft breaks, hard breaks and the portable choice
 - [Markdown images](https://mdstudio.deityhub.com/guides/markdown-images): paths, hosted URLs, base64 and alt text
 - [Math and Mermaid diagrams in Markdown](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams): where they render and what to do elsewhere
+- [Share a Markdown draft for review](https://mdstudio.deityhub.com/guides/share-markdown-for-review): expiring links, named people, comments on selected words
+- [Publish Markdown to GitHub](https://mdstudio.deityhub.com/guides/publish-markdown-to-github): commit, pull request or gist, with images
+- [Write a Markdown draft together](https://mdstudio.deityhub.com/guides/write-markdown-together): live cursors, offline edits that merge, and the limits
 
 ## Links
 

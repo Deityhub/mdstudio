@@ -3,8 +3,8 @@ slug: markdown-line-breaks
 title: Markdown Line Breaks and Paragraphs Explained
 description: "How line breaks work in Markdown: paragraphs, soft breaks and hard breaks, why trailing spaces are fragile, and which method renders the same everywhere."
 order: 5
-published: 2026-11-02T00:00:00Z
-updated: 2026-11-02T00:00:00Z
+published: 2026-11-02T14:31:00Z
+updated: 2026-11-16T11:17:00Z
 ---
 
 Line breaks are one of the most confusing parts of Markdown. You press Enter, and nothing happens in the preview, or everything runs together, or it works on one site and not another. The behavior is actually well defined, and once you know the rules you can pick the method that survives every platform.
@@ -58,4 +58,4 @@ Some editors turn every newline into a break to feel friendlier. That makes the 
 
 ## Catch fragile breaks automatically
 
-[mdstudio](https://mdstudio.deityhub.com/editor) renders soft breaks the way CommonMark defines them, so single newlines do not turn into breaks in the preview. Its portability checker also flags trailing-space line breaks, so you can replace them before an editor strips them. The editor is open source and keeps your drafts in your browser, unless you want to sync it to the cloud. For related pitfalls, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+[mdstudio](https://mdstudio.deityhub.com/editor) renders soft breaks the way CommonMark defines them, so a single newline does not turn into a break in the preview. Its checker also flags trailing-space line breaks, so you can replace them with a backslash before an editor strips them. For related pitfalls, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).

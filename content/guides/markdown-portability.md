@@ -1,13 +1,13 @@
 ---
 slug: markdown-portability
 title: "Portable Markdown: Why It Renders Differently Everywhere"
-description: Why the same Markdown looks different on GitHub, dev.to and Obsidian, and a checklist for making your writing render the same on every platform.
+description: Why the same Markdown looks different on GitHub, blogging platforms and Obsidian, and a checklist for making your writing render the same on every platform.
 order: 1
-published: 2026-11-02T00:00:00Z
-updated: 2026-11-02T00:00:00Z
+published: 2026-11-02T08:42:00Z
+updated: 2026-11-16T09:14:00Z
 ---
 
-Markdown looks like one language, but it is really a family of dialects. The same file can render perfectly on GitHub, lose a diagram on dev.to and print raw brackets in a static site generator. This guide explains why that happens and gives you a checklist for writing Markdown that renders the same everywhere.
+Markdown looks like one language, but it is really a family of dialects. The same file can render perfectly on GitHub, lose a diagram on a blogging platform and print raw brackets in a static site generator. This guide explains why that happens and gives you a checklist for writing Markdown that renders the same everywhere.
 
 ## Why the same Markdown renders differently
 
@@ -15,7 +15,7 @@ The original Markdown description left many details open, so every tool made its
 
 - GitHub adds alerts, math, Mermaid diagrams and footnotes.
 - Obsidian adds wiki-links, embeds, highlights and callouts.
-- dev.to and Hashnode add their own front matter, embed tags and sanitizing rules.
+- Blogging platforms add their own front matter, embed tags and sanitizing rules.
 - Static site generators each add shortcodes, plugins or MDX.
 
 Your text is only portable if every platform you care about understands every construct in it.
@@ -46,8 +46,6 @@ Before you publish, run through this list:
 - Avoid trailing-space line breaks, which editors often strip. A backslash at the end of the line is clearer.
 - Open the result on the target platform, or in a preview that follows its rules, before you hit publish.
 
-## Check it automatically
+## Let the editor do the checking
 
-Reading a checklist is slow and easy to forget. [mdstudio](https://mdstudio.deityhub.com/editor) is an open-source Markdown editor built around this problem. Choose a target profile (Strict CommonMark, GitHub (GFM extended), GFM without HTML or Wiki notes), and its portability checker flags raw HTML, local images, wiki-links, math, Mermaid, trailing-space breaks and more, with a click to jump to each one. The preview shows what that platform renders, with no preview-only tricks, so what you see is what ships.
-
-Your drafts stay in your browser, there is no account requirement unless you want to use the cloud features, and the project is open source under the MIT license. [Open the editor](https://mdstudio.deityhub.com/editor) and paste in a post to see what it finds.
+Run the checklist against your own text in [mdstudio](https://mdstudio.deityhub.com/editor). Pick a target (Strict CommonMark, GFM extended, GFM without HTML or Wiki notes) and the Checks panel lists each problem with its line number: raw HTML, local images, wiki-links, math, Mermaid and trailing-space breaks. The preview follows the same rules, so you see the result before you publish. Paste a post in to try it.

@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Write Markdown once. See exactly how it renders everywhere.</strong><br>
-  An open-source, local-first Markdown editor with a faithful live preview and a portability checker for GitHub, dev.to and Obsidian.
+  An open-source, local-first Markdown editor with a faithful live preview and a portability checker for GitHub, blogging platforms and Obsidian.
 </p>
 
 <p align="center">

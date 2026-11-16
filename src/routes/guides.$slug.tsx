@@ -48,15 +48,13 @@ export const Route = createFileRoute("/guides/$slug")({
   component: GuidePage,
 });
 
-/** When it went out, and when it last changed: with the times if both fall on the same day. */
+/** When it went out, and when it last changed (only if it did), each with its time in UTC. */
 function Stamps({ published, updated }: { published: string; updated: string }) {
-  const differ = stampsDiffer(published, updated);
-  const time = differ === "time";
-  const at = (iso: string) => <time dateTime={iso}>{formatStamp(iso, time)}</time>;
+  const at = (iso: string) => <time dateTime={iso}>{formatStamp(iso, true)}</time>;
   return (
     <>
       <span>Published {at(published)}</span>
-      {differ !== "none" && <span>Updated {at(updated)}</span>}
+      {stampsDiffer(published, updated) !== "none" && <span>Updated {at(updated)}</span>}
     </>
   );
 }

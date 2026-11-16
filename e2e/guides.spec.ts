@@ -20,6 +20,25 @@ test("the guides index lists every guide with a canonical URL and breadcrumbs", 
   expect(ld.some((d) => d["@type"] === "BreadcrumbList")).toBe(true);
 });
 
+test("the index leads with the latest guide, then lists the rest with date and reading time", async ({
+  page,
+}) => {
+  await page.goto("/guides");
+  const latest = page.getByRole("article", { name: GUIDES[0]!.title });
+  await expect(latest).toContainText("Latest guide");
+  await expect(latest.locator("time")).toHaveAttribute("datetime", GUIDES[0]!.published);
+  await expect(latest).toContainText(/\d+ min read/);
+
+  const all = page.getByRole("region", { name: "All guides" });
+  await expect(all.getByRole("listitem")).toHaveCount(GUIDES.length - 1);
+  const first = all.getByRole("listitem").first();
+  await expect(first).toContainText(GUIDES[1]!.title);
+  await expect(first.locator("time")).toHaveAttribute("datetime", GUIDES[1]!.published);
+  await expect(first).toContainText(/\d+ min read/);
+  // the dates are when each went out, not when it last changed
+  await expect(page.getByText(/^Updated /)).toHaveCount(0);
+});
+
 for (const g of GUIDES) {
   test(`guide: ${g.slug}`, async ({ page }) => {
     const errors: string[] = [];
