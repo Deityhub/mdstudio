@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AI_ACTIONS, actionInstruction, cleanEdit } from "./actions";
 
 describe("inline AI actions", () => {
-  it("offers the writing actions the roadmap names", () => {
+  it("offers the writing actions we promise", () => {
     const ids = AI_ACTIONS.map((a) => a.id);
     expect(ids).toEqual(
       expect.arrayContaining([

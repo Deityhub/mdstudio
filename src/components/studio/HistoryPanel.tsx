@@ -50,18 +50,29 @@ export function HistoryPanel({
   };
   /** The draft as it is now, the right-hand side of every comparison. */
   content: string;
-  onSave: () => void;
-  onRestore: (rev: Revision) => void;
+  onSave: () => unknown;
+  onRestore: (rev: Revision) => unknown;
 }) {
   const [open, setOpen] = useState<Revision | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const rows = useMemo(() => (open ? diffLines(open.content, content) : []), [open, content]);
   const stats = useMemo(() => diffStats(rows), [rows]);
   const identical = stats.added === 0 && stats.removed === 0;
 
   return (
     <div className="space-y-3">
-      <Button variant="outline" size="sm" className="w-full" onClick={onSave}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        loading={saving}
+        onClick={() => {
+          setSaving(true);
+          void Promise.resolve(onSave()).finally(() => setSaving(false));
+        }}
+      >
         <Save className="size-4" /> Save a version now
       </Button>
       {revisions.length ? (
@@ -159,9 +170,16 @@ export function HistoryPanel({
                 Close
               </Button>
               <Button
+                loading={restoring}
                 disabled={identical}
-                onClick={() => {
-                  if (open) onRestore(open);
+                onClick={async () => {
+                  if (!open) return;
+                  setRestoring(true);
+                  try {
+                    await onRestore(open);
+                  } finally {
+                    setRestoring(false);
+                  }
                   setOpen(null);
                 }}
               >

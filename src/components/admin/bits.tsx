@@ -24,7 +24,10 @@ export function Badge({
   );
 }
 
-/** A button that must be pressed twice, so a slip does not delete anything. */
+/**
+ * A button that must be pressed twice, so a slip does not delete anything. When `onConfirm` returns
+ * a promise, the button shows it loading until it settles.
+ */
 export function ConfirmButton({
   children,
   confirm = "Press again to confirm",
@@ -33,10 +36,11 @@ export function ConfirmButton({
 }: {
   children: ReactNode;
   confirm?: string;
-  onConfirm: () => void;
+  onConfirm: () => unknown;
   disabled?: boolean;
 }) {
   const [armed, setArmed] = useState(false);
+  const [running, setRunning] = useState(false);
   useEffect(() => {
     if (!armed) return;
     const t = setTimeout(() => setArmed(false), 4000);
@@ -46,12 +50,14 @@ export function ConfirmButton({
     <Button
       variant={armed ? "destructive" : "outline"}
       size="sm"
+      loading={running}
       disabled={disabled}
       onClick={() => {
-        if (armed) {
-          setArmed(false);
-          onConfirm();
-        } else setArmed(true);
+        if (!armed) return setArmed(true);
+        setArmed(false);
+        setRunning(true);
+        // a work that settles after this button is gone has no one left to tell
+        void Promise.resolve(onConfirm()).finally(() => setRunning(false));
       }}
     >
       {armed ? confirm : children}

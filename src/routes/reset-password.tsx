@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { Logo } from "@/components/Logo";
+import { Standalone, StandaloneBox } from "@/components/site/Standalone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,12 +47,11 @@ function ResetPassword() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <Logo />
+    <Standalone>
+      <StandaloneBox>
         {done ? (
           <div className="space-y-4">
-            <h1 className="text-xl font-semibold tracking-tight">Password changed</h1>
+            <h1 className="font-display text-[22px] font-semibold">Password changed</h1>
             <p role="status" className="text-sm text-muted-foreground">
               Every device was signed out. Sign in with your new password.
             </p>
@@ -62,7 +61,7 @@ function ResetPassword() {
           </div>
         ) : !held ? (
           <div className="space-y-4">
-            <h1 className="text-xl font-semibold tracking-tight">This link doesn't work</h1>
+            <h1 className="font-display text-[22px] font-semibold">This link doesn't work</h1>
             <p className="text-sm text-muted-foreground">
               It's missing its code. Open the link from the email again, or ask for a new one from
               the sign-in dialog.
@@ -79,7 +78,7 @@ function ResetPassword() {
               void submit();
             }}
           >
-            <h1 className="text-xl font-semibold tracking-tight">Choose a new password</h1>
+            <h1 className="font-display text-[22px] font-semibold">Choose a new password</h1>
             <div className="grid gap-1.5">
               <Label htmlFor="new-password">New password</Label>
               <div className="relative">
@@ -115,12 +114,12 @@ function ResetPassword() {
                 {error}
               </p>
             )}
-            <Button type="submit" loading={busy}>
+            <Button type="submit" size="lg" className="w-full" loading={busy}>
               Change password
             </Button>
           </form>
         )}
-      </div>
-    </main>
+      </StandaloneBox>
+    </Standalone>
   );
 }

@@ -14,10 +14,9 @@ mdstudio is built for writers, developers, technical bloggers, and documentation
 
 Before proposing or making changes, read:
 
-1. `docs/SYSTEM_SPEC.md`: the master source of truth (product, architecture, schema, decisions). The end-to-end use cases are in `docs/PRODUCT_SPEC.md`.
+1. `docs/SYSTEM_SPEC.md`: the master source of truth (product, architecture, schema, decisions). The end-to-end use cases are in its section 1, and what is planned or not built yet is in its section 12.
 2. This file: the non-negotiable invariants.
-3. `roadmap.md`: milestones and pending work.
-4. As needed: `docs/UI_SPEC.md` and `docs/DESIGN_SYSTEM.md` (screens and tokens), `infra/README.md` (backend blueprints), `docs/RELEASING.md` (releases and secrets).
+3. As needed: `docs/UI_SPEC.md` and `docs/DESIGN_SYSTEM.md` (screens and tokens), `infra/README.md` (backend blueprints), `docs/RELEASING.md` (releases and secrets).
 
 ---
 
@@ -77,6 +76,9 @@ All backend code lives in or is scaffolded via `infra/` (see `infra/README.md`):
 - **Compatibility:** Do not use Node.js standard library modules (`fs`, `path`, `crypto`, ...) in client-side code; client code must run in all browsers and on Cloudflare Workers. Node APIs are fine in `scripts/` and the Node-only `infra/` drivers.
 - **Types:** Prefer clean types and deterministic state machines. The TypeScript config is strict (`exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`).
 - **Tailwind classes:** write them in the form Tailwind recommends (`size-4` not `h-4 w-4`, `shrink-0` not `flex-shrink-0`, `data-disabled:` not `data-[disabled]:`, `wrap-break-word` not `break-words`). `bun run tailwind:check` lists anything that is not, CI runs it, and `bun run tailwind:fix` rewrites it using Tailwind's own rules.
+- **UI conventions:** every button that starts an action shows `loading` (the one pressed) or `pending` (its siblings), never a bare `disabled`; every dropdown uses the shared `Select`; action labels never end in an ellipsis. The rules and the reasons are in `docs/DESIGN_SYSTEM.md`, and a test (`loading-rules.test.ts`) enforces the first.
+- **Public pages:** a guide (`content/guides/<slug>.md`) and a legal page (`content/legal/<slug>.md`) say what they are in their own front matter (slug, title, description, and `published` and `updated` as UTC moments); adding one needs no code change. Set `updated` when you change one.
+- **Docs:** a change that alters what the app does, how it looks or how it is built updates `docs/SYSTEM_SPEC.md` and `docs/UI_SPEC.md` in the same change; the home copy and the FAQ live in `src/lib/site/seo-content.ts`, and `public/llms.txt` is generated from it (`bun run llms`).
 - **Accessibility:** Build accessible UX by default (Radix primitives, roving focus on toolbars, labelled controls).
 
 ---

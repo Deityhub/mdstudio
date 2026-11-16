@@ -66,7 +66,7 @@ export function AiPicker({ disabled }: { disabled?: boolean }) {
   );
 
   if (state.cloud === "loading")
-    return <p className="text-sm text-muted-foreground">Loading your AI integrations…</p>;
+    return <p className="text-sm text-muted-foreground">Loading your AI integrations</p>;
   if (!item)
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed border-border p-3">
@@ -110,7 +110,7 @@ export function AiPicker({ disabled }: { disabled?: boolean }) {
                   {i.name}
                 </SelectItem>
               ))}
-              <SelectItem value="__add">Add another…</SelectItem>
+              <SelectItem value="__add">Add another</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -140,10 +140,11 @@ export function AiPicker({ disabled }: { disabled?: boolean }) {
               size="icon"
               aria-label="Refresh models"
               title="Ask the provider for its current models"
-              disabled={disabled || refreshing || waiting}
+              loading={refreshing}
+              disabled={disabled || waiting}
               onClick={() => void refresh()}
             >
-              <RefreshCw className={refreshing ? "size-4 animate-spin" : "size-4"} />
+              <RefreshCw className="size-4" />
             </Button>
           )}
           <Button

@@ -6,8 +6,9 @@ import { endSessions } from "../realtime/publish";
 import { getPublicSettings } from "../settings/service";
 import { canonicalEmail } from "./email";
 import { findForReset, issueReset, resetMail, resetPassword } from "./reset";
-import { authorizeUrl, githubSignIn, pkcePair, randomState } from "./github";
-import { googleAuthorizeUrl, googleSignIn } from "./google";
+import { authorizeUrl, githubLink, githubSignIn, pkcePair, randomState } from "./github";
+import { googleAuthorizeUrl, googleLink, googleSignIn } from "./google";
+import { linkedProviders, unlinkSocial } from "./links";
 import {
   CONNECT_COOKIE,
   OAUTH_COOKIE,
@@ -23,6 +24,13 @@ import { SESSION_MS, login, logout, signup, userForToken } from "./service";
 import { verifyTurnstile } from "./turnstile";
 import { confirmVerification, hasLiveVerification, sendVerification } from "./verify";
 import { withUser } from "./guard";
+import {
+  confirmEmailChange,
+  emailChangeMail,
+  emailChangedNotice,
+  requestEmailChange,
+} from "./email-change";
+import { changePassword, updateProfile } from "./profile";
 
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   Response.json(body, { status, headers: { "cache-control": "no-store", ...headers } });
@@ -221,6 +229,114 @@ export const resendHandler = (request: Request) =>
     return json({ ok: true, sent: true });
   });
 
+/** `PATCH { displayName }`: the name other people see (cursors, comments, who shared a draft). */
+export const profileHandler = (request: Request) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    const result = await updateProfile(db, user.id, await body(request));
+    return result.ok ? json({ user: result.user }) : json({ error: result.error }, 400);
+  });
+
+/**
+ * `POST { current?, next }`: changes the password, or sets one for an account that signs in only
+ * with GitHub or Google. Wrong guesses of the current one are limited per account (a stolen
+ * session cannot be used to try passwords). Other devices are signed out; this one stays.
+ */
+export const passwordHandler = (request: Request) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    const token = readToken(request);
+    const input = (await body(request)) as { current?: unknown; next?: unknown } | null;
+    if (!token || typeof input?.next !== "string") return json({ error: "invalid" }, 400);
+    const key = `password:${user.id}`;
+    const max = limit(request, "LOGIN_FAIL_LIMIT", 10);
+    const wait = await lockedOut(db, key, max);
+    if (wait !== null) return tooMany(wait);
+    const result = await changePassword(db, user.id, token, {
+      next: input.next,
+      ...(typeof input.current === "string" && { current: input.current }),
+    });
+    if (!result.ok) {
+      if (result.error === "wrong_password") await hit(db, key, max, FAIL_WINDOW);
+      return json({ error: result.error }, result.error === "wrong_password" ? 401 : 400);
+    }
+    await clearLimit(db, key);
+    // the other devices' sockets close with their sessions; this browser's reconnects at once
+    await endSessions(request, user.id, "signed_out");
+    return json({ ok: true });
+  });
+
+/**
+ * `POST { email, current }`: emails a link to the NEW address; nothing changes until it is opened.
+ * Needs the current password (wrong guesses share the password limit) and a server that sends mail,
+ * since the new address must be proven. Three links an hour per account.
+ */
+export const emailChangeHandler = (request: Request) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    const mailer = await getMailer(request);
+    if (!mailer) return json({ error: "email_unavailable" }, 503);
+    const input = (await body(request)) as { email?: unknown; current?: unknown } | null;
+    if (typeof input?.email !== "string") return json({ error: "invalid" }, 400);
+    const guesses = `password:${user.id}`;
+    const max = limit(request, "LOGIN_FAIL_LIMIT", 10);
+    const wait = await lockedOut(db, guesses, max);
+    if (wait !== null) return tooMany(wait);
+    const result = await requestEmailChange(db, user.id, {
+      email: input.email,
+      ...(typeof input.current === "string" && { current: input.current }),
+    });
+    if (!result.ok) {
+      if (result.error === "wrong_password") await hit(db, guesses, max, FAIL_WINDOW);
+      const status = { wrong_password: 401, email_taken: 409 }[result.error as string] ?? 400;
+      return json({ error: result.error }, status);
+    }
+    await clearLimit(db, guesses);
+    const sends = await hit(
+      db,
+      `email-change:${user.id}`,
+      limit(request, "VERIFY_EMAIL_LIMIT", 3),
+      HOUR,
+    );
+    if (!sends.allowed) return tooMany(sends.retryAfter);
+    try {
+      await mailer(emailChangeMail(siteOrigin(request), result.token, result.to));
+    } catch (error) {
+      console.error("Couldn't send the email-change link", error);
+      return json({ error: "email_failed" }, 502);
+    }
+    return json({ ok: true, to: result.to });
+  });
+
+/** The link in that email: makes the new address the account's, then goes to the settings. */
+export async function emailConfirmHandler(request: Request) {
+  const token = new URL(request.url).searchParams.get("token") ?? "";
+  const db = await getDb(request);
+  const done = await confirmEmailChange(db, token, Date.now(), readToken(request) ?? undefined);
+  if (!done.ok)
+    return redirect(
+      `/settings?tab=account&auth_error=${done.error === "email_taken" ? "email_taken" : "email_change_failed"}`,
+    );
+  await endSessions(request, done.userId, "signed_out");
+  const mailer = await getMailer(request);
+  if (mailer)
+    await afterResponse(
+      request,
+      mailer(emailChangedNotice(siteOrigin(request), done.oldEmail, done.newEmail)),
+    );
+  return redirect("/settings?tab=account&email_changed=1");
+}
+
+/** `DELETE /api/auth/links/github|google`: unlinks a provider, never the last way to sign in. */
+export const unlinkHandler = (request: Request, provider: string) =>
+  withUser(request, async (user, db) => {
+    if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
+    if (provider !== "github" && provider !== "google") return json({ error: "invalid" }, 400);
+    const result = await unlinkSocial(db, provider, user.id);
+    if (result.ok) return json({ ok: true });
+    return json({ error: result.error }, result.error === "not_linked" ? 404 : 409);
+  });
+
 export async function logoutHandler(request: Request) {
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
   const token = readToken(request);
@@ -254,7 +370,8 @@ export async function meHandler(request: Request) {
   };
   if (!session || !token) return json({ user: null, providers });
   // Re-issue the cookie so the browser keeps it exactly as long as the (sliding) session lives.
-  return json({ user: session.user, providers }, 200, {
+  const linked = await linkedProviders(await getDb(request), session.user.id);
+  return json({ user: { ...session.user, linked }, providers }, 200, {
     "set-cookie": sessionCookie(token, protocol(request), session.expiresAt - Date.now()),
   });
 }
@@ -277,14 +394,30 @@ const redirect = (to: string, ...cookies: string[]) => {
   return new Response(null, { status: 302, headers });
 };
 
+/** Where a social flow ends: the editor to sign in, the account settings to link (`.link` mode). */
+const LINK_BACK = "/settings?tab=account";
+
+/** A link flow starts only from a signed-in session; this answers who, or null. */
+async function linkingUser(request: Request) {
+  const token = readToken(request);
+  const session = token ? await userForToken(await getDb(request), token) : null;
+  return session?.user ?? null;
+}
+
 export async function githubStartHandler(request: Request) {
+  const link = new URL(request.url).searchParams.get("link") === "1";
   const cfg = githubConfig(request);
-  if (!cfg) return redirect("/editor?auth_error=github_unavailable");
+  if (!cfg)
+    return redirect(
+      link ? `${LINK_BACK}&auth_error=github_unavailable` : "/editor?auth_error=github_unavailable",
+    );
+  if (link && !(await linkingUser(request)))
+    return redirect(`${LINK_BACK}&auth_error=unauthorized`);
   const { verifier, challenge } = await pkcePair();
   const state = randomState();
   return redirect(
     authorizeUrl(cfg, redirectUri(request), state, challenge),
-    oauthCookie(`${state}.${verifier}`, protocol(request), 10 * 60 * 1000),
+    oauthCookie(`${state}.${verifier}${link ? ".link" : ""}`, protocol(request), 10 * 60 * 1000),
   );
 }
 
@@ -298,11 +431,27 @@ export async function githubCallbackHandler(request: Request) {
   const connecting = readCookie(request, CONNECT_COOKIE);
   if (connecting && connecting.split(".")[0] === params.get("state"))
     return (await import("../github/routes")).connectCallbackHandler(request);
-  const [state, verifier] = readCookie(request, OAUTH_COOKIE)?.split(".") ?? [];
+  const [state, verifier, mode] = readCookie(request, OAUTH_COOKIE)?.split(".") ?? [];
   const code = params.get("code");
   // The state in the URL must be the one this browser was given, or the callback was forged.
   if (!cfg || !state || !verifier || !code || params.get("state") !== state)
-    return fail("github_failed");
+    return mode === "link"
+      ? redirect(`${LINK_BACK}&auth_error=github_failed`, clear)
+      : fail("github_failed");
+  if (mode === "link") {
+    const user = await linkingUser(request);
+    if (!user) return redirect(`${LINK_BACK}&auth_error=unauthorized`, clear);
+    const linked = await githubLink(
+      await getDb(request),
+      cfg,
+      { code, verifier, redirectUri: redirectUri(request) },
+      user.id,
+    );
+    return redirect(
+      linked.ok ? `${LINK_BACK}&linked=github` : `${LINK_BACK}&auth_error=${linked.error}`,
+      clear,
+    );
+  }
   const result = await githubSignIn(await getDb(request), cfg, {
     code,
     verifier,
@@ -324,8 +473,14 @@ const googleRedirectUri = (request: Request) =>
   `${getEnv(request, "PUBLIC_URL")?.replace(/\/$/, "") ?? new URL(request.url).origin}/api/auth/google/callback`;
 
 export async function googleStartHandler(request: Request) {
+  const link = new URL(request.url).searchParams.get("link") === "1";
   const cfg = googleConfig(request);
-  if (!cfg) return redirect("/editor?auth_error=google_unavailable");
+  if (!cfg)
+    return redirect(
+      link ? `${LINK_BACK}&auth_error=google_unavailable` : "/editor?auth_error=google_unavailable",
+    );
+  if (link && !(await linkingUser(request)))
+    return redirect(`${LINK_BACK}&auth_error=unauthorized`);
   const { verifier, challenge } = await pkcePair();
   const state = randomState();
   return redirect(
@@ -336,21 +491,44 @@ export async function googleStartHandler(request: Request) {
       challenge,
       getEnv(request, "GOOGLE_URL"),
     ),
-    oauthCookie(`${state}.${verifier}`, protocol(request), 10 * 60 * 1000, "google"),
+    oauthCookie(
+      `${state}.${verifier}${link ? ".link" : ""}`,
+      protocol(request),
+      10 * 60 * 1000,
+      "google",
+    ),
   );
 }
 
 export async function googleCallbackHandler(request: Request) {
   const cfg = googleConfig(request);
   const clear = oauthCookie("", protocol(request), 0, "google");
-  const fail = (code: string) => redirect(`/editor?auth_error=${code}`, clear);
   const params = new URL(request.url).searchParams;
-  const [state, verifier] = readCookie(request, OAUTH_COOKIE)?.split(".") ?? [];
+  const [state, verifier, mode] = readCookie(request, OAUTH_COOKIE)?.split(".") ?? [];
+  const fail = (code: string) =>
+    redirect(
+      mode === "link" ? `${LINK_BACK}&auth_error=${code}` : `/editor?auth_error=${code}`,
+      clear,
+    );
   // The state in the URL must be the one this browser was given, or the callback was forged.
   if (!cfg || !state || !verifier || params.get("state") !== state) return fail("google_failed");
   const code = params.get("code");
   if (params.get("error") === "access_denied") return fail("google_denied");
   if (!code) return fail("google_failed");
+  if (mode === "link") {
+    const user = await linkingUser(request);
+    if (!user) return fail("unauthorized");
+    const linked = await googleLink(
+      await getDb(request),
+      cfg,
+      { code, verifier, redirectUri: googleRedirectUri(request) },
+      user.id,
+      fetch,
+      Date.now(),
+      getEnv(request, "GOOGLE_URL"),
+    );
+    return linked.ok ? redirect(`${LINK_BACK}&linked=google`, clear) : fail(linked.error);
+  }
   const result = await googleSignIn(
     await getDb(request),
     cfg,

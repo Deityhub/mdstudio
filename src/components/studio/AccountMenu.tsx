@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Cloud,
   Eye,
@@ -6,6 +6,7 @@ import {
   Github,
   ImageIcon,
   LogOut,
+  Settings,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
@@ -43,7 +44,14 @@ import { ForgotPassword } from "./ForgotPassword";
 import { Turnstile } from "./Turnstile";
 
 /** Optional account: signed out is the default and the editor never needs it. */
-export function AccountMenu() {
+/**
+ * `settings={false}` drops the signed-out gear where Settings is shown elsewhere (its own page, the
+ * studio's side strip); `menuSide` opens the menu to the side of the button instead of below it.
+ */
+export function AccountMenu({
+  settings = true,
+  menuSide = "bottom",
+}: { settings?: boolean; menuSide?: "bottom" | "right" } = {}) {
   const account = useAccount();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -126,7 +134,7 @@ export function AccountMenu() {
               <Avatar src={user.avatarUrl} label={label} />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" side={menuSide}>
             <DropdownMenuLabel className="font-normal">
               <span className="block text-xs text-muted-foreground">Signed in as</span>
               {user.email}
@@ -135,13 +143,23 @@ export function AccountMenu() {
             <DropdownMenuItem
               onSelect={() => (cloudReady(account) ? setPicker(true) : setVerifying(true))}
             >
-              <Cloud className="size-4" /> Choose drafts for the cloud…
+              <Cloud className="size-4" /> Choose drafts for the cloud
             </DropdownMenuItem>
             {account.images && (
               <DropdownMenuItem onSelect={() => setManageImages(true)}>
-                <ImageIcon className="size-4" /> Manage images…
+                <ImageIcon className="size-4" /> Manage images
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem
+              onSelect={() => void navigate({ to: "/settings", search: { tab: "account" } })}
+            >
+              <UserRound className="size-4" /> Account
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => void navigate({ to: "/settings", search: { tab: "editor" } })}
+            >
+              <Settings className="size-4" /> Settings
+            </DropdownMenuItem>
             {user.isAdmin && (
               <DropdownMenuItem
                 onSelect={() =>
@@ -178,6 +196,13 @@ export function AccountMenu() {
 
   return (
     <>
+      {settings && (
+        <Button asChild variant="ghost" size="icon">
+          <Link to="/settings" search={{ tab: "" }} aria-label="Settings" title="Settings">
+            <Settings className="size-4" />
+          </Link>
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"

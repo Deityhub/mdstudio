@@ -83,7 +83,8 @@ export function SettingsTab() {
         <LimitsEditor catalog={catalog} values={limits} onChange={setLimits} disabled={busy} />
       </section>
       <Button
-        disabled={busy || !Object.keys(change).length}
+        loading={busy}
+        disabled={!Object.keys(change).length}
         onClick={async () => {
           setBusy(true);
           try {

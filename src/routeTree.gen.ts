@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AFileRouteImport } from './routes/a.$file'
@@ -34,12 +35,15 @@ import { Route as ApiAdminSettingsRouteImport } from './routes/api/admin.setting
 import { Route as ApiAdminUsersRouteImport } from './routes/api/admin.users'
 import { Route as ApiAiIntegrationsRouteImport } from './routes/api/ai.integrations'
 import { Route as ApiAssetsIdRouteImport } from './routes/api/assets.$id'
+import { Route as ApiAuthEmailRouteImport } from './routes/api/auth/email'
 import { Route as ApiAuthForgotRouteImport } from './routes/api/auth/forgot'
 import { Route as ApiAuthGithubRouteImport } from './routes/api/auth/github'
 import { Route as ApiAuthGoogleRouteImport } from './routes/api/auth/google'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
+import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
+import { Route as ApiAuthProfileRouteImport } from './routes/api/auth/profile'
 import { Route as ApiAuthResetRouteImport } from './routes/api/auth/reset'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
@@ -54,8 +58,10 @@ import { Route as ApiSyncPushRouteImport } from './routes/api/sync/push'
 import { Route as ApiAdminPlansNameRouteImport } from './routes/api/admin.plans.$name'
 import { Route as ApiAdminUsersIdRouteImport } from './routes/api/admin.users.$id'
 import { Route as ApiAiIntegrationsIdRouteImport } from './routes/api/ai.integrations.$id'
+import { Route as ApiAuthEmailConfirmRouteImport } from './routes/api/auth/email.confirm'
 import { Route as ApiAuthGithubCallbackRouteImport } from './routes/api/auth/github.callback'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google.callback'
+import { Route as ApiAuthLinksProviderRouteImport } from './routes/api/auth/links.$provider'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify.resend'
 import { Route as ApiCollabIdEditorsRouteImport } from './routes/api/collab.$id.editors'
 import { Route as ApiCollabLinkSlugRouteImport } from './routes/api/collab.link.$slug'
@@ -94,6 +100,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -201,6 +212,11 @@ const ApiAssetsIdRoute = ApiAssetsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiAssetsRoute,
 } as any)
+const ApiAuthEmailRoute = ApiAuthEmailRouteImport.update({
+  id: '/api/auth/email',
+  path: '/api/auth/email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthForgotRoute = ApiAuthForgotRouteImport.update({
   id: '/api/auth/forgot',
   path: '/api/auth/forgot',
@@ -229,6 +245,16 @@ const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
 const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
   id: '/api/auth/me',
   path: '/api/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasswordRoute = ApiAuthPasswordRouteImport.update({
+  id: '/api/auth/password',
+  path: '/api/auth/password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthProfileRoute = ApiAuthProfileRouteImport.update({
+  id: '/api/auth/profile',
+  path: '/api/auth/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthResetRoute = ApiAuthResetRouteImport.update({
@@ -301,6 +327,11 @@ const ApiAiIntegrationsIdRoute = ApiAiIntegrationsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiAiIntegrationsRoute,
 } as any)
+const ApiAuthEmailConfirmRoute = ApiAuthEmailConfirmRouteImport.update({
+  id: '/confirm',
+  path: '/confirm',
+  getParentRoute: () => ApiAuthEmailRoute,
+} as any)
 const ApiAuthGithubCallbackRoute = ApiAuthGithubCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
@@ -310,6 +341,11 @@ const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
   getParentRoute: () => ApiAuthGoogleRoute,
+} as any)
+const ApiAuthLinksProviderRoute = ApiAuthLinksProviderRouteImport.update({
+  id: '/api/auth/links/$provider',
+  path: '/api/auth/links/$provider',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
   id: '/resend',
@@ -419,6 +455,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
@@ -440,12 +477,15 @@ export interface FileRoutesByFullPath {
   '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/email': typeof ApiAuthEmailRouteWithChildren
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/profile': typeof ApiAuthProfileRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
@@ -460,8 +500,10 @@ export interface FileRoutesByFullPath {
   '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
+  '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/links/$provider': typeof ApiAuthLinksProviderRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
   '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
@@ -487,6 +529,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
@@ -508,12 +551,15 @@ export interface FileRoutesByTo {
   '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/email': typeof ApiAuthEmailRouteWithChildren
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/profile': typeof ApiAuthProfileRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
@@ -528,8 +574,10 @@ export interface FileRoutesByTo {
   '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
+  '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/links/$provider': typeof ApiAuthLinksProviderRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
   '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
@@ -556,6 +604,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/a/$file': typeof AFileRoute
@@ -577,12 +626,15 @@ export interface FileRoutesById {
   '/api/admin/users': typeof ApiAdminUsersRouteWithChildren
   '/api/ai/integrations': typeof ApiAiIntegrationsRouteWithChildren
   '/api/assets/$id': typeof ApiAssetsIdRoute
+  '/api/auth/email': typeof ApiAuthEmailRouteWithChildren
   '/api/auth/forgot': typeof ApiAuthForgotRoute
   '/api/auth/github': typeof ApiAuthGithubRouteWithChildren
   '/api/auth/google': typeof ApiAuthGoogleRouteWithChildren
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/profile': typeof ApiAuthProfileRoute
   '/api/auth/reset': typeof ApiAuthResetRoute
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
@@ -597,8 +649,10 @@ export interface FileRoutesById {
   '/api/admin/plans/$name': typeof ApiAdminPlansNameRoute
   '/api/admin/users/$id': typeof ApiAdminUsersIdRouteWithChildren
   '/api/ai/integrations/$id': typeof ApiAiIntegrationsIdRoute
+  '/api/auth/email/confirm': typeof ApiAuthEmailConfirmRoute
   '/api/auth/github/callback': typeof ApiAuthGithubCallbackRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/links/$provider': typeof ApiAuthLinksProviderRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/collab/$id/editors': typeof ApiCollabIdEditorsRouteWithChildren
   '/api/collab/link/$slug': typeof ApiCollabLinkSlugRoute
@@ -626,6 +680,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/privacy'
     | '/reset-password'
+    | '/settings'
     | '/sitemap.xml'
     | '/terms'
     | '/a/$file'
@@ -647,12 +702,15 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
+    | '/api/auth/email'
     | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/password'
+    | '/api/auth/profile'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
@@ -667,8 +725,10 @@ export interface FileRouteTypes {
     | '/api/admin/plans/$name'
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
+    | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
+    | '/api/auth/links/$provider'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
     | '/api/collab/link/$slug'
@@ -694,6 +754,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/privacy'
     | '/reset-password'
+    | '/settings'
     | '/sitemap.xml'
     | '/terms'
     | '/a/$file'
@@ -715,12 +776,15 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
+    | '/api/auth/email'
     | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/password'
+    | '/api/auth/profile'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
@@ -735,8 +799,10 @@ export interface FileRouteTypes {
     | '/api/admin/plans/$name'
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
+    | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
+    | '/api/auth/links/$provider'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
     | '/api/collab/link/$slug'
@@ -762,6 +828,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/privacy'
     | '/reset-password'
+    | '/settings'
     | '/sitemap.xml'
     | '/terms'
     | '/a/$file'
@@ -783,12 +850,15 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/ai/integrations'
     | '/api/assets/$id'
+    | '/api/auth/email'
     | '/api/auth/forgot'
     | '/api/auth/github'
     | '/api/auth/google'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
+    | '/api/auth/password'
+    | '/api/auth/profile'
     | '/api/auth/reset'
     | '/api/auth/signup'
     | '/api/auth/verify'
@@ -803,8 +873,10 @@ export interface FileRouteTypes {
     | '/api/admin/plans/$name'
     | '/api/admin/users/$id'
     | '/api/ai/integrations/$id'
+    | '/api/auth/email/confirm'
     | '/api/auth/github/callback'
     | '/api/auth/google/callback'
+    | '/api/auth/links/$provider'
     | '/api/auth/verify/resend'
     | '/api/collab/$id/editors'
     | '/api/collab/link/$slug'
@@ -831,6 +903,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   AFileRoute: typeof AFileRoute
@@ -851,12 +924,15 @@ export interface RootRouteChildren {
   ApiAdminSettingsRoute: typeof ApiAdminSettingsRoute
   ApiAdminUsersRoute: typeof ApiAdminUsersRouteWithChildren
   ApiAiIntegrationsRoute: typeof ApiAiIntegrationsRouteWithChildren
+  ApiAuthEmailRoute: typeof ApiAuthEmailRouteWithChildren
   ApiAuthForgotRoute: typeof ApiAuthForgotRoute
   ApiAuthGithubRoute: typeof ApiAuthGithubRouteWithChildren
   ApiAuthGoogleRoute: typeof ApiAuthGoogleRouteWithChildren
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
+  ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
+  ApiAuthProfileRoute: typeof ApiAuthProfileRoute
   ApiAuthResetRoute: typeof ApiAuthResetRoute
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
@@ -866,6 +942,7 @@ export interface RootRouteChildren {
   ApiGithubReposRoute: typeof ApiGithubReposRouteWithChildren
   ApiSyncPullRoute: typeof ApiSyncPullRoute
   ApiSyncPushRoute: typeof ApiSyncPushRoute
+  ApiAuthLinksProviderRoute: typeof ApiAuthLinksProviderRoute
   ApiDocumentsIdRevisionsRoute: typeof ApiDocumentsIdRevisionsRouteWithChildren
   ApiGithubPublicationsIdRoute: typeof ApiGithubPublicationsIdRoute
   ApiSSlugCommentsRoute: typeof ApiSSlugCommentsRouteWithChildren
@@ -899,6 +976,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -1048,6 +1132,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssetsIdRouteImport
       parentRoute: typeof ApiAssetsRoute
     }
+    '/api/auth/email': {
+      id: '/api/auth/email'
+      path: '/api/auth/email'
+      fullPath: '/api/auth/email'
+      preLoaderRoute: typeof ApiAuthEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/forgot': {
       id: '/api/auth/forgot'
       path: '/api/auth/forgot'
@@ -1088,6 +1179,20 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/me'
       fullPath: '/api/auth/me'
       preLoaderRoute: typeof ApiAuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/password': {
+      id: '/api/auth/password'
+      path: '/api/auth/password'
+      fullPath: '/api/auth/password'
+      preLoaderRoute: typeof ApiAuthPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/profile': {
+      id: '/api/auth/profile'
+      path: '/api/auth/profile'
+      fullPath: '/api/auth/profile'
+      preLoaderRoute: typeof ApiAuthProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/reset': {
@@ -1188,6 +1293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiIntegrationsIdRouteImport
       parentRoute: typeof ApiAiIntegrationsRoute
     }
+    '/api/auth/email/confirm': {
+      id: '/api/auth/email/confirm'
+      path: '/confirm'
+      fullPath: '/api/auth/email/confirm'
+      preLoaderRoute: typeof ApiAuthEmailConfirmRouteImport
+      parentRoute: typeof ApiAuthEmailRoute
+    }
     '/api/auth/github/callback': {
       id: '/api/auth/github/callback'
       path: '/callback'
@@ -1201,6 +1313,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/google/callback'
       preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
       parentRoute: typeof ApiAuthGoogleRoute
+    }
+    '/api/auth/links/$provider': {
+      id: '/api/auth/links/$provider'
+      path: '/api/auth/links/$provider'
+      fullPath: '/api/auth/links/$provider'
+      preLoaderRoute: typeof ApiAuthLinksProviderRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/verify/resend': {
       id: '/api/auth/verify/resend'
@@ -1499,6 +1618,18 @@ const ApiAiIntegrationsRouteChildren: ApiAiIntegrationsRouteChildren = {
 const ApiAiIntegrationsRouteWithChildren =
   ApiAiIntegrationsRoute._addFileChildren(ApiAiIntegrationsRouteChildren)
 
+interface ApiAuthEmailRouteChildren {
+  ApiAuthEmailConfirmRoute: typeof ApiAuthEmailConfirmRoute
+}
+
+const ApiAuthEmailRouteChildren: ApiAuthEmailRouteChildren = {
+  ApiAuthEmailConfirmRoute: ApiAuthEmailConfirmRoute,
+}
+
+const ApiAuthEmailRouteWithChildren = ApiAuthEmailRoute._addFileChildren(
+  ApiAuthEmailRouteChildren,
+)
+
 interface ApiAuthGithubRouteChildren {
   ApiAuthGithubCallbackRoute: typeof ApiAuthGithubCallbackRoute
 }
@@ -1578,6 +1709,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   AFileRoute: AFileRoute,
@@ -1598,12 +1730,15 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminSettingsRoute: ApiAdminSettingsRoute,
   ApiAdminUsersRoute: ApiAdminUsersRouteWithChildren,
   ApiAiIntegrationsRoute: ApiAiIntegrationsRouteWithChildren,
+  ApiAuthEmailRoute: ApiAuthEmailRouteWithChildren,
   ApiAuthForgotRoute: ApiAuthForgotRoute,
   ApiAuthGithubRoute: ApiAuthGithubRouteWithChildren,
   ApiAuthGoogleRoute: ApiAuthGoogleRouteWithChildren,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
+  ApiAuthPasswordRoute: ApiAuthPasswordRoute,
+  ApiAuthProfileRoute: ApiAuthProfileRoute,
   ApiAuthResetRoute: ApiAuthResetRoute,
   ApiAuthSignupRoute: ApiAuthSignupRoute,
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
@@ -1613,6 +1748,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGithubReposRoute: ApiGithubReposRouteWithChildren,
   ApiSyncPullRoute: ApiSyncPullRoute,
   ApiSyncPushRoute: ApiSyncPushRoute,
+  ApiAuthLinksProviderRoute: ApiAuthLinksProviderRoute,
   ApiDocumentsIdRevisionsRoute: ApiDocumentsIdRevisionsRouteWithChildren,
   ApiGithubPublicationsIdRoute: ApiGithubPublicationsIdRoute,
   ApiSSlugCommentsRoute: ApiSSlugCommentsRouteWithChildren,

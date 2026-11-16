@@ -41,6 +41,7 @@ export function AiWriter({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [stopped, setStopped] = useState(false);
+  const [creating, setCreating] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const upload = useRef<HTMLInputElement>(null);
   // the body scrolls on its own, and follows the text as it streams in
@@ -150,7 +151,7 @@ export function AiWriter({
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={busy}
+                    pending={busy}
                     onClick={() => setDraft(content)}
                   >
                     Use current draft
@@ -158,7 +159,7 @@ export function AiWriter({
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={busy}
+                    pending={busy}
                     onClick={() => upload.current?.click()}
                   >
                     <Upload className="size-4" /> Import .md
@@ -320,13 +321,17 @@ export function AiWriter({
             )}
             {mode === "write" && output && !busy && (
               <Button
+                loading={creating}
                 onClick={async () => {
+                  setCreating(true);
                   try {
                     await onCreate(output);
                     clearResult();
                     close(false);
                   } catch {
                     setError("Unable to save the generated draft.");
+                  } finally {
+                    setCreating(false);
                   }
                 }}
               >

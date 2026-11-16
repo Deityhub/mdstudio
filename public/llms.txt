@@ -1,52 +1,64 @@
 # mdstudio
 
-> mdstudio is an open-source, local-first Markdown editor and portability checker. It shows how your Markdown will render on GitHub, dev.to, Obsidian or a strict CommonMark engine, flags syntax that will not travel, and exports clean .md files. Formerly called Markdown Studio.
-
-Write Markdown in a full-featured editor with a complete formatting toolbar and a live preview. The raw Markdown is the single source of truth: the preview shows what other platforms render, with no preview-only syntax. Drafts are saved in the browser (IndexedDB) with no account and are not uploaded unless the writer chooses to. An optional account can keep up to 5 chosen drafts in a cloud, and a verified account can publish one as a public, read-only page that expires within 7 days.
+> mdstudio is an open-source, local-first Markdown editor and portability checker. The preview follows the rules of the target you pick (strict CommonMark, GFM, GFM without HTML or wiki notes), and clickable warnings point at anything that will not travel: raw HTML, local images, wiki-links, math, Mermaid diagrams and trailing-space line breaks. Drafts autosave in your browser with no account. With an account you can edit a draft together with invited people, share a read-only copy for review with comments, and publish to GitHub as a commit, a pull request or a gist. Optional AI helpers use your own API key. mdstudio is MIT licensed, runs in the browser and can be self-hosted with Docker. Formerly called Markdown Studio.
 
 ## What it does
 
-- Target profiles: Strict CommonMark, GFM extended, GFM without HTML, Wiki notes. The preview, the checks and the toolbar warnings follow the chosen profile.
-- Portability checker: flags raw HTML, local image paths, base64 images, wiki-links, math, Mermaid and trailing-space line breaks, with clickable issues that jump to the line.
-- Rich Markdown: tables with cell navigation, task lists, footnotes, GitHub alerts, KaTeX math, Mermaid diagrams, syntax-highlighted code blocks.
-- Import and export: open .md files, ZIP archives or whole folders, paste from Google Docs, Notion and the web; export clean UTF-8 Markdown (LF endings), standalone HTML, or every draft as a ZIP.
-- Library: search drafts, filter by tag, organise them in folders, rename them, and go back to any earlier version with a side-by-side compare.
-- Custom checker rules: turn rules on or off, add publication standards (title and description length, required front matter, heading structure) and your own text or regex rules, and share them as a JSON file.
-- Works offline after the first visit and can be installed as an app.
-- Optional AI writing helpers with the writer's own API key (OpenAI, Anthropic, Google Gemini or any OpenAI-compatible endpoint). Keys stay in session memory and requests go directly from the browser to the provider.
-- MIT licensed and open source. Self-host with Docker (`ghcr.io/deityhub/mdstudio` or `deityhub/mdstudio` on Docker Hub).
+- Live Markdown preview that follows the rules of the target you pick
+- Portability checker with clickable issues for non-portable syntax
+- Target profiles: Strict CommonMark, GFM extended, GFM without HTML, Wiki notes
+- Edit a draft together with invited people, online or offline, with live cursors
+- Share a read-only copy for review that expires, with comments from signed-in readers
+- Publish to GitHub as a commit, a pull request or a gist
+- Formatting toolbar for headings, lists, tables, links, images, code blocks, footnotes and alerts
+- KaTeX math and Mermaid diagrams
+- Local-first drafts stored in the browser (IndexedDB), no account needed
+- Import .md files, ZIP archives and folders; paste from Google Docs, Notion and the web
+- Export clean UTF-8 Markdown, standalone HTML, or every draft as a ZIP
+- Search drafts and their text, tag filters, folders, and version history with side-by-side compare
+- Custom checker rules and publication standards, shareable as a file
+- Bring-your-own-key AI writing helpers, shown as a diff before anything changes
+- Works offline and installs as an app
+- Open source under the MIT license, self-hostable with Docker
 
 ## Who it is for
 
-- Technical bloggers publishing through GitHub, dev.to, Hashnode and/or static site generators.
-- Developers writing READMEs and documentation for GitHub.
-- Obsidian users who share notes outside Obsidian.
-- Documentation teams who need Markdown that renders the same in every tool.
+- People who write for the web and publish in more than one place
+- Developers who write READMEs and docs, and want a second pair of eyes before the pull request
+- Notes writers who share outside their notes app
+- Small teams who review and edit docs together without leaving Markdown
 
 ## Common questions
 
-- Is it open source? Yes, it is MIT licensed, and you can use it in the browser or self-host it.
-- Do I need an account? No. An account is optional and adds cloud storage for chosen drafts (up to 5 by default), expiring share links with comments, and publishing to GitHub.
-- Can I publish to GitHub? Yes: commit or pull request to a repository, with images beside the file, or publish a gist. Needs an account with a confirmed email.
-- Are documents private? Yes by default. They stay in the browser; an account and the cloud are optional, and a draft is public only if the writer publishes it as a link that expires.
-- How is it different from other Markdown editors? It checks portability across platforms instead of rendering Markdown its own way.
+- Is mdstudio free and open source? Yes. It is MIT licensed and the code is on GitHub. The hosted site is free to use, with limits: 5 drafts in your cloud by default. You can also run your own copy with Docker, with your own database and storage.
+- Do I need an account? No. Writing, checking, importing and exporting all work without one, and drafts stay in your browser. An account is optional and adds what needs a server: cloud drafts, editing together, share links and publishing to GitHub. You sign up with an email address and confirm it.
+- Where are my documents stored? In your browser's storage on this device. A draft goes to our servers only if you put it in your cloud, and then only that draft. On a self-hosted copy it goes to your own database.
+- How does editing together work? Invite people by email from a draft's menu. Up to 3 people can edit one draft at the same time, and you see each other's cursors. If someone goes offline, their edits stay on their device and merge when they reconnect. If two people change the same spot, both keep their text.
+- How does review work? Sharing publishes a read-only copy that expires after 1 to 7 days. Make it public or limit it to people you name. Signed-in readers comment on the words they select, and you resolve the comments from the editor. Changing your draft does not change the copy until you publish an update, and you can stop sharing at any time.
+- Can I publish to GitHub? Yes. Connect your GitHub account, pick a repository, a branch and a path, then commit to the branch, open a pull request or post a gist. Local images are committed beside the file. Publishing needs an account with a confirmed email, and you can disconnect GitHub at any time.
+- How do the AI features handle my key and my text? You add your own key for OpenAI, Anthropic, Gemini, Ollama or any compatible gateway. The key stays in memory for the session and is never saved. Requests go from your browser to your provider, and every change is shown as a diff you accept or reject first.
+- Which flavors and platforms does it check? Four targets: Strict CommonMark, GFM extended, GFM without HTML and Wiki notes. They follow the rules those tools share rather than copying any one site, and the preview, the checks and the toolbar warnings all follow your choice. The guides explain where platforms differ.
+- How is it different from other Markdown editors? Most editors render Markdown their own way, with extra line breaks, smart quotes or built-in extensions, so a post can look right there and wrong where it lands. mdstudio renders strictly and tells you where the target will differ. It is also not a notes app or a blog host: it is where you write, check, review and publish from.
 
 ## Guides
 
-- [Portable Markdown: why it renders differently everywhere](https://mdstudio.deityhub.com/guides/markdown-portability): the six things that break most often and a checklist
-- [CommonMark vs GitHub Flavored Markdown](https://mdstudio.deityhub.com/guides/commonmark-vs-github-flavored-markdown): tables, task lists, strikethrough, footnotes, alerts
-- [Obsidian to GitHub Markdown](https://mdstudio.deityhub.com/guides/obsidian-to-github-markdown): converting wiki-links, highlights, callouts and embeds
-- [Writing Markdown for dev.to and Hashnode](https://mdstudio.deityhub.com/guides/markdown-for-devto-and-hashnode): front matter, images, raw HTML
-- [Markdown line breaks and paragraphs](https://mdstudio.deityhub.com/guides/markdown-line-breaks): soft breaks, hard breaks and the portable choice
-- [Markdown images](https://mdstudio.deityhub.com/guides/markdown-images): paths, hosted URLs, base64 and alt text
-- [Math and Mermaid diagrams in Markdown](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams): where they render and what to do elsewhere
+- [Write a Markdown Draft Together, Online or Offline](https://mdstudio.deityhub.com/guides/write-markdown-together): How several people edit one Markdown draft at once: inviting people, cursors and undo, what happens when someone goes offline, and the limits to know first.
+- [Publish Markdown to GitHub from an Editor](https://mdstudio.deityhub.com/guides/publish-markdown-to-github): Send a Markdown draft to a GitHub repository as a commit, a pull request or a gist, with its images, and what to know about connecting and republishing.
+- [Share a Markdown Draft for Review Before You Publish](https://mdstudio.deityhub.com/guides/share-markdown-for-review): Get feedback on a Markdown draft before it goes live: an expiring read-only copy, who can open it, comments on selected words, and what happens as you edit.
+- [Math and Mermaid Diagrams in Markdown: Where They Work](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams): Where LaTeX math and Mermaid diagrams render in Markdown: GitHub and Obsidian support them, other platforms do not. How to write them and what to do instead.
+- [Markdown Images: Paths, Alt Text and Portability](https://mdstudio.deityhub.com/guides/markdown-images): How to add images in Markdown so they show up everywhere: relative paths, hosted URLs, base64 data URIs, alt text and the mistakes that break previews.
+- [Markdown Line Breaks and Paragraphs Explained](https://mdstudio.deityhub.com/guides/markdown-line-breaks): How line breaks work in Markdown: paragraphs, soft breaks and hard breaks, why trailing spaces are fragile, and which method renders the same everywhere.
+- [Writing Markdown for Blogging Platforms](https://mdstudio.deityhub.com/guides/markdown-for-blogging-platforms): Write Markdown that publishes cleanly to blogging platforms and site tools: front matter, images, raw HTML and a test post before you rely on an extra feature.
+- [Obsidian to GitHub Markdown: Wiki-links, Callouts & More](https://mdstudio.deityhub.com/guides/obsidian-to-github-markdown): How to share Obsidian notes outside Obsidian: convert wiki-links, highlights, callouts and embeds so they render on GitHub, blogging platforms and static sites.
+- [CommonMark vs GitHub Flavored Markdown: What Differs](https://mdstudio.deityhub.com/guides/commonmark-vs-github-flavored-markdown): A clear comparison of CommonMark and GitHub Flavored Markdown: tables, task lists, strikethrough, footnotes, autolinks and alerts, and when each one matters.
+- [Portable Markdown: Why It Renders Differently Everywhere](https://mdstudio.deityhub.com/guides/markdown-portability): Why the same Markdown looks different on GitHub, blogging platforms and Obsidian, and a checklist for making your writing render the same on every platform.
 
 ## Links
 
 - [Home](https://mdstudio.deityhub.com/): overview, features and FAQ
 - [All guides](https://mdstudio.deityhub.com/guides): index of the Markdown guides
 - [Editor](https://mdstudio.deityhub.com/editor): open the editor
-- [Source code](https://github.com/Deityhub/mdstudio): README, specification, roadmap
+- [Source code](https://github.com/Deityhub/mdstudio): README and specification
 - [Changelog](https://github.com/Deityhub/mdstudio/blob/main/CHANGELOG.md)
 
 ## Author

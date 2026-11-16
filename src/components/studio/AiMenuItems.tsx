@@ -24,7 +24,7 @@ export function AiMenuItems({
       ))}
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={onIntegrations}>
-        <Settings2 className="mr-2 size-4" /> AI integrations…
+        <Settings2 className="mr-2 size-4" /> AI integrations
       </DropdownMenuItem>
     </>
   );

@@ -1,4 +1,5 @@
 // Loading and presenting guide text. The Markdown is imported lazily, one file at a time.
+import { splitFrontMatter } from "@/lib/markdown/markdown";
 import type { Guide } from "./guides";
 
 const files = import.meta.glob("../../../content/guides/*.md", {
@@ -8,7 +9,7 @@ const files = import.meta.glob("../../../content/guides/*.md", {
 
 export async function loadGuideMarkdown(slug: string): Promise<string | null> {
   const load = files[`../../../content/guides/${slug}.md`];
-  return load ? load() : null;
+  return load ? splitFrontMatter(await load()).body : null;
 }
 
 export const headingId = (text: string) =>
@@ -36,6 +37,24 @@ export function withHeadingIds(html: string, ids: string[]): string {
 
 export const formatDate = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" });
+
+const UTC = "UTC" as const;
+
+/** A UTC moment as a date ("November 2, 2026"), or with its time ("November 2, 2026 at 9:05 AM UTC"). */
+export const formatStamp = (iso: string, time = false) =>
+  new Date(iso).toLocaleString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    ...(time && { hour: "numeric", minute: "2-digit", timeZoneName: "short" }),
+    timeZone: UTC,
+  });
+
+/** How two moments differ: not at all, only in the time of day, or by the date. */
+export function stampsDiffer(a: string, b: string): "none" | "time" | "date" {
+  if (new Date(a).getTime() === new Date(b).getTime()) return "none";
+  return a.slice(0, 10) === b.slice(0, 10) ? "time" : "date";
+}
 
 export const relatedGuides = (all: Guide[], current: string, count = 3) =>
   all.filter((g) => g.slug !== current).slice(0, count);

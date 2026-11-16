@@ -68,8 +68,13 @@ export function ReviewComments({
     return () => clearTimeout(wait);
   }, [load, live]);
 
-  async function act(id: string, work: () => Promise<unknown>, event: RealtimeEvent) {
-    setBusy(id);
+  async function act(
+    id: string,
+    what: "resolve" | "delete",
+    work: () => Promise<unknown>,
+    event: RealtimeEvent,
+  ) {
+    setBusy(`${id}:${what}`);
     try {
       await work();
       // what the writer did is on screen at once; the event that follows changes nothing more
@@ -132,9 +137,10 @@ export function ReviewComments({
             variant="ghost"
             size="sm"
             className="h-7 px-2"
-            pending={busy === c.id}
+            loading={busy === `${c.id}:resolve`}
+            disabled={busy !== null}
             onClick={() =>
-              void act(c.id, () => ownerApi.resolve(draftId, c.id, !c.resolved), {
+              void act(c.id, "resolve", () => ownerApi.resolve(draftId, c.id, !c.resolved), {
                 t: "comment_resolved",
                 id: c.id,
                 resolved: !c.resolved,
@@ -150,9 +156,13 @@ export function ReviewComments({
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-destructive"
-          pending={busy === c.id}
+          loading={busy === `${c.id}:delete`}
+          disabled={busy !== null}
           onClick={() =>
-            void act(c.id, () => ownerApi.remove(draftId, c.id), { t: "comment_deleted", id: c.id })
+            void act(c.id, "delete", () => ownerApi.remove(draftId, c.id), {
+              t: "comment_deleted",
+              id: c.id,
+            })
           }
         >
           <Trash2 className="size-3.5" />

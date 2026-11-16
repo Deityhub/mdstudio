@@ -44,7 +44,7 @@ export function LimitsEditor({
           <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {group}
           </h4>
-          <ul className="divide-y divide-border rounded-md border border-border">
+          <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-muted">
             {Object.entries(LIMIT_INFO)
               .filter(([k, info]) => info.group === group && catalog[k])
               .map(([key, info]) => {

@@ -10,6 +10,10 @@ export type AccountUser = {
   isAdmin?: boolean;
   /** The picture of a Google or GitHub account, when there is one. */
   avatarUrl?: string | null;
+  /** False for an account that signs in only with GitHub or Google (it may set a password). */
+  hasPassword?: boolean;
+  /** The GitHub and Google identities linked to the account. */
+  linked?: ("github" | "google")[];
 };
 export type Account = {
   user: AccountUser | null;
@@ -49,6 +53,15 @@ const MESSAGES: Record<string, string> = {
   no_verified_email: "That account has no verified email address, so it can't be used to sign in.",
   email_in_use: "That email is already being used by another sign-in. Try again.",
   suspended: "This account has been suspended.",
+  wrong_password: "That isn't your current password.",
+  same: "Choose a password different from the current one.",
+  already_linked: "That account is already linked to a different mdstudio account.",
+  provider_taken: "This account already has one linked. Unlink it first to link another.",
+  last_method: "Set a password first: it would be your only way to sign in.",
+  same_email: "That is the address this account already uses.",
+  password_required: "Set a password first (under Password), then change your email.",
+  email_change_failed: "That link is invalid or has expired. Ask for a new one in Settings.",
+  unauthorized: "You were signed out. Sign in again.",
   signups_closed: "New accounts aren't being created right now.",
 };
 
@@ -207,4 +220,47 @@ export async function submitPasswordReset(
   } catch {
     return { error: "Can't reach the server. Check your connection and try again." };
   }
+}
+
+const send = async (path: string, method: string, data: unknown) => {
+  try {
+    const res = await fetch(path, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const body = (await res.json()) as { error?: string; retryAfter?: number } & Record<
+      string,
+      unknown
+    >;
+    if (res.ok) return body;
+    const wait = body.retryAfter ? ` Try again in ${Math.ceil(body.retryAfter / 60)} min.` : "";
+    return { error: authMessage(body.error ?? "") + (body.error === "rate_limited" ? wait : "") };
+  } catch {
+    return { error: "Can't reach the server. Check your connection and try again." };
+  }
+};
+
+/** Changes the name other people see; an empty name goes back to showing the address. */
+export async function updateDisplayName(displayName: string) {
+  const r = await send("/api/auth/profile", "PATCH", { displayName });
+  return "error" in r ? { error: String(r.error) } : { ok: true as const };
+}
+
+/** Changes the password, or sets one for an account that has none. Other devices are signed out. */
+export async function changePassword(next: string, current?: string) {
+  const r = await send("/api/auth/password", "POST", { next, ...(current && { current }) });
+  return "error" in r ? { error: String(r.error) } : { ok: true as const };
+}
+
+/** Emails a confirmation link to the new address; the address changes when the link is opened. */
+export async function requestEmailChange(email: string, current: string) {
+  const r = await send("/api/auth/email", "POST", { email, current });
+  return "error" in r ? { error: String(r.error) } : { ok: true as const, to: String(r["to"]) };
+}
+
+/** Unlinks GitHub or Google, unless it is the account's last way to sign in. */
+export async function unlinkProvider(provider: "github" | "google") {
+  const r = await send(`/api/auth/links/${provider}`, "DELETE", {});
+  return "error" in r ? { error: String(r.error) } : { ok: true as const };
 }

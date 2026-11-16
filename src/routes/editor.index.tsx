@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { PageLoader } from "@/components/PageLoader";
 import { fetchAccount } from "@/lib/account/client";
 import { documentStore, indexedDbStore, NEW_DOC_ID } from "@/lib/storage/documentStore";
 import { cloudOwners, isVisibleDoc } from "@/lib/sync/meta";
@@ -31,9 +32,5 @@ function EditorIndex() {
       navigate({ to: "/editor/$docId", params: { docId }, replace: true });
     })();
   }, [navigate]);
-  return (
-    <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
-      Opening your drafts…
-    </div>
-  );
+  return <PageLoader label="Opening your drafts" />;
 }

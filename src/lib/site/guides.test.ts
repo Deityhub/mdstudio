@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkPortability, getOutline } from "../markdown/markdown";
+import { checkPortability, getOutline, splitFrontMatter } from "../markdown/markdown";
 import { GUIDES, guideBySlug, guidePath, readingMinutes } from "./guides";
 import { SITE } from "./seo";
 
@@ -33,8 +33,23 @@ describe("guide catalogue", () => {
       expect(g.description.length, g.slug).toBeGreaterThanOrEqual(110);
       expect(g.description.length, g.slug).toBeLessThanOrEqual(160);
       expect(g.updated >= g.published, g.slug).toBe(true);
-      expect(g.published, g.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(g.published, g.slug).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+      expect(g.updated, g.slug).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
     }
+  });
+
+  it("takes everything from each guide's own front matter, newest first", () => {
+    for (const g of GUIDES) {
+      const { data } = splitFrontMatter(body(g.slug));
+      expect(data?.["slug"], g.slug).toBe(g.slug);
+      expect(data?.["title"], g.slug).toBe(g.title);
+      expect(data?.["description"], g.slug).toBe(g.description);
+      expect(String(data?.["published"]), g.slug).toBe(g.published);
+      expect(String(data?.["updated"]), g.slug).toBe(g.updated);
+      expect(g.minutes, g.slug).toBe(readingMinutes(splitFrontMatter(body(g.slug)).body));
+    }
+    const stamps = GUIDES.map((g) => g.published);
+    expect(stamps).toEqual([...stamps].sort().reverse());
   });
 
   it("looks guides up by slug and builds their paths", () => {
@@ -53,12 +68,22 @@ describe("guide content is dogfooded", () => {
         expect(getOutline(md).filter((h) => h.depth === 1)).toEqual([]);
         expect(getOutline(md).filter((h) => h.depth === 2).length).toBeGreaterThanOrEqual(3);
       });
+      // a link to another page of this site is a path, so a local or preview copy stays on itself
+      const sitePaths = ["/editor", ...GUIDES.map((x) => guidePath(x.slug))];
+      const siteLink = (message: string) => sitePaths.some((p) => message.includes(`(${p})`));
       it("is itself portable Markdown: no checker issues on the GFM and wiki profiles", () => {
         for (const profile of ["gfm-extended", "gfm-no-html", "wiki-notes"] as const)
-          expect(checkPortability(md, profile), profile).toEqual([]);
+          expect(
+            checkPortability(md, profile).filter(
+              (i) => !(i.rule === "local-link" && siteLink(i.message)),
+            ),
+            profile,
+          ).toEqual([]);
       });
-      it("links to the editor", () =>
-        expect(md).toContain("(https://mdstudio.deityhub.com/editor)"));
+      it("links to the editor, and to other pages of the site by path", () => {
+        expect(md).toContain("(/editor)");
+        expect(md).not.toContain(new URL(SITE.url).host);
+      });
     });
   }
 });

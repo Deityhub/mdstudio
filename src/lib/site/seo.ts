@@ -5,20 +5,8 @@ import { GUIDES, guidePath, type Guide } from "./guides";
 import { LEGAL_PAGES, legalPath } from "./legal";
 import { BRAND, FAQ, FEATURE_LIST, LONG_DESCRIPTION, type Faq } from "./seo-content";
 
-export const SITE = {
-  url: "https://mdstudio.deityhub.com",
-  name: BRAND.name,
-  alternateName: BRAND.alternateName,
-  tagline: BRAND.tagline,
-  description: BRAND.description,
-  author: "Chizoba Jude Ojini",
-  authorUrl: "https://judeojini.com",
-  /** Where privacy requests, account deletion and abuse reports go (see the legal pages). */
-  contactEmail: "contact@deityhub.com",
-  repo: "https://github.com/Deityhub/mdstudio",
-  image: "/og.png",
-  imageAlt: BRAND.imageAlt,
-} as const;
+export { SITE } from "./site";
+import { SITE } from "./site";
 
 export const absoluteUrl = (path: string) => `${SITE.url}${path}`;
 

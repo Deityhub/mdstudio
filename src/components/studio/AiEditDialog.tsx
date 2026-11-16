@@ -100,8 +100,7 @@ export function AiEditDialog({
       <DialogContent className="flex max-h-[90dvh] max-w-4xl flex-col [&_input]:text-base [&_input]:sm:text-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="size-5 text-primary" />{" "}
-            {edit?.label ?? action?.label.replace("…", "")}
+            <Sparkles className="size-5 text-primary" /> {edit?.label ?? action?.label}
           </DialogTitle>
           <DialogDescription>
             Review the change. Your draft stays as it is until you accept.
@@ -169,7 +168,7 @@ export function AiEditDialog({
                 {started ? "Try again" : "Run"}
               </Button>
             )}
-            <Button disabled={busy || !cleaned} onClick={() => onAccept(cleaned)}>
+            <Button pending={busy} disabled={!cleaned} onClick={() => onAccept(cleaned)}>
               <Check className="size-4" /> Accept
             </Button>
           </div>

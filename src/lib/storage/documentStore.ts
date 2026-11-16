@@ -155,8 +155,12 @@ export function createDocumentStore(kv: KeyValueStore) {
       notify(opts.quiet);
       return doc;
     },
+    /** Removing a folder's last draft removes the folder too (also when sync removes it). */
     async remove(id: string, opts: { quiet?: boolean } = {}) {
+      const folder = (await kv.get<MdDocument>(PREFIX + id))?.folder;
       await kv.del(PREFIX + id);
+      if (folder && !(await store.list()).some((d) => d.folder && byName(d.folder, folder) === 0))
+        await store.folders.remove(folder);
       notify(opts.quiet);
     },
     async create(partial: Partial<MdDocument> = {}): Promise<MdDocument> {

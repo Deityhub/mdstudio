@@ -29,8 +29,10 @@ export function PlansTab() {
   }, []);
   useEffect(load, [load]);
 
+  const [saving, setSaving] = useState(false);
   const save = async () => {
     if (!editing) return;
+    setSaving(true);
     try {
       await adminApi.savePlan(editing);
       toast.success("Plan saved");
@@ -38,6 +40,8 @@ export function PlansTab() {
       load();
     } catch {
       toast.error("That plan isn't valid");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -57,7 +61,7 @@ export function PlansTab() {
           <Plus className="size-4" /> New plan
         </Button>
       </div>
-      <ul className="divide-y divide-border rounded-md border border-border">
+      <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-muted">
         {(plans ?? []).map((p) => (
           <li key={p.name} className="flex items-center gap-3 px-3 py-2">
             <div className="min-w-0 flex-1">
@@ -85,7 +89,7 @@ export function PlansTab() {
                 <ConfirmButton
                   confirm="Delete plan?"
                   onConfirm={() =>
-                    void adminApi.deletePlan(p.name).then(
+                    adminApi.deletePlan(p.name).then(
                       () => {
                         toast.success("Plan deleted");
                         load();
@@ -107,7 +111,10 @@ export function PlansTab() {
         ))}
       </ul>
       {editing && catalog && (
-        <section aria-label="Edit plan" className="space-y-4 rounded-lg border border-border p-4">
+        <section
+          aria-label="Edit plan"
+          className="space-y-4 rounded-md border border-border bg-muted p-4"
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="plan-name">Name</Label>
@@ -138,6 +145,7 @@ export function PlansTab() {
           />
           <div className="flex gap-2">
             <Button
+              loading={saving}
               disabled={!NAME.test(editing.name) || !editing.label.trim()}
               onClick={() => void save()}
             >

@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { GUIDES } from "../src/lib/site/guides";
+import { readGuideCatalogue } from "../infra/guide-catalogue";
+
+// each guide says what it is in its own front matter
+const GUIDES = readGuideCatalogue();
 
 const ORIGIN = "https://mdstudio.deityhub.com";
 
@@ -15,6 +18,25 @@ test("the guides index lists every guide with a canonical URL and breadcrumbs", 
     JSON.parse(t),
   );
   expect(ld.some((d) => d["@type"] === "BreadcrumbList")).toBe(true);
+});
+
+test("the index leads with the latest guide, then lists the rest with date and reading time", async ({
+  page,
+}) => {
+  await page.goto("/guides");
+  const latest = page.getByRole("article", { name: GUIDES[0]!.title });
+  await expect(latest).toContainText("Latest guide");
+  await expect(latest.locator("time")).toHaveAttribute("datetime", GUIDES[0]!.published);
+  await expect(latest).toContainText(/\d+ min read/);
+
+  const all = page.getByRole("region", { name: "All guides" });
+  await expect(all.getByRole("listitem")).toHaveCount(GUIDES.length - 1);
+  const first = all.getByRole("listitem").first();
+  await expect(first).toContainText(GUIDES[1]!.title);
+  await expect(first.locator("time")).toHaveAttribute("datetime", GUIDES[1]!.published);
+  await expect(first).toContainText(/\d+ min read/);
+  // the dates are when each went out, not when it last changed
+  await expect(page.getByText(/^Updated /)).toHaveCount(0);
 });
 
 for (const g of GUIDES) {
@@ -89,4 +111,57 @@ test("the home page links into the guides", async ({ page }) => {
   await expect(page.locator("h1")).toHaveText(GUIDES[0]!.title);
   await page.getByRole("link", { name: "Open the editor" }).last().click();
   await expect(page).toHaveURL(/\/editor/);
+});
+
+test("the contents list follows the reading, and is hidden only when there is no room", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto("/guides/markdown-portability");
+  const list = page.getByRole("navigation", { name: "On this page" });
+  const links = list.getByRole("link");
+  await expect(list).toBeVisible();
+  // the first section is the one being read at the top
+  await expect(links.first()).toHaveAttribute("aria-current", "location");
+  // scrolling to a later section moves the mark to it, and the list stays in view beside the text
+  const last = links.last();
+  const id = (await last.getAttribute("href"))!.slice(1);
+  await page.locator(`h2[id="${id}"]`).scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(last).toHaveAttribute("aria-current", "location");
+  await expect(links.first()).not.toHaveAttribute("aria-current", "location");
+  await expect(list).toBeInViewport();
+  // with no room beside the text it is hidden
+  await page.setViewportSize({ width: 900, height: 700 });
+  await expect(list).toBeHidden();
+});
+
+test("the public header has no search, theme or repository links", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto("/guides");
+  const bar = page.getByRole("banner");
+  await expect(bar.getByRole("button", { name: "Search" })).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: /^Theme:/ })).toHaveCount(0);
+  await expect(bar.getByRole("link", { name: /github|self-host/i })).toHaveCount(0);
+  await expect(bar.getByRole("link", { name: "Settings" })).toBeVisible();
+  const footer = page.getByRole("contentinfo");
+  await expect(footer.getByRole("link", { name: "Settings" })).toHaveCount(0);
+  await expect(footer).not.toContainText("Chizoba");
+});
+
+test("the text is centred when the contents list is hidden", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 700 });
+  await page.goto("/guides/markdown-portability");
+  await expect(page.getByRole("navigation", { name: "On this page" })).toBeHidden();
+  const box = (await page.locator("article").boundingBox())!;
+  expect(Math.abs(box.x + box.width / 2 - 450)).toBeLessThan(8);
+});
+
+test("a guide shows when it was published", async ({ page }) => {
+  await page.goto(`/guides/${GUIDES[0]!.slug}`);
+  await expect(page.locator("article time").first()).toHaveAttribute(
+    "datetime",
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/,
+  );
+  await expect(page.getByText(/^Published /)).toBeVisible();
 });

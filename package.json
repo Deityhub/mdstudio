@@ -1,6 +1,6 @@
 {
   "name": "mdstudio",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Open-source, local-first Markdown editor with live preview and portability checks.",
   "license": "MIT",
   "author": "Chizoba Jude Ojini",
@@ -30,6 +30,7 @@
     "e2e": "NITRO_PRESET=node-server bun run build && playwright test",
     "db:generate": "drizzle-kit generate",
     "brand": "node scripts/brand-assets.mjs",
+    "llms": "bun scripts/llms.ts",
     "screenshots": "node scripts/screenshots.mjs",
     "dev:remote": "node scripts/dev-remote.mjs",
     "bundle:check": "bun scripts/bundle-size.ts",

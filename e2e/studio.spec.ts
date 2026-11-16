@@ -52,9 +52,13 @@ async function replaceText(page: Page, text: string) {
 test("home page renders and links to the editor", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  const github = page.getByRole("link", { name: /mdstudio on github/i });
-  await expect(github).toHaveAttribute("href", "https://github.com/Deityhub/mdstudio");
-  await expect(github).toHaveAttribute("target", "_blank");
+  // links that leave the site open in a new tab, without handing it this one
+  const changelog = page
+    .getByRole("navigation", { name: "Footer" })
+    .getByRole("link", { name: "Changelog" });
+  await expect(changelog).toHaveAttribute("href", /github\.com\/Deityhub\/mdstudio/);
+  await expect(changelog).toHaveAttribute("target", "_blank");
+  await expect(changelog).toHaveAttribute("rel", /noopener/);
   await page
     .getByRole("link", { name: /start writing/i })
     .first()
@@ -186,19 +190,41 @@ test("the drafts pane resizes by drag and keyboard, within limits, and remembers
   await expect.poll(width).toBe(288);
 });
 
-test("the Checks panel starts open only on wide screens, and opens on click below that", async ({
-  page,
-}) => {
-  const panel = page.getByText("Portable", { exact: true });
+test("the drafts and the panels share the pane on the left", async ({ page }) => {
+  const checks = page.getByText("Portable", { exact: true });
   await page.setViewportSize({ width: 1600, height: 900 });
   await open(page);
-  await expect(panel).toBeVisible();
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.reload();
-  await expect(editor(page)).toBeVisible();
-  await expect(panel).toBeHidden();
-  await page.getByRole("button", { name: "Checks" }).click();
-  await expect(panel).toBeVisible();
+  const panels = page.getByRole("navigation", { name: "Panels" });
+  const drafts = page.getByRole("complementary").getByRole("navigation", { name: "Drafts" });
+  const toggle = page
+    .getByRole("navigation", { name: "Panels" })
+    .getByRole("button", { name: "Drafts" });
+  // the drafts show first, with the panel buttons to their left
+  await expect(drafts).toBeVisible();
+  await expect(checks).toBeHidden();
+  const strip = (await panels.boundingBox())!;
+  const list = (await drafts.boundingBox())!;
+  expect(strip.x).toBeLessThan(list.x);
+  // a panel takes their place, and the drafts button brings them back
+  await panels.getByRole("button", { name: "Checks" }).click();
+  await expect(checks).toBeVisible();
+  await expect(drafts).toBeHidden();
+  await toggle.click();
+  await expect(drafts).toBeVisible();
+  await expect(checks).toBeHidden();
+  // pressing the open panel's button again closes it, and the drafts come back
+  await panels.getByRole("button", { name: "Outline" }).click();
+  await expect(drafts).toBeHidden();
+  await panels.getByRole("button", { name: "Outline" }).click();
+  await expect(drafts).toBeVisible();
+  // the strip has its own drafts button too: it hides the list, and brings it back over a panel
+  const draftsButton = panels.getByRole("button", { name: "Drafts" });
+  await expect(draftsButton).toHaveAttribute("aria-pressed", "true");
+  await draftsButton.click();
+  await expect(drafts).toBeHidden();
+  await panels.getByRole("button", { name: "History" }).click();
+  await draftsButton.click();
+  await expect(drafts).toBeVisible();
 });
 
 test("draft options live in a menu, and the rename field stays put while hovering", async ({
@@ -350,7 +376,7 @@ test("library: create a folder, move drafts in through the menu, and keep it aft
 
   await nav.getByText("One", { exact: true }).hover();
   await page.getByRole("button", { name: "Options for One" }).click();
-  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder" }).click();
   await page.getByLabel("Folder name").fill("blog POSTS");
   await page.getByRole("button", { name: "Move" }).click();
   // the typed name reuses the existing folder's spelling instead of making a second one
@@ -378,7 +404,7 @@ test("library: create a folder, move drafts in through the menu, and keep it aft
 
   await nav.getByText("One", { exact: true }).hover();
   await page.getByRole("button", { name: "Options for One" }).click();
-  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder" }).click();
   await page.getByLabel("Folder name").fill("");
   await page.getByRole("button", { name: "Move" }).click();
   // out of the folder, which stays as an empty one
@@ -429,7 +455,7 @@ test("library: deleting an empty folder is immediate, one with drafts asks first
   // with a draft: confirm, and cancel keeps everything
   await nav.getByText("Doomed", { exact: true }).hover();
   await page.getByRole("button", { name: "Options for Doomed" }).click();
-  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder" }).click();
   await page.getByLabel("Folder name").fill("Full one");
   await page.getByRole("button", { name: "Move" }).click();
   const full = nav.getByRole("group", { name: "Folder Full one" });
@@ -459,7 +485,7 @@ test("library: the folder field lists existing folders on click, and only when t
   const openMove = async () => {
     await nav.getByText("Picker", { exact: true }).hover();
     await page.getByRole("button", { name: "Options for Picker" }).click();
-    await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+    await page.getByRole("menuitem", { name: "Move to folder" }).click();
   };
 
   // no folders yet: nothing to pick from, just type a name
@@ -505,7 +531,7 @@ test("bulk: export every draft as a ZIP, with folders", async ({ page }) => {
   const nav = page.getByRole("navigation", { name: "Drafts" });
   await nav.getByText("Filed post", { exact: true }).hover();
   await page.getByRole("button", { name: "Options for Filed post" }).click();
-  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder" }).click();
   await page.getByLabel("Folder name").fill("Blog");
   await page.getByRole("button", { name: "Move" }).click();
 
@@ -602,7 +628,7 @@ test("library: rename a folder through its menu, and its drafts follow", async (
   }
   await nav.getByText("Inside", { exact: true }).hover();
   await page.getByRole("button", { name: "Options for Inside" }).click();
-  await page.getByRole("menuitem", { name: "Move to folder…" }).click();
+  await page.getByRole("menuitem", { name: "Move to folder" }).click();
   await page.getByLabel("Folder name", { exact: true }).fill("Blog");
   await page.getByRole("button", { name: "Move" }).click();
 
@@ -1111,7 +1137,9 @@ test("in focus mode the drafts button opens the list as a panel and focus mode s
 }) => {
   await open(page);
   const focus = page.getByRole("toolbar").getByRole("button", { name: "Focus mode" });
-  const toggle = page.getByRole("banner").getByRole("button", { name: "Toggle drafts" });
+  const toggle = page
+    .getByRole("navigation", { name: "Panels" })
+    .getByRole("button", { name: "Drafts" });
   const sidebar = page.getByRole("complementary").getByRole("navigation", { name: "Drafts" });
 
   // normal mode: the button still opens and closes the sidebar in place
@@ -1147,7 +1175,7 @@ test("in focus mode the drafts button opens the list as a panel and focus mode s
   await expect(panel).toBeHidden();
 });
 
-test("in focus mode the panel buttons stay, and open their panel from the right", async ({
+test("in focus mode the panel buttons stay, and open their panel from the left", async ({
   page,
 }) => {
   await open(page);
@@ -1201,4 +1229,42 @@ test("on a phone the panel bar stays in focus mode too", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
   await expect(focus).toHaveAttribute("aria-pressed", "true");
+});
+
+test("one button for what leaves the studio: Export for a local draft, with the same menu", async ({
+  page,
+}) => {
+  await open(page);
+  // not in the cloud: Export, with no publishing section
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Download .md" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /Publish to GitHub/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  // the view switch and the target are in the first row, with the logo
+  const bar = page.getByRole("banner");
+  await expect(bar.getByRole("combobox", { name: "Target platform" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "preview view" })).toBeVisible();
+});
+
+test("the account sits in the side strip from 768px, and in the top bar on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  const strip = page.getByRole("navigation", { name: "Panels", exact: true });
+  const bar = page.getByRole("banner");
+  await expect(strip.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Sign in" })).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Toggle drafts" })).toHaveCount(0);
+  // a narrower window keeps the strip, with the search, theme and account in it
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(strip.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(strip.getByRole("button", { name: "Drafts" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Sign in" })).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Toggle drafts" })).toHaveCount(0);
+  // only a phone drops the strip, and then the top bar has the account and the drafts toggle
+  await page.setViewportSize({ width: 600, height: 800 });
+  await expect(strip).toBeHidden();
+  await expect(bar.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Toggle drafts" })).toBeVisible();
 });

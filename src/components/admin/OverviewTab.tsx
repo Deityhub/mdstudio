@@ -24,9 +24,9 @@ export function OverviewTab() {
   return (
     <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {cards.map(([label, value, note]) => (
-        <li key={label} className="rounded-lg border border-border bg-card p-4">
+        <li key={label} className="rounded-md border border-border bg-muted p-4">
           <div className="text-xs text-muted-foreground">{label}</div>
-          <div className="mt-1 font-serif text-2xl">{value.toLocaleString()}</div>
+          <div className="mt-1 font-display text-2xl font-semibold">{value.toLocaleString()}</div>
           {note && <div className="mt-0.5 text-xs text-muted-foreground">{note}</div>}
         </li>
       ))}

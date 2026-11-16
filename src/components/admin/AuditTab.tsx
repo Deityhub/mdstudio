@@ -28,7 +28,7 @@ export function AuditTab() {
   if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
   return (
     <div>
-      <ul className="divide-y divide-border rounded-md border border-border">
+      <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-muted">
         {data.entries.map((e) => (
           <li key={e.id} className="space-y-0.5 px-3 py-2">
             <div className="text-sm">

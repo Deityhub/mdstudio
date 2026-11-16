@@ -74,9 +74,11 @@ export function ShareDialog({
   const { byDraft, defaultDays, maxDays, privateLinks, loaded } = useShares();
   const share = draft ? byDraft.get(draft.id) : undefined;
   const [days, setDays] = useState(String(defaultDays));
-  const [busy, setBusy] = useState<"publish" | "extend" | "stop" | "settings" | "invite" | null>(
-    null,
-  );
+  const [busy, setBusy] = useState<
+    "publish" | "extend" | "stop" | "settings" | "invite" | "remove" | null
+  >(null);
+  // the person being removed, so only their button shows it
+  const [removing, setRemoving] = useState<string | null>(null);
   // what a link not yet published will be made with
   const [chosenAccess, setChosenAccess] = useState<ShareAccess>("public");
   const [chosenComments, setChosenComments] = useState(false);
@@ -214,15 +216,17 @@ export function ShareDialog({
       "person",
     );
   };
-  const uninvite = (person: SharePerson) =>
+  const uninvite = (person: SharePerson) => {
+    setRemoving(person.id);
     void run(
-      "invite",
+      "remove",
       async () => {
         await peopleApi.remove(draft.id, person.id);
         setPeople((list) => list.filter((p) => p.id !== person.id));
       },
       "person",
-    );
+    ).finally(() => setRemoving(null));
+  };
   const stop = () =>
     run("stop", async () => {
       await shareApi.revoke(draft.id);
@@ -364,7 +368,8 @@ export function ShareDialog({
                       size="icon"
                       className="size-7 shrink-0"
                       aria-label={`Remove ${p.email}`}
-                      pending={busy !== null}
+                      loading={removing === p.id}
+                      pending={busy !== null && removing !== p.id}
                       onClick={() => uninvite(p)}
                     >
                       <X className="size-4" />

@@ -28,7 +28,11 @@ export async function twoPeople(browser: Browser) {
 
 export async function openDialog(a: Page) {
   await a.getByRole("button", { name: "Options for Notes" }).click();
-  await a.getByRole("menuitem", { name: "Edit together…" }).click();
+  await a.getByRole("menuitem", { name: "Share", exact: true }).click();
+  await a
+    .getByRole("dialog", { name: "Share this draft" })
+    .getByRole("button", { name: /Edit together/ })
+    .click();
   return a.getByRole("dialog", { name: "Edit together" });
 }
 

@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createNodeDb } from "../../../infra/db/node";
 import { oauthAccounts, users } from "../../../infra/db/schema";
 import type { Db } from "../db";
-import { authorizeUrl, githubSignIn, pkcePair } from "./github";
+import { authorizeUrl, githubLink, githubSignIn, pkcePair } from "./github";
+import { linkedProviders } from "./links";
 import { signup, userForToken } from "./service";
 
 const cfg = { clientId: "cid", clientSecret: "secret" };
@@ -122,5 +123,41 @@ describe("githubSignIn", () => {
     expect(await githubSignIn(db, cfg, input, github({ status: 500 }), now)).toEqual({
       error: "github_failed",
     });
+  });
+});
+
+describe("githubLink", () => {
+  it("adds the GitHub identity to the signed-in account whatever its email, and signs nobody in", async () => {
+    const made = await signup(
+      db,
+      { email: "me@example.com", password: "a long enough password" },
+      now,
+    );
+    if ("error" in made) throw new Error(made.error);
+    const other = github({
+      emails: [{ email: "else@example.org", primary: true, verified: true }],
+    });
+    expect(await githubLink(db, cfg, input, made.user.id, other, now)).toEqual({ ok: true });
+    expect(await linkedProviders(db, made.user.id)).toEqual(["github"]);
+    expect(await db.select().from(users)).toHaveLength(1);
+  });
+  it("reports a failed exchange without linking anything", async () => {
+    const made = await signup(
+      db,
+      { email: "me@example.com", password: "a long enough password" },
+      now,
+    );
+    if ("error" in made) throw new Error(made.error);
+    expect(
+      await githubLink(
+        db,
+        cfg,
+        input,
+        made.user.id,
+        github({ token: { error: "bad_verification_code" } }),
+        now,
+      ),
+    ).toEqual({ ok: false, error: "github_failed" });
+    expect(await linkedProviders(db, made.user.id)).toEqual([]);
   });
 });

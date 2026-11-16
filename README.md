@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Write Markdown once. See exactly how it renders everywhere.</strong><br>
-  An open-source, local-first Markdown editor with a faithful live preview and a portability checker for GitHub, dev.to and Obsidian.
+  An open-source, local-first Markdown editor with a faithful live preview and a portability checker for GitHub, blogging platforms and Obsidian.
 </p>
 
 <p align="center">
@@ -30,17 +30,20 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 - **Faithful live preview.** Strict CommonMark and GitHub Flavored Markdown, sanitized, with syntax-highlighted code. Scrolling stays aligned line by line, and clicking a block in the preview puts the editor cursor on its source line.
 - **Portability checker.** Raw HTML, local images and links, base64 images, wiki-links, `==highlights==`, math, Mermaid, trailing-space line breaks, missing alt text, unclosed tags and more. Every issue is clickable. Turn rules on or off, add publication standards (title and description length, required front matter, heading structure) and your own text or regex rules, and share them as a JSON file.
 - **Target profiles.** Strict CommonMark, GFM extended, GFM without HTML, and Wiki notes. The preview, the checks and the toolbar warnings follow your choice.
+- **Edit together.** Invite people by email and edit one draft at the same time, online or offline: live cursors, per-person undo, and offline edits merge when the network returns (Yjs). Up to 3 people per draft by default.
+- **Review links.** Share an expiring read-only copy (1 to 7 days), public or for named people only. Signed-in readers comment on the words they select, and you resolve the comments from the editor.
+- **Publish to GitHub.** Commit or open a pull request to a repository, or post a gist, with the images committed beside the file.
 - **Complete formatting toolbar.** Marks, headings, lists, task lists, links, images, footnotes, rules, code blocks, tables with cell navigation, GitHub alerts, math, diagrams and HTML helpers. Fully keyboard accessible.
 - **Math and diagrams.** KaTeX and Mermaid, rendered on demand, themed for light and dark.
-- **Local-first and private.** Drafts autosave to your browser's IndexedDB. No account, no uploads.
-- **A library that scales.** Search every draft, filter by tag, organise drafts in folders (drag and drop), and rename them without touching the text.
+- **Local-first.** Drafts autosave to your browser's IndexedDB and everything works offline with no account. Anything that leaves your device (cloud drafts, share links, publishing) is a choice you make per draft.
+- **A library that scales.** Search every draft and the words inside them, filter by tag, organise drafts in folders (drag and drop), and rename them without touching the text. One search (Ctrl/⌘ K) also finds commands, settings and pages.
 - **Version history.** Versions are kept automatically as you write; compare any of them side by side with the current draft and restore it.
 - **Works offline.** The studio keeps working with no connection and can be installed as an app.
 - **Import and export.** Open `.md` files, a ZIP or a whole folder, or paste from Google Docs, Notion and the web. Export clean UTF-8 Markdown (LF endings), self-contained Markdown with embedded images, standalone HTML, or every draft at once as a ZIP.
-- **Optional AI writer and inline AI actions, bring your own key.** OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint (Ollama, OpenRouter, Groq). Keys stay in session memory and requests go straight from your browser to the provider.
+- **AI on your own key.** A writer for titles, descriptions and drafts, inline actions on the selection (rewrite, shorten, translate, proofread), and Fix with AI on a flagged check, always shown as a diff you accept or reject. OpenAI, Anthropic, Gemini, Ollama or any OpenAI-compatible endpoint. Keys stay in session memory and requests go straight from your browser to the provider.
 - **Responsive and themed.** Split view on desktop, single pane with drawers on phones, light and dark mode.
-- **Self-hostable.** One Docker container with SQLite, or Cloudflare Workers.
-- **Guides.** Seven practical [guides to portable Markdown](https://mdstudio.deityhub.com/guides), written in Markdown and rendered by mdstudio itself.
+- **Self-hostable.** One Docker container with SQLite, or Cloudflare Workers (D1, R2 and Durable Objects). The hosted site is the same code. An admin dashboard manages accounts, plans, limits and server settings.
+- **Guides.** Practical [guides](https://mdstudio.deityhub.com/guides) on portable Markdown, reviewing, writing together and publishing, written in Markdown and rendered by mdstudio itself.
 
 <p align="center">
   <img src="docs/ui-screenshots/13_library.png" alt="The drafts library with search, tags and folders" width="440">
@@ -50,6 +53,11 @@ mdstudio keeps your **raw Markdown as the single source of truth**. The preview 
 <p align="center">
   <img src="docs/ui-screenshots/16_shared_page_comments.png" alt="A shared page with comments beside the words they are about" width="440">
   <img src="docs/ui-screenshots/20_publish_github.png" alt="Publishing a draft to a GitHub repository" width="440">
+</p>
+
+<p align="center">
+  <img src="docs/ui-screenshots/21_settings_ai.png" alt="Settings: the AI tab listing its integrations" width="440">
+  <img src="docs/ui-screenshots/22_search_palette.png" alt="The search palette finding a command and a guide" width="440">
 </p>
 
 <p align="center">
@@ -96,9 +104,9 @@ The app is served on <http://localhost:3000> with data in the `mdstudio-data` vo
 - **Engine.** [unified](https://unifiedjs.com): remark-parse, GFM, front matter, math, remark-rehype, rehype-sanitize, then highlighting. The output is always sanitized. All Markdown logic lives in [`src/lib/markdown/markdown.ts`](src/lib/markdown/markdown.ts).
 - **Editor.** CodeMirror 6, loaded only in the browser. Editing commands are pure functions with their own tests.
 - **Storage.** Raw IndexedDB behind a small `documentStore` interface.
-- **Security.** Nonce-based Content-Security-Policy in production, sanitized preview, no server in the writing path.
+- **Security.** Nonce-based Content-Security-Policy in production, a sanitized preview, and no server in the writing path unless you choose a cloud feature.
 - **Stack.** TanStack Start, React 19, Vite, Tailwind CSS v4, Radix UI.
-- **Backend blueprints.** One Drizzle SQLite schema shared by Cloudflare D1 and `better-sqlite3`, with R2 or disk storage. See [`infra/`](infra/README.md); it is activated in milestone 3.
+- **Backend.** One Drizzle SQLite schema shared by Cloudflare D1 and `better-sqlite3`, with R2 or disk storage, cookie sessions, a WebSocket channel on Durable Objects (in process when self-hosted) and a Yjs room per live draft. See [`infra/`](infra/README.md).
 
 ## Development
 
@@ -112,23 +120,22 @@ The app is served on <http://localhost:3000> with data in the `mdstudio-data` vo
 | `bun run licenses`                   | Audits dependency licenses against the policy           |
 | `bun run screenshots`                | Regenerates the UI screenshots in `docs/ui-screenshots` |
 | `bun run brand`                      | Regenerates the icons and social card                   |
+| `bun run llms`                       | Regenerates `public/llms.txt` from the site copy        |
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request: branch from `dev`, write the test first, and use Conventional Commits.
 
 ## Documentation
 
-| Document                                                                              | Contents                                                  |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| [docs/SYSTEM_SPEC.md](docs/SYSTEM_SPEC.md)                                            | Source of truth: product, architecture, schema, decisions |
-| [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md)                                          | The end-to-end use cases                                  |
-| [docs/UI_SPEC.md](docs/UI_SPEC.md) and [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Screens and design tokens                                 |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)                                          | Modules and routes                                        |
-| [docs/RELEASING.md](docs/RELEASING.md)                                                | Cutting a release and the required secrets                |
-| [roadmap.md](roadmap.md)                                                              | What is done and what is next                             |
+| Document                                                                              | Contents                                                                     |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [docs/SYSTEM_SPEC.md](docs/SYSTEM_SPEC.md)                                            | Source of truth: product and use cases, architecture, schema, API, decisions |
+| [docs/UI_SPEC.md](docs/UI_SPEC.md) and [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Every screen, and the design tokens and conventions                          |
+| [docs/RELEASING.md](docs/RELEASING.md)                                                | Cutting a release and the required secrets                                   |
+| [infra/README.md](infra/README.md)                                                    | The backend blueprints and how to run them                                   |
 
 ## Roadmap
 
-Next up: v0.1.0, then accounts with sync, hosted images and share links. Details in [roadmap.md](roadmap.md).
+What is planned and what is not built yet is in the [system spec](docs/SYSTEM_SPEC.md), and what is released is in the [changelog](CHANGELOG.md).
 
 ## Contributing, security and license
 

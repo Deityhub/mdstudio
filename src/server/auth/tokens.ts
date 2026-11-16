@@ -6,7 +6,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { emailTokens } from "../../../infra/db/schema";
 import type { Db } from "../db";
 
-export type Purpose = "verify" | "reset";
+export type Purpose = "verify" | "reset" | "email_change";
 
 const b64url = (bytes: Uint8Array) =>
   btoa(String.fromCharCode(...bytes))

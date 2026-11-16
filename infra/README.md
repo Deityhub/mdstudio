@@ -3,7 +3,7 @@
 One Drizzle SQLite schema, two deployments. `src/server/db.ts` (`getDb(request)`) opens the D1
 binding `DB` on Cloudflare or the SQLite file in `DATA_DIR` in Docker, and `GET /api/health` reports
 whether it answers. The Workers build aliases the Node driver to a stub, so better-sqlite3 stays out
-of the Worker bundle. Auth, sync and uploads are the next milestone 3 units.
+of the Worker bundle. Accounts, sync, uploads, sharing, GitHub publishing, the real-time channel and live editing all run on it.
 
 | Path                               | What it is                                                                                                            |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
