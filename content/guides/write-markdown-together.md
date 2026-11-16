@@ -35,8 +35,8 @@ The text people edit together is the live draft. A copy of it is kept up to date
 - Images pasted into the text as local data are not shared. Use hosted images, or a link, so everyone sees them.
 - People you invite can edit, but cannot reshare the draft, publish it to GitHub or delete it. Those stay with the owner.
 - Removing a person, or deleting the draft, ends their access straight away. They keep a plain local copy of what they had, and nothing is destroyed.
-- There are no comments or suggestions inside the live editor. For feedback from people who should not edit, use a [review link](https://mdstudio.deityhub.com/guides/share-markdown-for-review).
+- There are no comments or suggestions inside the live editor. For feedback from people who should not edit, use a [review link](/guides/share-markdown-for-review).
 
 ## When to use it
 
-Edit together when two or three people are producing the same text. Use a review link when you want feedback on a finished copy from many readers. And write the final text for the place it is going: read [portable Markdown](https://mdstudio.deityhub.com/guides/markdown-portability) before you publish. To try it, [open the editor](https://mdstudio.deityhub.com/editor).
+Edit together when two or three people are producing the same text. Use a review link when you want feedback on a finished copy from many readers. And write the final text for the place it is going: read [portable Markdown](/guides/markdown-portability) before you publish. To try it, [open the editor](/editor).

@@ -68,4 +68,4 @@ Rendering user-provided math and diagrams carries some risk, since both are pars
 
 ## Preview them against your target
 
-[mdstudio](https://mdstudio.deityhub.com/editor) renders math with KaTeX and diagrams with Mermaid in strict mode, in light and dark themes, and only for the targets that support them. On GFM without HTML or Strict CommonMark the checker warns that math and Mermaid are not portable, and the toolbar marks the tools that target will not render. For more on compatibility, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+[mdstudio](/editor) renders math with KaTeX and diagrams with Mermaid in strict mode, in light and dark themes, and only for the targets that support them. On GFM without HTML or Strict CommonMark the checker warns that math and Mermaid are not portable, and the toolbar marks the tools that target will not render. For more on compatibility, read the [portable Markdown guide](/guides/markdown-portability).

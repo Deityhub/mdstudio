@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 import { readGuideCatalogue } from "./guide-catalogue";
+import { readLegalCatalogue } from "./legal-catalogue";
 
 // What each guide says about itself (slug, title, description, order and dates) is in its own front
 // matter (content/guides/<slug>.md). This hands it to the catalogue as a module, so lists, the
@@ -17,6 +18,21 @@ export function guideCatalogue(): Plugin {
       if (resolved !== `\0${id}`) return null;
       for (const file of readdirSync(dir)) this.addWatchFile(resolve(dir, file));
       return `export default ${JSON.stringify(readGuideCatalogue(dir))};`;
+    },
+  };
+}
+
+/** The same for the privacy policy and the terms (content/legal/*.md). */
+export function legalCatalogue(): Plugin {
+  const id = "virtual:legal-catalogue";
+  const dir = "content/legal";
+  return {
+    name: "legal-catalogue",
+    resolveId: (source) => (source === id ? `\0${id}` : null),
+    load(resolved) {
+      if (resolved !== `\0${id}`) return null;
+      for (const file of readdirSync(dir)) this.addWatchFile(resolve(dir, file));
+      return `export default ${JSON.stringify(readLegalCatalogue(dir))};`;
     },
   };
 }

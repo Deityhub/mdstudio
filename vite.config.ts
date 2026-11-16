@@ -6,7 +6,7 @@ import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import { nitro } from "nitro/vite";
-import { guideCatalogue } from "./infra/guide-catalogue-plugin";
+import { guideCatalogue, legalCatalogue } from "./infra/guide-catalogue-plugin";
 import { isPreview, workerConfig } from "./infra/worker-config";
 
 // Deploy target is chosen at build time: Cloudflare Workers by default,
@@ -59,6 +59,7 @@ export default defineConfig(({ command }) => ({
   },
   plugins: [
     guideCatalogue(),
+    legalCatalogue(),
     tsConfigPaths(),
     tailwindcss(),
     tanstackStart({

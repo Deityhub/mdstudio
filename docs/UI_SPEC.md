@@ -15,7 +15,7 @@ Header (`SiteHeader`, shared by the public pages, content up to 1200px wide): th
 
 ## 1a. Privacy and Terms `/privacy`, `/terms`
 
-Text pages in the site layout (header, footer), in the same reading layout as a guide (`DocLayout`): the page's sections listed in a sticky column on the left (from 1024px; below that there is no room beside the text and it is hidden, and the text is centred), with the section being read marked as the page scrolls, and beside it a Privacy | Terms switch, the title and "Last updated" date. Linked from the footer. Public and indexable.
+Text pages in the site layout (header, footer), in the same reading layout as a guide (`DocLayout`): the page's sections listed in a sticky column on the left (from 1024px; below that there is no room beside the text and it is hidden, and the text is centred), with the section being read marked as the page scrolls, and beside it a Privacy | Terms switch, the title and "Last updated" with its date and time in UTC. Linked from the footer. Public and indexable.
 
 ## 1b. Guides `/guides` and `/guides/$slug`
 

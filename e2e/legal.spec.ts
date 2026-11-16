@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { LEGAL_PAGES } from "../src/lib/site/legal";
+import { readLegalCatalogue } from "../infra/legal-catalogue";
 import { SITE } from "../src/lib/site/site";
 
-for (const p of LEGAL_PAGES) {
+for (const p of readLegalCatalogue()) {
   test(`${p.slug}: a public, indexable page with the contact address`, async ({
     page,
     request,

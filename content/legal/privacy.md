@@ -1,3 +1,12 @@
+---
+slug: privacy
+title: "Privacy Policy"
+description: "What mdstudio stores and shares: nothing without an account, and only what each feature needs with one, including editing together. No ads, no analytics."
+order: 1
+published: 2026-11-11T16:55:00Z
+updated: 2026-11-16T13:28:00Z
+---
+
 This policy covers the hosted mdstudio at {{site}}, run by the mdstudio maintainers ("we", "us"). If you self-host mdstudio, whoever runs your copy is responsible for your data, and this policy does not apply to it.
 
 The short version: mdstudio is local-first. You can write, preview, check and export without an account, and then nothing you write leaves your browser. An account is optional and adds features that need a server. There is no advertising, no analytics and no tracking.
@@ -8,6 +17,7 @@ Without an account, everything is stored on your device:
 
 - Your drafts and their saved versions (IndexedDB).
 - Your settings: theme, checker rules, library folders and similar (localStorage).
+- The search index: searching your drafts, commands and settings (the search dialog) happens on your device, and what you type is never sent anywhere.
 - A copy of the app's files, so it works offline (the browser cache).
 
 We never receive these. Clearing your browser's site data deletes them.
@@ -20,12 +30,13 @@ If you are signed in, the name, provider, address and model of your AI setups ar
 
 ## What we store when you have an account
 
-- **Account details:** your email address, a hash of your password (never the password itself), your display name, and the time the account was created.
+- **Account details:** your email address, a hash of your password (never the password itself), your display name, and the time the account was created. When you change your email address, a link goes to the new address, and the address changes only once that link is opened; we also tell the old address that it changed.
 - **Sign-in with Google or GitHub:** see the next section. We store the provider's ID for you, your profile picture's address, and your name.
 - **Sessions:** a hash of your session token and its expiry. No IP address or device details are stored with it.
 - **Email links:** hashes of the one-time links for confirming your email and resetting your password, until they expire or are used.
 - **Cloud drafts:** only drafts you choose to put in the cloud. The text, the title and a limited number of earlier versions are stored. Drafts are not end-to-end encrypted: they are stored in a database that we administer, and the admin tools we use show titles and sizes, not text.
 - **Share links and comments:** see below.
+- **Drafts edited together:** see "Editing together" below.
 - **GitHub publishing:** only if you connect it. See below.
 - **Account limits and admin records:** your plan and limits, whether the account is suspended, and a log of admin actions (who did what to which account).
 
@@ -54,13 +65,24 @@ A share link publishes a copy of a cloud draft at a public address. Understand w
 - You can make a link private to invited email addresses. Readers must then sign in with one of those addresses. Invitations are sent by email.
 - If comments are on, signed-in readers can comment. Comments show the commenter's display name, never their email address. If your display name came from Google or GitHub, that is the name shown.
 
+## Editing together
+
+You can switch a cloud draft to live editing and invite people by email address, up to 3 people on a draft including you. Understand what that means before you use it:
+
+- The people you invite can read the whole draft, edit it at the same time as you, and see each other's display name, picture and cursor while they are in it. They need an account with a confirmed email address that matches the invitation. Removing a person, or stopping live editing, ends their access to the live draft.
+- While a draft is edited live, its text, and the comments and suggestions made in it, are kept in a live room: on the hosted service, storage belonging to a Cloudflare Durable Object, separate from the main database. A copy of the text is also written to your cloud draft so that versions, share links and publishing keep working. The room is deleted when you stop live editing or delete the draft.
+- Each invited person's browser keeps a copy on their device while they work, so it can keep working offline and merge afterwards. Taking access away does not delete a copy that is already on their device, because we cannot reach into someone's browser. Only invite people you would trust with the text.
+- Live drafts are not end-to-end encrypted, like other cloud drafts. The admin tools we use show titles and sizes, not text.
+- The live connection (a WebSocket to Cloudflare) knows which account is on it, so that only invited people can join. It also carries other live updates, such as your drafts reaching your other devices and new comments on a share link. Nothing about it is stored beyond the connection.
+- An invitation is an email to the address you give, with a link to the draft.
+
 ## Email
 
-We send email for confirming your address, password resets, share invitations and notices that someone commented on your shared draft (at most one an hour per link, and never the comment itself). These go through an email provider (currently Resend or Mailtrap), which receives the recipient address and the message.
+We send email for confirming your address, changing it, password resets, share invitations, invitations to edit together and notices that someone commented on your shared draft (at most one an hour per link, and never the comment itself). These go through an email provider (currently Resend or Mailtrap), which receives the recipient address and the message.
 
 ## Technical data
 
-- **Hosting:** the site runs on Cloudflare (Workers, D1 database, and its network). Cloudflare processes IP addresses and request details to deliver and protect the site, and may keep logs under [its own privacy policy](https://www.cloudflare.com/privacypolicy/).
+- **Hosting:** the site runs on Cloudflare (Workers, the D1 database, Durable Objects for live updates and editing, and its network). Cloudflare processes IP addresses and request details to deliver and protect the site, and may keep logs under [its own privacy policy](https://www.cloudflare.com/privacypolicy/).
 - **Abuse limits:** to limit sign-up and sign-in abuse, we keep short-lived counters tied to your IP address (and to the email address being tried). They exist only for the length of the limit, at most about an hour, and are then deleted.
 - **Sign-up check:** sign-up may use Cloudflare Turnstile to tell people from bots. Turnstile runs in your browser and sends information about it to Cloudflare.
 - **Errors:** if a server error occurs, the error and where it happened are logged so we can fix it. Request contents, such as your draft text, are not logged.
@@ -82,7 +104,8 @@ We do not sell personal data. Data goes only to the services needed to run mdstu
 - Account data and cloud drafts: until you delete them or the account is deleted.
 - Sessions: 24 hours, renewed while you use the site, and never more than 5 days after you signed in.
 - Email confirmation links: 24 hours. Password reset links: 1 hour.
-- When an account is deleted, its drafts, versions, share links, comments, GitHub connection and sessions are deleted with it. Cloudflare keeps short-lived database backups, so deleted data can remain in them for a limited time (up to 30 days).
+- Live editing rooms: until you stop live editing or delete the draft.
+- When an account is deleted, its drafts, versions, share links, comments, live editing rooms, GitHub connection and sessions are deleted with it. Cloudflare keeps short-lived database backups, so deleted data can remain in them for a limited time (up to 30 days).
 
 ## Your choices and rights
 

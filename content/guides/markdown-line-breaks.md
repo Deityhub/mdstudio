@@ -58,4 +58,4 @@ Some editors turn every newline into a break to feel friendlier. That makes the 
 
 ## Catch fragile breaks automatically
 
-[mdstudio](https://mdstudio.deityhub.com/editor) renders soft breaks the way CommonMark defines them, so a single newline does not turn into a break in the preview. Its checker also flags trailing-space line breaks, so you can replace them with a backslash before an editor strips them. For related pitfalls, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+[mdstudio](/editor) renders soft breaks the way CommonMark defines them, so a single newline does not turn into a break in the preview. Its checker also flags trailing-space line breaks, so you can replace them with a backslash before an editor strips them. For related pitfalls, read the [portable Markdown guide](/guides/markdown-portability).

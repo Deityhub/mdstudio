@@ -12,3 +12,9 @@ declare module "virtual:guide-catalogue" {
   const guides: import("../infra/guide-catalogue").GuideMeta[];
   export default guides;
 }
+
+/** The privacy policy's and the terms' front matter (see infra/guide-catalogue-plugin.ts). */
+declare module "virtual:legal-catalogue" {
+  const pages: import("../infra/legal-catalogue").LegalMeta[];
+  export default pages;
+}

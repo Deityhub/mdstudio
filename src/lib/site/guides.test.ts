@@ -68,12 +68,22 @@ describe("guide content is dogfooded", () => {
         expect(getOutline(md).filter((h) => h.depth === 1)).toEqual([]);
         expect(getOutline(md).filter((h) => h.depth === 2).length).toBeGreaterThanOrEqual(3);
       });
+      // a link to another page of this site is a path, so a local or preview copy stays on itself
+      const sitePaths = ["/editor", ...GUIDES.map((x) => guidePath(x.slug))];
+      const siteLink = (message: string) => sitePaths.some((p) => message.includes(`(${p})`));
       it("is itself portable Markdown: no checker issues on the GFM and wiki profiles", () => {
         for (const profile of ["gfm-extended", "gfm-no-html", "wiki-notes"] as const)
-          expect(checkPortability(md, profile), profile).toEqual([]);
+          expect(
+            checkPortability(md, profile).filter(
+              (i) => !(i.rule === "local-link" && siteLink(i.message)),
+            ),
+            profile,
+          ).toEqual([]);
       });
-      it("links to the editor", () =>
-        expect(md).toContain("(https://mdstudio.deityhub.com/editor)"));
+      it("links to the editor, and to other pages of the site by path", () => {
+        expect(md).toContain("(/editor)");
+        expect(md).not.toContain(new URL(SITE.url).host);
+      });
     });
   }
 });

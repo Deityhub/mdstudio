@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { DocLayout } from "@/components/site/DocLayout";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
-import { formatDate } from "@/lib/site/guides-content";
+import { formatStamp } from "@/lib/site/guides-content";
 import { LEGAL_PAGES, legalPath, type LegalPage as Legal } from "@/lib/site/legal";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +43,7 @@ export function LegalPage({
             {page.title}
           </h1>
           <p className="mt-3 mb-6 text-sm text-muted-foreground">
-            Last updated {formatDate(page.updated)}
+            Last updated <time dateTime={page.updated}>{formatStamp(page.updated, true)}</time>
           </p>
           {/* sanitized by renderMarkdown (rehype-sanitize) */}
           <div className="md-preview text-[17px]" dangerouslySetInnerHTML={{ __html: html }} />

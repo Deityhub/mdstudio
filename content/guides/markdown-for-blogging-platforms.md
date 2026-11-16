@@ -61,8 +61,8 @@ The features most likely to behave differently are the ones outside CommonMark. 
 - An Obsidian wiki-link, which prints as literal brackets almost everywhere.
 - Raw HTML with an alignment attribute.
 
-Write down what works for that platform. It takes ten minutes once and saves you from finding out in front of readers. For a diagram you cannot afford to lose, use an image. See the guide to [math and Mermaid in Markdown](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams).
+Write down what works for that platform. It takes ten minutes once and saves you from finding out in front of readers. For a diagram you cannot afford to lose, use an image. See the guide to [math and Mermaid in Markdown](/guides/markdown-math-and-diagrams).
 
 ## Preview before you publish
 
-[mdstudio](https://mdstudio.deityhub.com/editor) can hold the text to the stricter rules while you write. Choose the GFM without HTML target: raw HTML is reported as an error there, and the checker also catches local images, wiki-links, math, Mermaid and trailing-space line breaks, each with a click to jump to the line. If your tool builds pages from a Git repository, you can also publish the draft straight to it as a commit or a pull request. For a wider checklist, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+[mdstudio](/editor) can hold the text to the stricter rules while you write. Choose the GFM without HTML target: raw HTML is reported as an error there, and the checker also catches local images, wiki-links, math, Mermaid and trailing-space line breaks, each with a click to jump to the line. If your tool builds pages from a Git repository, you can also publish the draft straight to it as a commit or a pull request. For a wider checklist, read the [portable Markdown guide](/guides/markdown-portability).

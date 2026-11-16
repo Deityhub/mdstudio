@@ -43,4 +43,4 @@ The checker warns about links to local files, because they break once the text l
 
 ## When something else is the destination
 
-Not everything is published through a repository. If you are sending the text to a platform that takes pasted Markdown, export clean Markdown with the target set to the one that matches, and read [writing Markdown for blogging platforms](https://mdstudio.deityhub.com/guides/markdown-for-blogging-platforms). To get a second opinion before you commit, see [sharing a draft for review](https://mdstudio.deityhub.com/guides/share-markdown-for-review). To try publishing, [open the editor](https://mdstudio.deityhub.com/editor).
+Not everything is published through a repository. If you are sending the text to a platform that takes pasted Markdown, export clean Markdown with the target set to the one that matches, and read [writing Markdown for blogging platforms](/guides/markdown-for-blogging-platforms). To get a second opinion before you commit, see [sharing a draft for review](/guides/share-markdown-for-review). To try publishing, [open the editor](/editor).

@@ -67,8 +67,8 @@ Obsidian callouts look like a block quote that starts with a type in square brac
 
 ## What does carry over
 
-Headings, emphasis, lists, task lists, tables, footnotes, code blocks, math and Mermaid diagrams are all standard on GitHub too, so these usually need no changes. Math and Mermaid still fail on platforms that do not render them. See [math and Mermaid in Markdown](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams).
+Headings, emphasis, lists, task lists, tables, footnotes, code blocks, math and Mermaid diagrams are all standard on GitHub too, so these usually need no changes. Math and Mermaid still fail on platforms that do not render them. See [math and Mermaid in Markdown](/guides/markdown-math-and-diagrams).
 
 ## Let a checker find them
 
-Doing this by eye across a long note is error prone. Paste the note into [mdstudio](https://mdstudio.deityhub.com/editor) and choose GFM extended: the checker lists every wiki-link, highlight and local image with a clickable line number. Then choose Wiki notes and the wiki-link and highlight warnings go away, which shows exactly what is Obsidian-only. For the bigger picture, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+Doing this by eye across a long note is error prone. Paste the note into [mdstudio](/editor) and choose GFM extended: the checker lists every wiki-link, highlight and local image with a clickable line number. Then choose Wiki notes and the wiki-link and highlight warnings go away, which shows exactly what is Obsidian-only. For the bigger picture, read the [portable Markdown guide](/guides/markdown-portability).

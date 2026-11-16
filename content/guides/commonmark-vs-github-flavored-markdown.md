@@ -64,4 +64,4 @@ Other platforms may support some of these, all of them or none. That is why a do
 
 ## See which flavor your text uses
 
-It is easy to use a GFM feature without noticing. Open the text in [mdstudio](https://mdstudio.deityhub.com/editor) and switch the target to Strict CommonMark: the checker flags every table, task list, strikethrough and footnote as a GFM extension, so you can see exactly where your text depends on one. The [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability) has the wider checklist.
+It is easy to use a GFM feature without noticing. Open the text in [mdstudio](/editor) and switch the target to Strict CommonMark: the checker flags every table, task list, strikethrough and footnote as a GFM extension, so you can see exactly where your text depends on one. The [portable Markdown guide](/guides/markdown-portability) has the wider checklist.

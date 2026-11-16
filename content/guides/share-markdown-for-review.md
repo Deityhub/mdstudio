@@ -42,4 +42,4 @@ When you do publish an update, comments written on the earlier copy are found ag
 3. Resolve each comment as you deal with it, and publish an update when you want a second look.
 4. When you are done, stop sharing. Your draft is unchanged, and an expired link and its comments stay available to you for 30 days.
 
-Review is one step in a longer flow. For editing the same draft at the same time as someone else, read [writing a Markdown draft together](https://mdstudio.deityhub.com/guides/write-markdown-together). To send the finished text on, see [publishing Markdown to GitHub](https://mdstudio.deityhub.com/guides/publish-markdown-to-github). To try it, [open the editor](https://mdstudio.deityhub.com/editor).
+Review is one step in a longer flow. For editing the same draft at the same time as someone else, read [writing a Markdown draft together](/guides/write-markdown-together). To send the finished text on, see [publishing Markdown to GitHub](/guides/publish-markdown-to-github). To try it, [open the editor](/editor).
