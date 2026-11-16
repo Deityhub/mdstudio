@@ -1,8 +1,17 @@
+---
+slug: terms
+title: "Terms of Service"
+description: "The rules for using the hosted mdstudio: your content, acceptable use, limits and the service's lack of guarantees."
+order: 2
+published: 2026-11-11T16:55:00Z
+updated: 2026-11-16T13:28:00Z
+---
+
 These terms cover your use of the hosted mdstudio at {{site}}, run by the mdstudio maintainers ("we", "us"). By using it, you agree to them. If you do not agree, do not use it. How we handle personal data is in the [Privacy Policy](/privacy).
 
 ## What mdstudio is
 
-mdstudio is a Markdown editor and portability checker. You can use the editor without an account, and it stores your drafts in your browser. An account is optional and adds cloud drafts, share links with comments, saved AI setups and publishing to GitHub. The service is free.
+mdstudio is a Markdown editor and portability checker. You can use the editor without an account, and it stores your drafts in your browser. An account is optional and adds cloud drafts, share links with comments, editing a draft together with people you invite, saved AI setups and publishing to GitHub. The service is free.
 
 ## Your account
 
@@ -12,9 +21,15 @@ mdstudio is a Markdown editor and portability checker. You can use the editor wi
 
 ## Your content
 
-You own what you write. You give us permission to store, process and show it only as needed to run the features you use: to keep your cloud drafts, sync them between your devices, serve a share link you publish, send your draft to GitHub when you publish, and send your text to an AI provider when you run an AI helper. That permission ends when you delete the content or the account, apart from short-lived backups.
+You own what you write. You give us permission to store, process and show it only as needed to run the features you use: to keep your cloud drafts, sync them between your devices, serve a share link you publish, show a draft to the people you invite to edit it, send your draft to GitHub when you publish, and send your text to an AI provider when you run an AI helper. That permission ends when you delete the content or the account, apart from short-lived backups.
 
 You are responsible for your content and for having the right to use it. A share link is public unless you make it private. Do not publish anything there that you would not want read by anyone.
+
+## Editing together
+
+You can invite other people, by email address, to edit a cloud draft with you. Invite only people you want to have the whole text, because they can read it, change it and keep a copy on their device. You are responsible for who you invite and for what they can see. People you invite can edit anything in the draft, including your text.
+
+Only you can invite and remove people, stop live editing or delete the draft. When you remove someone or stop, their access ends, but a copy already on their device stays there. People you are invited by can use the draft only to work on it with you: they may not share it, publish it or use it for anything else. A draft allows up to 3 people, and an account up to 2 live drafts, for now.
 
 ## What you may not do
 

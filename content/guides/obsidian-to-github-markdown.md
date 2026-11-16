@@ -1,4 +1,13 @@
-Obsidian stores notes as plain Markdown files, which makes them easy to share, but Obsidian adds syntax that other tools do not understand. If you copy a note straight into a GitHub README, a dev.to post or a static site, some of it will break. This guide lists what to convert and how.
+---
+slug: obsidian-to-github-markdown
+title: "Obsidian to GitHub Markdown: Wiki-links, Callouts & More"
+description: "How to share Obsidian notes outside Obsidian: convert wiki-links, highlights, callouts and embeds so they render on GitHub, blogging platforms and static sites."
+order: 3
+published: 2026-11-02T11:23:00Z
+updated: 2026-11-16T10:08:00Z
+---
+
+Obsidian stores notes as plain Markdown files, which makes them easy to share, but Obsidian adds syntax that other tools do not understand. If you copy a note straight into a GitHub README, a blog post or a static site, some of it will break. This guide lists what to convert and how.
 
 ## What Obsidian adds to Markdown
 
@@ -58,8 +67,8 @@ Obsidian callouts look like a block quote that starts with a type in square brac
 
 ## What does carry over
 
-Headings, emphasis, lists, task lists, tables, footnotes, code blocks, math and Mermaid diagrams are all standard on GitHub too, so these usually need no changes. Math and Mermaid still fail on platforms that do not render them. See [math and Mermaid in Markdown](https://mdstudio.deityhub.com/guides/markdown-math-and-diagrams).
+Headings, emphasis, lists, task lists, tables, footnotes, code blocks, math and Mermaid diagrams are all standard on GitHub too, so these usually need no changes. Math and Mermaid still fail on platforms that do not render them. See [math and Mermaid in Markdown](/guides/markdown-math-and-diagrams).
 
 ## Let a checker find them
 
-Doing this by eye across a long note is error prone. Paste the note into [mdstudio](https://mdstudio.deityhub.com/editor) and switch the target profile to Strict CommonMark, GitHub (GFM extended), GFM without HTML or Wiki notes. The portability checker lists every wiki-link, highlight, local image and other non-portable construct with a clickable line number. Switch to the Obsidian profile and the wiki-link and highlight warnings disappear, which shows exactly what is Obsidian-only. The editor is open source and local-first. For the bigger picture, read the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+Doing this by eye across a long note is error prone. Paste the note into [mdstudio](/editor) and choose GFM extended: the checker lists every wiki-link, highlight and local image with a clickable line number. Then choose Wiki notes and the wiki-link and highlight warnings go away, which shows exactly what is Obsidian-only. For the bigger picture, read the [portable Markdown guide](/guides/markdown-portability).

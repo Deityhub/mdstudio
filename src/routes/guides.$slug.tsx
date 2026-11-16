@@ -7,7 +7,12 @@ import { DocLayout } from "@/components/site/DocLayout";
 import { Band, TILE } from "@/components/site/SitePieces";
 import { cn } from "@/lib/utils";
 import { GUIDES, guideBySlug, readingMinutes } from "@/lib/site/guides";
-import { formatDate, loadGuideMarkdown, relatedGuides } from "@/lib/site/guides-content";
+import {
+  formatStamp,
+  loadGuideMarkdown,
+  relatedGuides,
+  stampsDiffer,
+} from "@/lib/site/guides-content";
 import { renderWithToc } from "@/lib/site/render-toc";
 import { articleJsonLd, breadcrumbJsonLd, jsonLdScript, pageHead } from "@/lib/site/seo";
 
@@ -43,6 +48,17 @@ export const Route = createFileRoute("/guides/$slug")({
   component: GuidePage,
 });
 
+/** When it went out, and when it last changed (only if it did), each with its time in UTC. */
+function Stamps({ published, updated }: { published: string; updated: string }) {
+  const at = (iso: string) => <time dateTime={iso}>{formatStamp(iso, true)}</time>;
+  return (
+    <>
+      <span>Published {at(published)}</span>
+      {stampsDiffer(published, updated) !== "none" && <span>Updated {at(updated)}</span>}
+    </>
+  );
+}
+
 function GuidePage() {
   const { guide, html, minutes, toc } = Route.useLoaderData();
   return (
@@ -69,7 +85,7 @@ function GuidePage() {
             {guide.title}
           </h1>
           <p className="mt-3 mb-6 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-            <span>Updated {formatDate(guide.updated)}</span>
+            <Stamps published={guide.published} updated={guide.updated} />
             <span>{minutes} min read</span>
           </p>
           {/* sanitized by renderMarkdown (rehype-sanitize) */}

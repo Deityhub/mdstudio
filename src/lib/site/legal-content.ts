@@ -1,5 +1,6 @@
 // Loading the legal text. The Markdown is imported lazily, one file at a time, and the details that
 // belong to the site (who runs it, how to reach them) are filled in from SITE.
+import { splitFrontMatter } from "@/lib/markdown/markdown";
 import { SITE } from "./seo";
 
 const files = import.meta.glob("../../../content/legal/*.md", {
@@ -17,5 +18,7 @@ const details: Record<string, string> = {
 
 export async function loadLegalMarkdown(slug: string): Promise<string | null> {
   const load = files[`../../../content/legal/${slug}.md`];
-  return load ? (await load()).replace(/\{\{(\w+)\}\}/g, (m, key) => details[key] ?? m) : null;
+  return load
+    ? splitFrontMatter(await load()).body.replace(/\{\{(\w+)\}\}/g, (m, key) => details[key] ?? m)
+    : null;
 }

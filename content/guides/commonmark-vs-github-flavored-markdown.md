@@ -1,3 +1,12 @@
+---
+slug: commonmark-vs-github-flavored-markdown
+title: "CommonMark vs GitHub Flavored Markdown: What Differs"
+description: "A clear comparison of CommonMark and GitHub Flavored Markdown: tables, task lists, strikethrough, footnotes, autolinks and alerts, and when each one matters."
+order: 2
+published: 2026-11-02T09:57:00Z
+updated: 2026-11-16T09:41:00Z
+---
+
 CommonMark and GitHub Flavored Markdown (GFM) are the two Markdown standards you will meet most often. GFM is a strict superset of CommonMark, which means every valid CommonMark document is also valid GFM, but not the other way round. Knowing exactly what GFM adds tells you when your text stops being universally portable.
 
 ## What CommonMark is
@@ -53,6 +62,6 @@ Other platforms may support some of these, all of them or none. That is why a do
 - Footnotes and alerts are not CommonMark and not part of the GFM specification, so check each target.
 - Raw HTML is allowed by CommonMark, but GFM filters a small set of dangerous tags and most platforms sanitize far more.
 
-## Check which flavor you are using
+## See which flavor your text uses
 
-It is easy to use a GFM feature without noticing. [mdstudio](https://mdstudio.deityhub.com/editor) lets you switch the target profile between Strict CommonMark, GitHub (GFM extended), GFM without HTML or Wiki notes. On Strict CommonMark, the checker flags every table, task list, strikethrough and footnote as a GFM extension, so you can see exactly where your text depends on one. The editor is open source and keeps your drafts in your browser. Read more in the [portable Markdown guide](https://mdstudio.deityhub.com/guides/markdown-portability).
+It is easy to use a GFM feature without noticing. Open the text in [mdstudio](/editor) and switch the target to Strict CommonMark: the checker flags every table, task list, strikethrough and footnote as a GFM extension, so you can see exactly where your text depends on one. The [portable Markdown guide](/guides/markdown-portability) has the wider checklist.
