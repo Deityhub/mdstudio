@@ -59,19 +59,24 @@ describe("brand copy", () => {
     expect(BRAND.homeTitle.startsWith("mdstudio")).toBe(true);
     expect(SITE.alternateName).toBe("Markdown Studio");
   });
-  it("makes no claims the product cannot back up yet", () => {
+  it("makes no claims the product cannot back up", () => {
     const text = [BRAND.description, ...FEATURE_LIST, ...FAQ.map((f) => f.answer)].join(" ");
-    // offline use, accounts, cloud drafts, share links and GitHub publishing are real; real-time
-    // collaboration and publishing elsewhere are not built
-    expect(text).not.toMatch(/collaborat|real-time|dev\.to api|hashnode|medium|wordpress/i);
+    // editing together, review links and GitHub publishing are real; publishing to other
+    // platforms through their APIs, and anything on a paid plan, are not
+    expect(text).not.toMatch(/dev\.to api|hashnode|medium|wordpress|paid plan|webllm/i);
   });
-  it("answers what an account gives, how the cloud works and how GitHub publishing works", () => {
+  it("answers the account, storage, editing together, review, GitHub and AI questions", () => {
     const asked = (re: RegExp) => FAQ.find((f) => re.test(f.question));
     expect(asked(/account/i)?.answer).toMatch(/optional/i);
-    expect(asked(/cloud/i)?.answer).toMatch(/5 drafts/);
+    expect(asked(/free/i)?.answer).toMatch(/5 drafts/);
+    expect(asked(/stored/i)?.answer).toMatch(/cloud/i);
+    expect(asked(/editing together/i)?.answer).toMatch(/offline/i);
+    expect(asked(/review/i)?.answer).toMatch(/expire/i);
     expect(asked(/github/i)?.answer).toMatch(/pull request/i);
-    expect(asked(/share|feedback/i)?.answer).toMatch(/expire/i);
+    expect(asked(/ai/i)?.answer).toMatch(/diff/i);
   });
+  it("names the limits plainly", () =>
+    expect(FAQ.map((f) => f.answer).join(" ")).toMatch(/3 people/));
   it("no longer says there is no account", () =>
     expect(FAQ.map((f) => f.answer).join(" ")).not.toMatch(/no account to create/i));
 });

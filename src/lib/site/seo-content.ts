@@ -9,121 +9,92 @@ export const BRAND = {
   tagline: "Write once. Render the same everywhere.",
   homeTitle: "mdstudio: Markdown editor that renders the same everywhere",
   description:
-    "Open-source Markdown editor with live preview. Checks your writing renders the same on GitHub, dev.to and Obsidian. Math, Mermaid, no sign-up.",
+    "Open-source Markdown editor that checks your writing renders the same on GitHub and elsewhere. Write together, get review, publish. No sign-up.",
   imageAlt: "mdstudio: write once, render the same everywhere",
 } as const;
 
 export const LONG_DESCRIPTION =
-  "mdstudio is an open-source, local-first Markdown editor and portability checker. Write in a " +
-  "full-featured editor with a complete formatting toolbar, watch a live preview that matches what " +
-  "GitHub, dev.to, Obsidian or a strict CommonMark engine will render, and get clickable warnings for " +
-  "anything that will not travel: raw HTML, local images, wiki-links, math, Mermaid diagrams and " +
-  "trailing-space line breaks. Drafts autosave in your browser with no account, import from .md files or " +
-  "pasted Google Docs and Notion content, and export clean UTF-8 Markdown or self-contained HTML. " +
-  "Optional AI writing helpers use your own API key. mdstudio is MIT licensed, runs in the browser " +
-  "and can be self-hosted with Docker.";
+  "mdstudio is an open-source, local-first Markdown editor and portability checker. The preview " +
+  "follows the rules of the target you pick (strict CommonMark, GFM, GFM without HTML or wiki " +
+  "notes), and clickable warnings point at anything that will not travel: raw HTML, local images, " +
+  "wiki-links, math, Mermaid diagrams and trailing-space line breaks. Drafts autosave in your " +
+  "browser with no account. With an account you can edit a draft together with invited people, " +
+  "share a read-only copy for review with comments, and publish to GitHub as a commit, a pull " +
+  "request or a gist. Optional AI helpers use your own API key. mdstudio is MIT licensed, runs in " +
+  "the browser and can be self-hosted with Docker.";
 
 export const FEATURE_LIST = [
-  "Live Markdown preview that matches GitHub, dev.to, Obsidian and CommonMark",
+  "Live Markdown preview that follows the rules of the target you pick",
   "Portability checker with clickable issues for non-portable syntax",
   "Target profiles: Strict CommonMark, GFM extended, GFM without HTML, Wiki notes",
+  "Edit a draft together with invited people, online or offline, with live cursors",
+  "Share a read-only copy for review that expires, with comments from signed-in readers",
+  "Publish to GitHub as a commit, a pull request or a gist",
   "Formatting toolbar for headings, lists, tables, links, images, code blocks, footnotes and alerts",
   "KaTeX math and Mermaid diagrams",
   "Local-first drafts stored in the browser (IndexedDB), no account needed",
-  "Import .md files and paste from Google Docs, Notion and the web",
-  "Export clean UTF-8 Markdown or standalone HTML, or every draft at once as a ZIP",
-  "Import ZIP archives and whole folders of Markdown files",
-  "Search, tag filters and folders for your drafts, all kept in the browser",
-  "Version history with a side-by-side compare and one-click restore",
+  "Import .md files, ZIP archives and folders; paste from Google Docs, Notion and the web",
+  "Export clean UTF-8 Markdown, standalone HTML, or every draft as a ZIP",
+  "Search drafts and their text, tag filters, folders, and version history with side-by-side compare",
   "Custom checker rules and publication standards, shareable as a file",
+  "Bring-your-own-key AI writing helpers, shown as a diff before anything changes",
   "Works offline and installs as an app",
-  "Bring-your-own-key AI writing helpers",
   "Open source under the MIT license, self-hostable with Docker",
 ];
 
 export const AUDIENCES = [
-  "Technical bloggers publishing through GitHub, dev.to, Hashnode and/or other static site generators",
-  "Developers writing READMEs and documentation for GitHub",
-  "Obsidian users who share notes outside Obsidian",
-  "Documentation teams who need Markdown that renders the same in every tool",
+  "People who write for the web and publish in more than one place",
+  "Developers who write READMEs and docs, and want a second pair of eyes before the pull request",
+  "Notes writers who share outside their notes app",
+  "Small teams who review and edit docs together without leaving Markdown",
 ];
 
 export type Faq = { question: string; answer: string };
 
 export const FAQ: Faq[] = [
   {
-    question: "What is mdstudio?",
+    question: "Is mdstudio free and open source?",
     answer:
-      "mdstudio is an open-source Markdown editor with a live preview and a portability checker. You write Markdown, see how it will render on GitHub, dev.to, Obsidian or a strict CommonMark engine, and fix anything that would look different before you publish.",
-  },
-  {
-    question: "How is mdstudio different from other Markdown editors?",
-    answer:
-      "Most editors render Markdown their own way, so a post can look right in the editor and wrong where you publish it. mdstudio keeps the raw Markdown as the single source of truth, renders it without preview-only tricks, and flags syntax that other platforms handle differently, such as raw HTML, local image paths, wiki-links, math and Mermaid.",
-  },
-  {
-    question: "Is mdstudio open source?",
-    answer:
-      "Yes. mdstudio can be used in the browser and is released under the MIT license. The source code is on GitHub, and you can self-host it with Docker.",
-  },
-  {
-    question: "Are my documents private?",
-    answer:
-      "Yes. Drafts are saved in your browser's IndexedDB and are not uploaded anywhere unless you choose to keep one in your cloud, which needs an account. If you use the optional AI helpers, your API key stays in memory for the session and requests go directly from your browser to the provider you choose.",
+      "Yes. It is MIT licensed and the code is on GitHub. The hosted site is free to use, with limits: 5 drafts in your cloud by default. You can also run your own copy with Docker, with your own database and storage.",
   },
   {
     question: "Do I need an account?",
     answer:
-      "No. The whole editor works without one, and drafts stay on your device. An account is optional and adds what needs a server: keeping drafts in your cloud, sharing a draft as a read-only link with optional comments, and publishing to GitHub. Sign up with an email and password or with GitHub, then confirm your email.",
+      "No. Writing, checking, importing and exporting all work without one, and drafts stay in your browser. An account is optional and adds what needs a server: cloud drafts, editing together, share links and publishing to GitHub. You sign up with an email address and confirm it.",
   },
   {
-    question: "What does an account offer me?",
+    question: "Where are my documents stored?",
     answer:
-      "Cloud storage for chosen drafts that opens on any device you sign in on, with version history kept for them. Share links that expire, public or limited to people you invite, with comments from signed-in readers. And publishing a draft to GitHub as a commit, a pull request or a gist.",
+      "In your browser's storage on this device. A draft goes to our servers only if you put it in your cloud, and then only that draft. On a self-hosted copy it goes to your own database.",
   },
   {
-    question: "How does cloud storage work?",
+    question: "How does editing together work?",
     answer:
-      "You choose which drafts go to your cloud, up to 5 drafts by default. A cloud draft is saved to your account and keeps its version history, so you can open it on another device. Drafts you do not choose stay only in your browser. Self-hosted installs keep cloud drafts in your own database.",
+      "Invite people by email from a draft's menu. Up to 3 people can edit one draft at the same time, and you see each other's cursors. If someone goes offline, their edits stay on their device and merge when they reconnect. If two people change the same spot, both keep their text.",
   },
   {
-    question: "Can I share a draft to get feedback?",
+    question: "How does review work?",
     answer:
-      "Yes, from a cloud draft. Sharing publishes a copy as a read-only page that expires after 1 to 7 days, 4 by default. Make it public, or limit it to the email addresses you invite. Signed-in readers can select text and comment on it, and you can resolve or delete comments. Changing the draft does not change the page until you publish an update, and you can stop sharing at any time.",
+      "Sharing publishes a read-only copy that expires after 1 to 7 days. Make it public or limit it to people you name. Signed-in readers comment on the words they select, and you resolve the comments from the editor. Changing your draft does not change the copy until you publish an update, and you can stop sharing at any time.",
   },
   {
     question: "Can I publish to GitHub?",
     answer:
-      "Yes. Connect your GitHub account, pick a repository and branch, and type the file path, including folders such as posts/my-post.md. Then commit straight to the branch or open a pull request. Local images are committed next to the file in an images folder. Publishing again updates the same file, and you can also publish a draft as a secret or public gist. Publishing needs an account with a confirmed email, and you can disconnect GitHub at any time.",
+      "Yes. Connect your GitHub account, pick a repository, a branch and a path, then commit to the branch, open a pull request or post a gist. Local images are committed beside the file. Publishing needs an account with a confirmed email, and you can disconnect GitHub at any time.",
   },
   {
-    question: "Does mdstudio work offline?",
+    question: "How do the AI features handle my key and my text?",
     answer:
-      "Yes. After your first visit the studio opens and keeps working without a connection, saves your drafts in the browser, and can be installed as an app. Only the optional AI helpers need a network connection.",
+      "You add your own key for OpenAI, Anthropic, Gemini, Ollama or any compatible gateway. The key stays in memory for the session and is never saved. Requests go from your browser to your provider, and every change is shown as a diff you accept or reject first.",
   },
   {
-    question: "Can I organise many drafts and go back to an earlier version?",
+    question: "Which flavors and platforms does it check?",
     answer:
-      "Yes. Search your drafts, filter them by tag and keep them in folders. mdstudio saves versions as you write, shows a side-by-side comparison with the current draft, and restores any version in one click. You can also export every draft as a ZIP.",
+      "Four targets: Strict CommonMark, GFM extended, GFM without HTML and Wiki notes. They follow the rules those tools share rather than copying any one site, and the preview, the checks and the toolbar warnings all follow your choice. The guides explain where platforms differ.",
   },
   {
-    question: "Which Markdown flavors and platforms does it check?",
+    question: "How is it different from other Markdown editors?",
     answer:
-      "Choose a target profile: Strict CommonMark, GFM extended, GFM without HTML or Wiki notes. The preview and the portability checks adapt to the profile, and the toolbar warns before you insert syntax the target does not support.",
-  },
-  {
-    question: "Does mdstudio support math, diagrams, tables and footnotes?",
-    answer:
-      "Yes. It renders KaTeX math, Mermaid diagrams, GitHub-style tables, task lists, footnotes and alert blocks, and shows when a target platform may not render them.",
-  },
-  {
-    question: "How do I export my writing?",
-    answer:
-      "Download or copy clean Markdown with UTF-8 and LF line endings and optional whitespace normalizing, or export a standalone HTML file with images and math included.",
-  },
-  {
-    question: "Can I self-host mdstudio?",
-    answer:
-      "Yes. A Docker image runs the whole app in a single container with a persistent volume. See the project on GitHub for the compose file and instructions.",
+      "Most editors render Markdown their own way, with extra line breaks, smart quotes or built-in extensions, so a post can look right there and wrong where it lands. mdstudio renders strictly and tells you where the target will differ. It is also not a notes app or a blog host: it is where you write, check, review and publish from.",
   },
 ];

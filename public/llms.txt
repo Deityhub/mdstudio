@@ -1,35 +1,36 @@
 # mdstudio
 
-> mdstudio is an open-source, local-first Markdown editor and portability checker. It shows how your Markdown will render on GitHub, dev.to, Obsidian or a strict CommonMark engine, flags syntax that will not travel, and exports clean .md files. Formerly called Markdown Studio.
+> mdstudio is an open-source, local-first Markdown editor and portability checker. The preview follows the rules of the target you pick, flags syntax that will not travel, and exports clean .md files. With an account you can edit a draft together with invited people, share a read-only copy for review, and publish to GitHub. Formerly called Markdown Studio.
 
-Write Markdown in a full-featured editor with a complete formatting toolbar and a live preview. The raw Markdown is the single source of truth: the preview shows what other platforms render, with no preview-only syntax. Drafts are saved in the browser (IndexedDB) with no account and are not uploaded unless the writer chooses to. An optional account can keep up to 5 chosen drafts in a cloud, and a verified account can publish one as a public, read-only page that expires within 7 days.
+Write Markdown in a full-featured editor with a formatting toolbar and a live preview. The raw Markdown is the single source of truth: the preview shows what the target renders, with no preview-only syntax. Drafts are saved in the browser (IndexedDB) with no account and are not uploaded unless the writer chooses to. An optional account keeps up to 5 chosen drafts in a cloud by default.
 
 ## What it does
 
 - Target profiles: Strict CommonMark, GFM extended, GFM without HTML, Wiki notes. The preview, the checks and the toolbar warnings follow the chosen profile.
-- Portability checker: flags raw HTML, local image paths, base64 images, wiki-links, math, Mermaid and trailing-space line breaks, with clickable issues that jump to the line.
-- Rich Markdown: tables with cell navigation, task lists, footnotes, GitHub alerts, KaTeX math, Mermaid diagrams, syntax-highlighted code blocks.
+- Portability checker: flags raw HTML, local image paths, base64 images, wiki-links, math, Mermaid and trailing-space line breaks, with clickable issues that jump to the line. Rules can be turned on or off, with publication standards and the writer's own text or regex rules.
+- Editing together: up to 3 invited people edit one draft at the same time, online or offline, with live cursors and per-person undo. Edits made offline merge when the network returns.
+- Review: share a read-only copy that expires after 1 to 7 days, public or limited to named people, with comments from signed-in readers.
+- Publishing: commit or pull request to a GitHub repository with images beside the file, or publish a gist. Needs an account with a confirmed email.
+- Rich Markdown: tables, task lists, footnotes, GitHub alerts, KaTeX math, Mermaid diagrams, syntax-highlighted code blocks.
 - Import and export: open .md files, ZIP archives or whole folders, paste from Google Docs, Notion and the web; export clean UTF-8 Markdown (LF endings), standalone HTML, or every draft as a ZIP.
-- Library: search drafts, filter by tag, organise them in folders, rename them, and go back to any earlier version with a side-by-side compare.
-- Custom checker rules: turn rules on or off, add publication standards (title and description length, required front matter, heading structure) and your own text or regex rules, and share them as a JSON file.
+- Library: search drafts and the words inside them, filter by tag, organise folders, and go back to any earlier version with a side-by-side compare.
+- Optional AI writing helpers with the writer's own API key (OpenAI, Anthropic, Google Gemini, Ollama or any OpenAI-compatible endpoint). Keys stay in session memory and requests go directly from the browser to the provider; every change is shown as a diff first.
 - Works offline after the first visit and can be installed as an app.
-- Optional AI writing helpers with the writer's own API key (OpenAI, Anthropic, Google Gemini or any OpenAI-compatible endpoint). Keys stay in session memory and requests go directly from the browser to the provider.
 - MIT licensed and open source. Self-host with Docker (`ghcr.io/deityhub/mdstudio` or `deityhub/mdstudio` on Docker Hub).
 
 ## Who it is for
 
-- Technical bloggers publishing through GitHub, dev.to, Hashnode and/or static site generators.
-- Developers writing READMEs and documentation for GitHub.
-- Obsidian users who share notes outside Obsidian.
-- Documentation teams who need Markdown that renders the same in every tool.
+- People who write for the web and publish in more than one place.
+- Developers who write READMEs and docs, and want a second pair of eyes before the pull request.
+- Notes writers who share outside their notes app.
+- Small teams who review and edit docs together without leaving Markdown.
 
 ## Common questions
 
 - Is it open source? Yes, it is MIT licensed, and you can use it in the browser or self-host it.
-- Do I need an account? No. An account is optional and adds cloud storage for chosen drafts (up to 5 by default), expiring share links with comments, and publishing to GitHub.
-- Can I publish to GitHub? Yes: commit or pull request to a repository, with images beside the file, or publish a gist. Needs an account with a confirmed email.
-- Are documents private? Yes by default. They stay in the browser; an account and the cloud are optional, and a draft is public only if the writer publishes it as a link that expires.
-- How is it different from other Markdown editors? It checks portability across platforms instead of rendering Markdown its own way.
+- Do I need an account? No. An account is optional and adds cloud drafts (up to 5 by default), editing together, share links with comments, and publishing to GitHub.
+- Are documents private? Yes by default. They stay in the browser; a draft goes to the cloud only if the writer chooses, and is public only if published as a link that expires.
+- How is it different from other Markdown editors? Most render Markdown their own way. mdstudio renders strictly and tells you where the target will differ. It is where you write, check, review and publish from, not a notes app or a blog host.
 
 ## Guides
 
