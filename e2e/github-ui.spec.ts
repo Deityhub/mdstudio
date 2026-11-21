@@ -13,7 +13,8 @@ async function openPublish(page: Page) {
   return page.getByRole("dialog", { name: "Publish to GitHub" });
 }
 async function fillTarget(dialog: ReturnType<Page["getByRole"]>, path: string) {
-  await dialog.getByRole("combobox", { name: "Repository" }).fill("octo/blog");
+  await dialog.getByRole("combobox", { name: "Repository" }).click();
+  await dialog.getByRole("option", { name: "octo/blog" }).click();
   await expect(dialog.getByRole("combobox", { name: "Branch" })).toContainText("main");
   await dialog.getByRole("textbox", { name: "File path" }).fill(path);
 }
