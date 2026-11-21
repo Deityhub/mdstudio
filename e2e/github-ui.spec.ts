@@ -12,9 +12,9 @@ async function openPublish(page: Page) {
   await page.getByRole("menuitem", { name: "Publish", exact: true }).click();
   return page.getByRole("dialog", { name: "Publish to GitHub" });
 }
-async function fillTarget(dialog: ReturnType<Page["getByRole"]>, path: string) {
+async function fillTarget(dialog: ReturnType<Page["getByRole"]>, page: Page, path: string) {
   await dialog.getByRole("combobox", { name: "Repository" }).click();
-  await dialog.getByRole("option", { name: "octo/blog" }).click();
+  await page.getByRole("option", { name: "octo/blog" }).click();
   await expect(dialog.getByRole("combobox", { name: "Branch" })).toContainText("main");
   await dialog.getByRole("textbox", { name: "File path" }).fill(path);
 }
@@ -37,7 +37,7 @@ test("a writer connects GitHub from the dialog, comes back to it, and commits th
   await expect(dialog.getByText("octo")).toBeVisible();
 
   const path = `ui/${unique()}.md`;
-  await fillTarget(dialog, path);
+  await fillTarget(dialog, page, path);
   await dialog.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(dialog.getByText("Published", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("link", { name: "View the file" })).toHaveAttribute(
@@ -57,7 +57,7 @@ test("it can open a pull request, and shows what the GitHub check finds", async 
   // the draft has a local image that is not in this browser: the GitHub profile says so
   await expect(dialog.getByLabel("Checks for GitHub")).toBeVisible({ timeout: 20_000 });
   const path = `ui-pr-${unique()}.md`;
-  await fillTarget(dialog, path);
+  await fillTarget(dialog, page, path);
   await dialog.getByLabel("Open a pull request").check();
   await dialog.getByRole("button", { name: "Open pull request" }).click();
   await expect(dialog.getByRole("link", { name: "Open the pull request" })).toBeVisible();
@@ -89,7 +89,7 @@ test("a file that is already there is only replaced after the writer agrees", as
 
   const { context, page, content } = await writer(playwright, browser, "gu-replace");
   const dialog = await openPublish(page);
-  await fillTarget(dialog, path);
+  await fillTarget(dialog, page, path);
   await dialog.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("is already in octo/blog");
   await dialog.getByRole("button", { name: "Replace it" }).click();
