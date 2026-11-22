@@ -245,4 +245,3 @@ test("presets fill in a custom endpoint", async ({ page }) => {
   await expect(page.getByLabel("API base URL")).toHaveValue("https://api.groq.com/openai/v1");
   await expect(page.getByLabel("Name (optional)")).toHaveValue("Groq");
 });
-
