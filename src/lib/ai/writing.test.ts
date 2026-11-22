@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readWritingStream, writingRequestSchema } from "./writing";
+import { readWritingStream, writingRequestSchema, DEFAULT_METADATA_FIELDS } from "./writing";
 import { joinFrontMatter, splitFrontMatter } from "../markdown/markdown";
 
 describe("AI writing", () => {
@@ -28,6 +28,7 @@ describe("AI writing", () => {
     expect(writingRequestSchema.parse({ mode: "metadata", draft: "# Draft" })).toEqual({
       mode: "metadata",
       draft: "# Draft",
+      fields: DEFAULT_METADATA_FIELDS,
     });
     expect(writingRequestSchema.parse({ mode: "write", topic: "Accessibility" })).toEqual({
       mode: "write",
