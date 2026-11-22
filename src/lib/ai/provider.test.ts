@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildProviderRequest, generateWithProvider, type AiConnection } from "./provider";
+import { DEFAULT_METADATA_FIELDS } from "./writing";
 
 const connection: AiConnection = {
   provider: "compatible",
@@ -20,7 +21,11 @@ describe("independent AI providers", () => {
     expect(request.body.model).toBe("writer-model");
   });
   it("uses native Anthropic and Gemini request shapes", () => {
-    const input = { mode: "metadata" as const, draft: "# Markdown" };
+    const input = {
+      mode: "metadata" as const,
+      draft: "# Markdown",
+      fields: DEFAULT_METADATA_FIELDS,
+    };
     const anthropic = buildProviderRequest(
       { ...connection, provider: "anthropic", baseUrl: "https://api.anthropic.com/v1" },
       input,
@@ -60,7 +65,7 @@ describe("independent AI providers", () => {
     const events: unknown[] = [];
     await generateWithProvider(
       connection,
-      { mode: "metadata", draft: "# Markdown" },
+      { mode: "metadata", draft: "# Markdown", fields: DEFAULT_METADATA_FIELDS },
       new AbortController().signal,
       (event) => events.push(event),
     );
