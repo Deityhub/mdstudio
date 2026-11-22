@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 (2026-11-22)
+
+### Features
+
+- dynamic AI metadata fields in AI writer (#121)
+
+### Fixes
+
+- prevent dialog content overflow on long text
+- dialog overflow + GitHub publish repo dropdown (#120)
+
 ## 0.7.0 (2026-11-16)
 
 ### Features
