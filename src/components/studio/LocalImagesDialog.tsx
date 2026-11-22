@@ -36,9 +36,9 @@ export function LocalImagesDialog({
           <DialogTitle>{note.label[0]!.toUpperCase() + note.label.slice(1)}</DialogTitle>
           <DialogDescription>{note.advice}</DialogDescription>
         </DialogHeader>
-        <ul aria-label="Images" className="grid max-h-40 gap-1 overflow-y-auto text-sm">
+        <ul aria-label="Images" className="grid max-w-full max-h-40 gap-1 overflow-y-auto text-sm">
           {names.map((n) => (
-            <li key={n} className="truncate rounded border border-border px-2 py-1">
+            <li key={n} className="max-w-full truncate rounded border border-border px-2 py-1">
               {n}
             </li>
           ))}
