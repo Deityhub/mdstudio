@@ -347,29 +347,26 @@ export function PublishDialog({
               <TabsContent value="repo" className="grid gap-3">
                 <div className="grid gap-1.5">
                   <Label htmlFor="pub-repo">Repository</Label>
-                  <Input
-                    id="pub-repo"
-                    list="pub-repos"
-                    placeholder="owner/name"
-                    autoComplete="off"
+                  <Select
                     value={repo}
-                    onChange={(e) => {
-                      const v = e.target.value;
+                    onValueChange={(v) => {
                       setRepo(v);
                       setBranches(null);
                       setReplace(false);
-                      // picking one from the list reads its branches; typing one reads them on leaving
-                      if (repos.some((r) => r.fullName === v)) void loadBranches(v);
+                      void loadBranches(v);
                     }}
-                    onBlur={() => branches === null && void loadBranches(repo.trim())}
-                  />
-                  <datalist id="pub-repos">
-                    {repos.map((r) => (
-                      <option key={r.fullName} value={r.fullName}>
-                        {r.private ? "private" : "public"}
-                      </option>
-                    ))}
-                  </datalist>
+                  >
+                    <SelectTrigger id="pub-repo" aria-label="Repository">
+                      <SelectValue placeholder="Pick a repository" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {repos.map((r) => (
+                        <SelectItem key={r.fullName} value={r.fullName}>
+                          {r.fullName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
