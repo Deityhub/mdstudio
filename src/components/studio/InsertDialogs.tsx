@@ -188,7 +188,7 @@ export function ImageDialog({
               onChange={(e) => setValues({ ...values, url: e.target.value })}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -197,9 +197,11 @@ export function ImageDialog({
             >
               <Upload className="size-4" /> Upload from device
             </Button>
-            <span className="min-w-0 truncate text-sm text-muted-foreground">
-              {file ? file.name : "or paste a URL above"}
-            </span>
+            <div className="min-w-0 flex-1 max-w-full">
+              <span className="truncate text-sm text-muted-foreground block">
+                {file ? file.name : "or paste a URL above"}
+              </span>
+            </div>
             <input
               ref={picker}
               type="file"

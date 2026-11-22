@@ -11,8 +11,16 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { type SuggestedMetadata } from "@/lib/ai/writing";
+import { DEFAULT_METADATA_FIELDS, METADATA_FIELDS } from "@/lib/ai/writing";
+import type { MetadataFieldId, SuggestedMetadata } from "@/lib/ai/writing";
 import { generateWithProvider } from "@/lib/ai/provider";
 import { ai, useAi } from "@/lib/ai/integrations";
 import { renderMarkdown } from "@/lib/markdown/markdown";
@@ -37,6 +45,8 @@ export function AiWriter({
   const [notes, setNotes] = useState("");
   const [output, setOutput] = useState("");
   const [metadata, setMetadata] = useState<SuggestedMetadata | null>(null);
+  /** Which metadata fields the AI is asked to generate. */
+  const [fields, setFields] = useState<MetadataFieldId[]>(DEFAULT_METADATA_FIELDS);
   const [reasoning, setReasoning] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,7 +70,7 @@ export function AiWriter({
     try {
       await generateWithProvider(
         connection,
-        mode === "metadata" ? { mode: "metadata", draft } : { mode: "write", topic, notes },
+        mode === "metadata" ? { mode: "metadata", draft, fields } : { mode: "write", topic, notes },
         controller.signal,
         (event) => {
           if (event.type === "text") setOutput((text) => text + event.text);
@@ -90,6 +100,19 @@ export function AiWriter({
   };
   const hasInput = mode === "metadata" ? !!draft.trim() : !!topic.trim();
   const hasResult = mode === "metadata" ? !!metadata : !!output;
+  const toggleField = (field: MetadataFieldId) => {
+    setFields((prev) =>
+      prev.includes(field)
+        ? prev.length > 1
+          ? prev.filter((f) => f !== field)
+          : prev
+        : [...prev, field],
+    );
+  };
+  const isFieldSelected = (field: MetadataFieldId) => fields.includes(field);
+  const hasGenerated = (field: MetadataFieldId) =>
+    metadata != null && metadata[field] !== undefined;
+  const fieldValue = (field: MetadataFieldId) => metadata?.[field] ?? "";
   return (
     <Dialog open={open} onOpenChange={close}>
       <Button
@@ -145,6 +168,28 @@ export function AiWriter({
         >
           {mode === "metadata" ? (
             <div className="space-y-2">
+              <div className="grid gap-3 rounded-md border bg-card p-3 sm:grid-cols-3">
+                <Label className="text-sm font-medium col-span-full">Generate these fields</Label>
+                {METADATA_FIELDS.map((field) => (
+                  <label
+                    key={field.id}
+                    className="flex items-center gap-2 rounded border border-input px-2 py-1.5 text-sm cursor-pointer hover:bg-accent data-[state=checked]:bg-secondary data-[state=checked]:text-secondary-foreground"
+                    data-state={isFieldSelected(field.id) ? "checked" : "unchecked"}
+                  >
+                    <input
+                      type="checkbox"
+                      id={`ai-field-${field.id}`}
+                      checked={isFieldSelected(field.id)}
+                      onChange={() => toggleField(field.id)}
+                      className="shrink-0"
+                    />
+                    <div className="flex flex-col leading-none">
+                      <span className="font-medium">{field.label}</span>
+                      <span className="text-xs text-muted-foreground">{field.hint}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label htmlFor="ai-draft">Markdown draft</Label>
                 <div className="flex gap-2">
@@ -239,41 +284,62 @@ export function AiWriter({
               {error}
             </p>
           )}
-          {stopped && (
-            <p className="text-sm text-muted-foreground">Stopped. Partial content kept.</p>
-          )}
           {mode === "metadata" && metadata && (
             <div className="space-y-3 border-t border-border pt-4">
-              <div className="space-y-1">
-                <Label htmlFor="ai-title">Suggested title</Label>
-                <Input
-                  id="ai-title"
-                  value={metadata.title}
-                  onChange={(e) => setMetadata({ ...metadata, title: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="ai-description">Suggested description</Label>
-                <Textarea
-                  id="ai-description"
-                  rows={2}
-                  value={metadata.description}
-                  onChange={(e) => setMetadata({ ...metadata, description: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="ai-tags">Suggested tags</Label>
-                <Input
-                  id="ai-tags"
-                  value={metadata.tags.join(", ")}
-                  onChange={(e) =>
-                    setMetadata({
-                      ...metadata,
-                      tags: e.target.value.split(",").map((tag) => tag.trim()),
-                    })
-                  }
-                />
-              </div>
+              {METADATA_FIELDS.filter(
+                (field) => isFieldSelected(field.id) && hasGenerated(field.id),
+              ).map((field) => {
+                const value = fieldValue(field.id);
+                return (
+                  <div key={field.id} className="space-y-1">
+                    <Label htmlFor={`ai-meta-${field.id}`}>{field.label}</Label>
+                    {field.input === "select" ? (
+                      <Select
+                        value={String(value)}
+                        onValueChange={(v) => setMetadata({ ...metadata, [field.id]: v })}
+                      >
+                        <SelectTrigger id={`ai-meta-${field.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options?.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : field.input === "tags" ? (
+                      <Input
+                        id={`ai-meta-${field.id}`}
+                        value={Array.isArray(value) ? value.join(", ") : String(value ?? "")}
+                        onChange={(e) =>
+                          setMetadata({
+                            ...metadata,
+                            [field.id]: e.target.value
+                              .split(",")
+                              .map((tag) => tag.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                    ) : field.input === "textarea" ? (
+                      <Textarea
+                        id={`ai-meta-${field.id}`}
+                        rows={field.rows}
+                        value={String(value ?? "")}
+                        onChange={(e) => setMetadata({ ...metadata, [field.id]: e.target.value })}
+                      />
+                    ) : (
+                      <Input
+                        id={`ai-meta-${field.id}`}
+                        value={String(value ?? "")}
+                        onChange={(e) => setMetadata({ ...metadata, [field.id]: e.target.value })}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {mode === "write" && output && (
@@ -309,9 +375,15 @@ export function AiWriter({
             )}
             {mode === "metadata" && metadata && !busy && (
               <Button
-                disabled={!metadata.title.trim()}
+                disabled={Object.keys(metadata).length === 0}
                 onClick={() => {
-                  onApply({ ...metadata, tags: metadata.tags.filter(Boolean) });
+                  const next: SuggestedMetadata = {};
+                  for (const field of fields) {
+                    if (metadata[field] !== undefined) next[field] = metadata[field];
+                  }
+                  const tags = next["tags"];
+                  if (Array.isArray(tags)) next["tags"] = tags.filter(Boolean);
+                  onApply(next);
                   clearResult();
                   close(false);
                 }}

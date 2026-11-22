@@ -130,7 +130,7 @@ export function SignOutDialog({
 }) {
   return (
     <Dialog open={!!prompt} onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         {prompt?.kind === "offline" && (
           <>
             <DialogHeader>
@@ -160,9 +160,9 @@ export function SignOutDialog({
                 you sign out would lose their images:
               </DialogDescription>
             </DialogHeader>
-            <ul className="list-disc pl-5 text-sm">
+            <ul className="list-disc text-sm max-w-full">
               {prompt.titles.map((t, i) => (
-                <li key={i} className="truncate">
+                <li key={i} className="max-w-full truncate">
                   {t}
                 </li>
               ))}

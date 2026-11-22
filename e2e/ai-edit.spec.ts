@@ -142,13 +142,13 @@ test("the AI writer keeps its buttons in view, and forgets a suggestion once it 
   await addOllama(page);
   await page.getByRole("button", { name: "Suggest metadata" }).click();
   const apply = page.getByRole("button", { name: "Apply to current draft" });
-  await expect(page.getByLabel("Suggested title")).toHaveValue("Better title");
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Better title");
   // the footer stays put however long the result is
   await expect(apply).toBeInViewport();
   await apply.click();
-  await expect(page.getByLabel("Suggested title")).toBeHidden();
+  await expect(page.getByLabel("Title", { exact: true })).toBeHidden();
   await page.getByRole("button", { name: "AI writer" }).click();
-  await expect(page.getByLabel("Suggested title")).toHaveCount(0);
+  await expect(page.getByLabel("Title", { exact: true })).toHaveCount(0);
 });
 
 test("an action with nothing selected asks for a selection", async ({ page }) => {
